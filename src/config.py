@@ -1,0 +1,25 @@
+"""
+Centralized configuration and project path resolution.
+"""
+from pathlib import Path
+
+# Base directories
+SRC_DIR = Path(__file__).resolve().parent
+BASE_DIR = SRC_DIR.parent
+DATA_DIR = BASE_DIR / "data"
+DOCS_DIR = BASE_DIR / "docs"
+
+# Default sample files (IMP-182)
+DEFAULT_IMPORT_ID = "IMP-182"
+DEFAULT_IMPORT_DIR = DATA_DIR / DEFAULT_IMPORT_ID
+DEFAULT_QC_FILE = DEFAULT_IMPORT_DIR / "IMP-182 Control del calidad.xlsm"
+DEFAULT_CIERRE_FILE = DEFAULT_IMPORT_DIR / "Copia de IMP-182 inprogress.xlsm"
+DEFAULT_PACKING_LIST_A = DEFAULT_IMPORT_DIR / "CZC7933A Packing list 16JULY26.xls"
+DEFAULT_PACKING_LIST_B = DEFAULT_IMPORT_DIR / "CZC7933B Packing list 16JULY26.xls"
+
+# Business Constants
+CENTRO_DEFAULT = "C001"
+PROVEEDOR_DEFAULT = "CENTRE ZONE LIMITED"
+FACTURA_DEFAULT = "4100002283"
+MATERIAL_EMBALAJE_DEFAULT = "8000018"
+UBICACION_DESTINO_DEFAULT = "CLARIFICACION"

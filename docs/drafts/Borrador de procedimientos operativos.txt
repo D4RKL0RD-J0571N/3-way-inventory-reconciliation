@@ -1,0 +1,778 @@
+Borrador de procedimientos operativos: Recepción e importaciones en SAP
+
+Estado: Borrador de trabajo para revisión interna
+Objetivo: Documentar los pasos observados durante los procesos de recepción e ingreso de importaciones, incluyendo transacciones SAP, archivos de referencia, campos utilizados y puntos que requieren validación.
+
+Nota para revisión: Este documento contiene apuntes de un proceso en aprendizaje. Los pasos, nombres de menús, valores y transacciones se registran según lo observado hasta el momento. Se solicita a los compañeros con más experiencia revisar, corregir, completar o aclarar cualquier información antes de considerar estas instrucciones como definitivas.
+
+1. Alcance y referencias generales
+
+El proceso de recepción de importaciones combina operaciones en SAP GUI con archivos y documentos externos. Entre las referencias mencionadas se encuentran:
+
+Documento o sistema
+
+Uso observado o descrito
+
+DUA
+
+Documento aduanero que se revisa durante la recepción.
+
+Checklist de documentos
+
+Verificar el orden y la organización de los documentos.
+
+Facturas
+
+Documentación relacionada con el proveedor y la importación.
+
+Información General
+
+Archivo o apartado utilizado durante el proceso. Falta confirmar su contenido exacto.
+
+Z Facturas
+
+Archivo, reporte o apartado pendiente de identificar con precisión.
+
+Control de Calidad / ZDescarga
+
+Referencia para el control de calidad y el desglose de la descarga.
+
+Packing List
+
+Desglose del cargamento proporcionado por el proveedor.
+
+Radar
+
+Desglose de contenedores e importaciones organizado por semana.
+
+Carpeta de creación de recepciones
+
+Carpeta relacionada con la creación o gestión de recepciones.
+
+SAP GUI
+
+Sistema principal para consultar pedidos, materiales, ubicaciones, entregas entrantes y tareas de almacén.
+
+1.1. Identificación de la importación
+
+Durante varios pasos del proceso se solicita el número de contenedor o importación.
+
+Formato de ejemplo: IMP-122
+
+Este identificador se utiliza en distintos puntos del procedimiento, incluyendo la identificación de la ubicación de almacén y la identificación externa de la entrega entrante.
+
+Pendiente de confirmar: si el identificador debe obtenerse siempre de Radar, del Packing List, de otro documento o de una combinación de referencias.
+
+1.2. Tipos de documentos y numeración
+
+Según los apuntes actuales, los números iniciales permiten distinguir los siguientes tipos de documentos:
+
+Prefijo observado
+
+Tipo de documento
+
+Descripción
+
+45...
+
+Pedido de tienda
+
+Pedido asociado a una tienda.
+
+43...
+
+Orden de compra
+
+Pedido de compra al proveedor.
+
+41...
+
+Factura de proveedor
+
+Documento de factura relacionado con el proveedor.
+
+40...
+
+Nota de crédito
+
+Documento de crédito.
+
+Nota: confirmar los prefijos y su significado con un compañero experimentado. Los números completos se representan parcialmente porque dependen de cada documento.
+
+2. Recepción: revisión inicial de documentos
+
+2.1. Revisar el DUA
+
+Localizar el DUA correspondiente a la importación.
+
+Revisar el documento aduanero.
+
+Confirmar qué datos deben verificarse y cómo se determina que el documento está correcto.
+
+Pendiente de documentar: campos específicos del DUA, criterios de validación y procedimiento ante inconsistencias.
+
+2.2. Revisar el checklist de documentos
+
+Localizar el checklist correspondiente.
+
+Verificar el orden de los documentos.
+
+Confirmar que se encuentran los documentos requeridos para continuar con la recepción.
+
+Pendiente de documentar: orden exacto, documentos obligatorios y procedimiento cuando falta algún documento.
+
+2.3. Cierres de recepción y archivos relacionados
+
+Se identificaron los siguientes elementos relacionados con la recepción:
+
+Facturas.
+
+Información General.
+
+Z Facturas.
+
+Control de Calidad.
+
+Carpeta de creación de recepciones.
+
+Pendiente de documentar: qué significa exactamente «Cierres Recepción», en qué momento se realiza el cierre y cómo se relaciona cada uno de estos elementos con el procedimiento de ingreso en SAP.
+
+3. Consultas de órdenes de compra y materiales
+
+3.1. Consultar documentos mediante ME80FN
+
+Transacción: ME80FN
+
+Procedimiento observado:
+
+Ingresar a SAP y ejecutar la transacción ME80FN.
+
+Para la consulta masiva de órdenes de compra, pegar los números de PO que comienzan con 43... en el campo correspondiente.
+
+Ejecutar la consulta.
+
+Copiar el resultado obtenido hasta el valor o columna identificado como UMP.
+
+Pendiente de confirmar:
+
+Nombre exacto del campo donde se pegan los números de PO.
+
+Qué significa UMP en este reporte y si corresponde al nombre de una columna.
+
+Si el resultado debe copiarse completo hasta esa columna o si existen otras columnas necesarias para el análisis.
+
+En qué formato se pega el resultado y dónde se utiliza posteriormente.
+
+3.2. Consultar información de proveedores y materiales mediante SE16N
+
+Transacción: SE16N
+
+Procedimiento observado:
+
+Ingresar a SE16N.
+
+Introducir la tabla EINA.
+
+Pegar los códigos de materiales en el campo correspondiente para realizar la consulta masiva.
+
+Ejecutar la consulta y revisar los resultados.
+
+También se anotó que debe ingresarse el código del proveedor.
+
+Pendiente de confirmar: si el código del proveedor se utiliza en esta misma consulta, cuál es el campo exacto, y si debe filtrarse por proveedor además de por material.
+
+3.3. Consulta de prepacks y materiales hijos
+
+Se anotó la referencia STPO para consultar información de prepacks y obtener la lista de materiales hijos, incluyendo la curva de cada hijo.
+
+Procedimiento por confirmar:
+
+Acceder a la consulta correspondiente.
+
+Identificar el prepack.
+
+Consultar la lista de materiales que lo componen.
+
+Obtener la información de los materiales hijos y su curva.
+
+Pendiente de confirmar:
+
+Si STPO se consulta mediante SE16N o mediante otra transacción.
+
+Qué significa «curva» en este contexto y en qué campo se encuentra.
+
+Cómo se identifica la relación entre el prepack y sus materiales hijos.
+
+Si existe otra tabla o reporte que deba consultarse junto con STPO.
+
+4. Consulta de movimientos de materiales: MB51
+
+Transacción: MB51
+
+Se utiliza para consultar movimientos de materiales. En los apuntes se indica un rango de clases de movimiento 101–102.
+
+Procedimiento observado:
+
+Ejecutar la transacción MB51.
+
+Pegar los materiales en el campo de selección masiva correspondiente.
+
+Indicar el centro: C001.
+
+Indicar las clases de movimiento: 101–102.
+
+Ejecutar la consulta mediante el botón de ejecución o F8.
+
+Revisar los movimientos obtenidos.
+
+También se anotó que, para consultar pedidos, se filtran los resultados usando la factura del proveedor.
+
+Pendiente de confirmar:
+
+Nombre exacto del campo utilizado para filtrar por factura del proveedor.
+
+Si el filtro de factura se aplica en MB51 o en otra consulta.
+
+Si el rango 101–102 se utiliza siempre o depende del objetivo de la consulta.
+
+Qué información debe copiarse o guardarse después de ejecutar el reporte.
+
+5. Referencias utilizadas en recepción y despacho
+
+5.1. Packing List
+
+Documento proporcionado por el proveedor que contiene el desglose del cargamento.
+
+Uso que debe documentarse: cómo se compara el contenido del Packing List con las órdenes de compra y con el control físico.
+
+5.2. ZDescarga
+
+Referencia asociada al control de calidad.
+
+Uso que debe documentarse: cómo se registra la cantidad físicamente recibida, cómo se identifican las diferencias y cómo se comunica el resultado a quien realiza el ingreso en SAP.
+
+5.3. Radar
+
+Referencia que presenta el desglose de contenedores e importaciones por semana.
+
+Uso que debe documentarse: cómo se identifica una importación, cómo se determina su estado y si se utiliza como punto de partida para abrir la recepción.
+
+6. Ingreso de recepción en SAP
+
+6.1. Consulta de la factura del proveedor
+
+Transacción: ME80FN
+
+Ejecutar ME80FN.
+
+Introducir el número de factura del proveedor, con prefijo 41..., en el campo «Documento de compras».
+
+Ejecutar la consulta con el botón de ejecución o F8.
+
+Revisar el resultado correspondiente.
+
+Pendiente de confirmar: si la factura debe introducirse directamente como criterio de selección y cómo se identifica la orden de compra vinculada a esa factura.
+
+6.2. Acceso inicial a SAP y al Monitor
+
+Al ingresar a SAP, en algunas ocasiones puede solicitarse información inicial de acceso o selección.
+
+Valores anotados:
+
+N.º de almacén: C001
+
+Monitor: SAP
+
+Una vez dentro del Monitor, se utilizan las rutas de menú descritas a continuación.
+
+Pendiente de confirmar: en qué pantalla aparecen estos campos y si los valores son configuraciones iniciales, datos de sesión o parámetros específicos del procedimiento.
+
+6.3. Actualización masiva de atributos de almacén para materiales
+
+Ruta de menú observada:
+
+Monitor → Datos Maestros Productos → Atributo de Almacén
+
+Procedimiento:
+
+Ingresar a la ruta indicada.
+
+Pegar los códigos de materiales en el campo «Número de producto», utilizando la selección masiva.
+
+Seleccionar la operación «Todos».
+
+Seleccionar «Modificar en Masa».
+
+Rellenar los campos con los valores anotados:
+
+Campo
+
+Valor
+
+Indicador tipo de proceso
+
+Z1
+
+Indicador entrada stock
+
+C001
+
+Indicador área de almacén
+
+ZALB
+
+Indicador control salida de stock
+
+PICK
+
+Grupo puesto de descarga / detalle muelle
+
+Z001
+
+Revisar los valores antes de guardar o confirmar la modificación.
+
+Regresar al menú principal.
+
+Pendiente de confirmar:
+
+Los nombres exactos de los campos, ya que pueden variar respecto de las etiquetas mostradas en SAP.
+
+Si todos los materiales requieren los mismos valores.
+
+Qué validación debe realizarse antes de aplicar la modificación masiva.
+
+Si la modificación se guarda automáticamente o requiere una acción adicional.
+
+7. Creación y consulta de la ubicación de importación
+
+7.1. Crear ubicación
+
+Desde la opción correspondiente del Monitor:
+
+Campo
+
+Valor
+
+N.º de almacén
+
+C001
+
+Ubicación
+
+IMP-X
+
+Sustituir X por el número de la importación.
+
+Ejemplo: IMP-122.
+
+Pendiente de confirmar: nombre exacto de la transacción o ruta de menú para crear la ubicación y si se requiere introducir información adicional.
+
+7.2. Clasificación de ubicación
+
+Introducir los siguientes valores:
+
+Campo
+
+Valor
+
+N.º de almacén
+
+C001
+
+Tipo de almacén
+
+Z970
+
+Actividad
+
+En blanco
+
+Ejecutar mediante el botón del reloj o F8.
+
+Revisar el resultado mostrado, correspondiente a la visualización de la ubicación.
+
+7.3. Actualización del campo de verificación
+
+Introducir los siguientes valores:
+
+Campo
+
+Valor
+
+N.º de almacén
+
+C001
+
+Tipo de almacén
+
+Z970
+
+Ejecutar mediante el botón del reloj o F8.
+
+Revisar el resultado en modo de visualización.
+
+Pendiente de confirmar: nombre exacto de la función de actualización, qué representa el campo de verificación y si esta operación modifica datos o únicamente muestra información.
+
+8. Creación de la entrega entrante
+
+8.1. Crear la entrega entrante
+
+Transacción: VL3IN
+
+Ejecutar VL3IN.
+
+En el campo «Pedido», introducir la factura del proveedor, identificada por el prefijo 41....
+
+Ejecutar mediante el botón del reloj o F8.
+
+Revisar los resultados.
+
+Acceder al detalle de cabecera de la entrega entrante mediante F8 o la opción correspondiente.
+
+Pendiente de confirmar: si VL3IN es el código exacto utilizado en el entorno de SAP y si el campo denominado «Pedido» acepta la factura de proveedor directamente o requiere una referencia vinculada.
+
+8.2. Completar la identificación externa
+
+En el detalle de cabecera:
+
+Acceder a la pestaña o sección «Gestión 2».
+
+Localizar el campo «Ident. ext.».
+
+Introducir el identificador de la importación en el formato IMP-X.
+
+Ejemplo: IMP-122.
+
+Grabar o guardar la entrega entrante.
+
+Copiar el número de entrega generado, que en los apuntes se identifica como un número que comienza con 18....
+
+Resultado esperado: se obtiene un número de entrega entrante que será necesario para las operaciones siguientes.
+
+Pendiente de confirmar: longitud del número, pantalla donde aparece y si debe copiarse desde el mensaje de confirmación o desde el documento creado.
+
+8.3. Actualizar o consultar la entrega entrante
+
+Acceder a la función de actualización de entrega entrante.
+
+En el campo de búsqueda «Entrega / Ejecución logística», pegar el número de entrega obtenido anteriormente, con prefijo 18....
+
+Ejecutar mediante el reloj o F8.
+
+Verificar que se muestra la entrega correcta.
+
+9. Embalaje de la entrega entrante
+
+9.1. Acceder al puesto de trabajo de embalaje
+
+Desde el menú auxiliar:
+
+Entrega Entrante → Funciones Siguientes → Embalar
+
+Atajo anotado: Ctrl + F3.
+
+La pantalla resultante corresponde al «Puesto de Trabajo Embalar para Entrante».
+
+9.2. Seleccionar el material de embalaje
+
+En el campo «Material Embalaje», introducir:
+
+8000018
+
+Pendiente de confirmar: si este material de embalaje se utiliza en todas las importaciones o únicamente en las operaciones observadas.
+
+9.3. Asignar los materiales a la unidad de manipulación
+
+Identificar los materiales que deben introducirse en la unidad de manipulación.
+
+Arrastrar los materiales a la unidad correspondiente, cuyo número se identifica en los apuntes por el prefijo 80...18.
+
+Revisar que los materiales queden dentro de la nueva unidad de manipulación.
+
+Verificar que las cantidades de los materiales que aparecen fuera de la unidad queden en 0.
+
+Grabar o guardar.
+
+Criterio de verificación observado: después de la asignación, las cantidades de los materiales fuera de la unidad deben quedar en cero.
+
+Pendiente de confirmar:
+
+Si el número 80...18 corresponde a una unidad de manipulación generada durante el embalaje.
+
+Qué debe hacerse si quedan cantidades distintas de cero fuera de la unidad.
+
+Cómo verificar que todos los materiales se asignaron correctamente antes de guardar.
+
+10. Creación de la tarea de almacén
+
+10.1. Acceder a la función de tarea de almacén
+
+Desde el menú auxiliar:
+
+Entrega Entrante → Funciones Siguientes → Tarea Almacén
+
+10.2. Revisar unidades de manipulación y valores de propuesta
+
+Acceder a «Unidades de Manipulación».
+
+Revisar «Valores de propuesta».
+
+Introducir o seleccionar la ubicación de destino:
+
+CLARIFICACION
+
+Pendiente de confirmar: si CLARIFICACION es una ubicación fija para este procedimiento, un valor de propuesta o un destino que depende de la importación.
+
+10.3. Crear la tarea
+
+Seleccionar «Crear Tarea de Almacén».
+
+Validar la advertencia de movimiento que aparece.
+
+Seleccionar «Crear».
+
+Grabar la tarea.
+
+Pendiente de confirmar: el contenido de la advertencia de movimiento y las condiciones que determinan si se puede continuar.
+
+10.4. Obtener el número del documento
+
+Regresar al puesto de trabajo, en la sección de documentos.
+
+Copiar el número del documento generado.
+
+Conservar el número para las consultas posteriores.
+
+Pendiente de confirmar: qué documento se identifica en este paso y si corresponde a la tarea de almacén, la entrega entrante u otro documento relacionado.
+
+11. Consultar la entrega entrante desde el Monitor
+
+Ruta anotada:
+
+Monitor → Entrada → Documentos → Entrega Entrante
+
+Procedimiento:
+
+Acceder a la ruta indicada.
+
+Ejecutar la consulta mediante el botón del reloj o F8.
+
+Localizar la entrega entrante que se desea revisar.
+
+Pendiente de confirmar: criterios de búsqueda necesarios y cómo se utiliza esta pantalla después de crear la tarea de almacén.
+
+11.1. Consultar la tarea de almacén desde la ventana inferior
+
+En la ventana inferior:
+
+Acceder a «Otros métodos».
+
+Seleccionar la opción anotada como Confi.tarea.alma.fondo.
+
+Refrescar la ventana.
+
+Dejar esta ventana abierta.
+
+Abrir una ventana nueva para continuar con las siguientes operaciones.
+
+Pendiente de confirmar: nombre exacto de la opción de menú y motivo por el cual se mantiene la ventana abierta mientras se utiliza otra.
+
+12. Operación mediante RFUI
+
+Transacción o herramienta: RFUI
+
+Valores anotados:
+
+Campo
+
+Valor
+
+Movimiento
+
+522
+
+ID
+
+UM Origen
+
+CI proc.
+
+Y999
+
+Procedimiento por completar:
+
+Abrir RFUI.
+
+Seleccionar o introducir el movimiento 522.
+
+Introducir el ID de la unidad de manipulación de origen.
+
+Introducir Y999 en el campo «CI proc.».
+
+Continuar según las indicaciones de la pantalla.
+
+Importante: estos son los valores anotados, pero todavía falta documentar la secuencia completa de pantallas, los campos adicionales, las validaciones y el resultado esperado.
+
+Pendiente de confirmar:
+
+Qué representa UM Origen y cómo se obtiene el identificador.
+
+Qué significa CI proc. en este contexto.
+
+Qué función cumple el movimiento 522 dentro del proceso.
+
+Qué mensaje o documento confirma que la operación terminó correctamente.
+
+Si esta operación es obligatoria para todas las importaciones.
+
+13. Verificación del stock físico en la ubicación de importación
+
+Ruta anotada en el Monitor:
+
+Monitor → Stock Físico → Verificar Materiales en Ubicación de Importación
+
+Procedimiento observado:
+
+Acceder al Monitor.
+
+Ingresar a «Stock Físico».
+
+Seleccionar «Verificar Materiales en Ubicación de Importación».
+
+Introducir o seleccionar el número de ubicación correspondiente a la importación.
+
+Revisar los materiales mostrados.
+
+Ejemplo de ubicación: IMP-122.
+
+Pendiente de documentar: cómo se interpretan los resultados, cómo se determina si los materiales esperados están presentes y qué debe hacerse ante diferencias entre el stock físico y los registros del sistema.
+
+14. Consulta masiva final mediante MB51
+
+Transacción: MB51
+
+Valores anotados:
+
+Campo
+
+Valor
+
+Selección de materiales
+
+Lista masiva de materiales
+
+Centro
+
+C001
+
+Clase de movimiento
+
+101–102
+
+Procedimiento:
+
+Ejecutar MB51.
+
+Pegar la lista de materiales en el campo de selección masiva.
+
+Introducir el centro C001.
+
+Seleccionar las clases de movimiento 101–102.
+
+Ejecutar la consulta.
+
+Revisar los movimientos obtenidos.
+
+Pendiente de documentar:
+
+Qué debe comprobarse exactamente en este reporte.
+
+Si los resultados deben filtrarse por factura del proveedor, orden de compra o número de importación.
+
+Si el objetivo es verificar cantidades ingresadas, detectar diferencias o confirmar el registro de movimientos.
+
+Si este paso corresponde a una validación final o a una consulta intermedia.
+
+15. Puntos de control y temas pendientes de validación
+
+Los siguientes temas requieren revisión por parte de un compañero con experiencia antes de considerar el procedimiento completo.
+
+Documentación y referencias
+
+Confirmar el orden exacto de los documentos de recepción.
+
+Identificar con precisión «Información General» y «Z Facturas».
+
+Confirmar el papel de Radar en la apertura y seguimiento de una importación.
+
+Documentar cómo se relacionan el Packing List y ZDescarga con las cantidades registradas.
+
+Consultas y maestros de materiales
+
+Confirmar los campos y criterios de selección utilizados en ME80FN.
+
+Confirmar cómo se utiliza EINA mediante SE16N.
+
+Documentar la consulta de prepacks y materiales hijos mediante STPO.
+
+Confirmar el significado de UMP y la información que debe copiarse de los resultados.
+
+Creación y movimiento de inventario
+
+Confirmar los pasos exactos para crear y clasificar la ubicación IMP-X.
+
+Verificar los valores de los atributos de almacén y si son universales.
+
+Confirmar la transacción VL3IN y los criterios de creación de la entrega entrante.
+
+Documentar el embalaje y la validación de las unidades de manipulación.
+
+Confirmar el procedimiento de creación de tareas de almacén.
+
+Completar la secuencia de RFUI y validar el uso del movimiento 522.
+
+Confirmar la finalidad de la consulta final mediante MB51.
+
+Control de diferencias
+
+Documentar qué hacer cuando el pedido, el control de calidad y SAP presentan cantidades distintas.
+
+Definir cómo se tratan las cantidades faltantes o sobrantes.
+
+Identificar qué decisiones requieren autorización.
+
+Documentar los pasos necesarios para corregir un error sin duplicar registros ni alterar indebidamente el inventario.
+
+16. Registro de futuras observaciones
+
+Usar esta sección para agregar pasos nuevos o corregir los existentes mientras se aprende el proceso.
+
+Fecha
+
+Proceso / sección
+
+Observación o duda
+
+Estado
+
+[Fecha]
+
+[Proceso]
+
+[Detalle observado o por confirmar]
+
+Pendiente
+
+[Fecha]
+
+[Proceso]
+
+[Corrección o aclaración]
+
+Revisado
+
+Nota final
+
+Este documento busca servir como punto de partida para centralizar el conocimiento operativo y facilitar su revisión por parte del equipo. No sustituye los procedimientos oficiales ni las instrucciones de los responsables del proceso.
+
+La intención es que cualquier compañero pueda comprender la secuencia general, identificar las transacciones utilizadas y señalar con facilidad qué información necesita corregirse, ampliarse o validarse.

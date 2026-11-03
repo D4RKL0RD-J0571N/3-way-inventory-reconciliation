@@ -1,0 +1,136 @@
+Recepcion
+1-Revision del DUA (documento de aduanas)
+2-Revisar checklist acerca del orden de los documentos
+3-Cierres Recepcion
+Facturas
+Informacion General
+Z facturas
+Control de Calidad
+Carpeta creacion de recepciones
+Siempre pide el numero de contenedor/importacion "IMP-122" example.
+
+En SAP S/H realizar transaccion ME80FN
+Siempre pegar PO #43... en masivo
+Copiar el resultado hasta el valor UMP
+
+Desglose de tipo de valor 
+45... Pedido de Tienda
+43... Orden de Compra
+41... Factura Provedor
+40... Nota de Credito
+
+Ingresar codigo provedor, transaccion SE16N
+Pegar materiales usando la table EINA
+
+Tabla MOST STPO para prepacks
+Lista de Material para hijos
+Para obtener curva de cada hijo.
+
+MB51 rango de movimiento 101-102
+
+Pedido filtrar resultados usando facture de provedor
+
+Recepcion y despacho 
+Packing List(Desglose por parte del provedor del cargamento), ZDescarga (Control de Calidad), Radar (desglose de contenedores/importaciones por semana)
+
+
+Ingreso Recepcion
+ME80FN pegar Factura de Provedor 41... en field documento de compras
+Al ingresar al SAP por primera vez puede pedir N#almacen = c001, Monitor = SAP
+
+Ahora en Monitor, navegar en el menu las siguientes direcciones
+"Datos Maestros Productos", "Atribute de Almacen", en este apartado, se pegan los Materiales en el masivo en field Numero de producto, Selecciono la operacion "Todos", modificar en Masa.
+Se rellenan lo siguiente:
+Indicador tipo de proceso: Z1
+Indicador entrada stock: C001
+Indicador area de almacen: ZALB
+Indicador control salidaa de stock: PICK
+Grupo puesto de descarga/detalle muelle: Z001
+
+Regresar Menu Principal
+
+Crear ubicacion
+Pred: 
+N# almacen: C001
+Ubicacion: IMP-X(numero de importacion) eg IMP-122
+
+Clasificacion Ubicacion
+N# Almacen: C001
+Tipo Almacen: Z970
+Actividad: En blanco
+
+Reloj/F8 
+Resultado es la visualizacion de ubicacion
+
+Actualizacion Campo Verificacion
+N# almacen: C001
+Tipo Almacen: Z970
+
+Resultados solo visualizacion 
+Reloj/F8
+
+Crear Entrega Entrante
+VL3IN
+Pedido verificar Factura Provedor "41..."
+Reloj/F8
+
+Entrega Entrante - F8/Detalle de cabecera
+
+Gestion 2
+Ident ext: IMP-X(numero de importacion) eg IMP-122
+Grabar/Guardar
+Resultado - copiar 18...mil
+
+Actualizar entrega entrante
+Busqueda: Entrega Ejecucion Logistica - Pegar 18...mil
+Reloj/F8
+
+Menu Auxiliar (Entrega Entrante - Funciones Siguientes - Embalar) Ctrl + F3
+
+Puesto de Trabajo Embalar para Entrante
+
+Material Embalaje: "8000018"
+
+Arrastro los materiales a la unidad 80...18 para que quede adentro de la unidad Nueva 80...18 revisando que queden en 0 las cantidades de los materiales fuera de la unidad.
+Grabar/Guardar
+
+Menu Auxiliar(Entrega Entrante - Funciones Siguientes - Tarea Almacen)
+
+-Unidades de Manipulacion
+-Valores de propuesta
+ *Ubicacion destino "CLARIFICACION"
+
+Crear Tarea de Almacen
+ *Validar Advertencia de Movimiento
+Crear Mas Grabar
+
+Regresar al puesto de trabajo en documentos 
+Copiar # de documento
+
+Monitor - Entrada - Documentos - Entrega Entrante - Reloj/F8
+
+
+Tarea Almacen - Ventana Inferior - Otros metodos - "Confi.tarea.alma.fondo"
+Refrescar Ventana
+Dejar Abierto y abro Ventana Nueva
+
+RFUI
+Movimiento 522
+
+ID: UM Origen
+CI proc: Y999
+
+Monitor - Stock Fisico - Verificar Materiales en Ubicacion de Importacion #
+
+MB51
+
+Listado Masivo de Materiales, pego mis materiales
+
+Centro: C001
+Clase de Movimiento: 101 - 102
+
+
+
+
+
+
