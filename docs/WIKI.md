@@ -16,6 +16,10 @@ Para facilitar la evaluación de la herramienta en cualquier computadora de ofic
    - Haz doble clic en **`ReconcileAI.exe`** (o en **`INICIAR_RECONCILEAI.bat`**).
    - Se abrirá automáticamente tu navegador web en `http://localhost:8501`.
    - Coloca tus carpetas de importaciones (ej. `IMP-182` o `IMP-174`) dentro de la carpeta `data/` o búscalas con el explorador integrado.
+5. **Soporte Bilingüe & Tooltips Traducidos:**
+   - Por defecto, la aplicación inicia en **Español**.
+   - Los botones y tooltips de las tablas de datos (`Pantalla completa`, `Descargar como CSV`, `Buscar`) se traducen en tiempo real.
+   - Puedes cambiar a **Inglés** en cualquier momento desde el selector en la barra lateral (`🌐 Idioma / Language`).
 
 ---
 
@@ -155,6 +159,7 @@ Auditoría y Gerencia revisan las filas 5 y 6 de `CIERRE RECEP` antes de mirar l
 ## 1. Demo Edition v1.0.0 (Standalone Portable)
 - **Zero Python Installation:** Runs standalone from `ReconcileAI_Portable.zip` on any Windows 10/11 system.
 - **USB & Offline Friendly:** Unpack anywhere, double-click `ReconcileAI.exe`, and audit containers immediately.
+- **Bilingual & Localized Tables:** Starts in Spanish by default; toggle to English anytime in the sidebar. Table toolbars and hover tooltips (`Fullscreen`, `Download as CSV`, `Search`) dynamically adapt to the chosen language.
 - **Enterprise Privacy:** Zero sensitive data baked in. Runs 100% in local memory.
 
 ## 2. 5-Minute Evaluation Walkthrough for Leadership

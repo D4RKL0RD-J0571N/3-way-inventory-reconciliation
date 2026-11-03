@@ -47,6 +47,10 @@ This release delivers a **100% portable standalone executable** packaged for zer
 - **Zero Hardcoded Corporate Data:** No proprietary company names, facility codes, or confidential vendor references exist in code, logs, or documentation.
 - **Local Memory Guarantee:** All data operations occur exclusively in local workstation RAM. No telemetry, no external API calls, and zero external persistence.
 
+### 7. 🌐 Bilingual Engine & Dynamic Table Tooltip Localization
+- **Spanish as Default (`es`):** All headers, KPI cards, table columns, checklist items, and interactive wiki walkthroughs default to Spanish, with instant toggle to English (`en`) via sidebar selector.
+- **Client-Side Table Toolbar & Tooltip Translation:** Client-side DOM mutation engine intercepts Streamlit / BaseWeb table toolbars in real time, translating hover tooltips (e.g. `Fullscreen` ➔ `Pantalla completa`, `Download as CSV` ➔ `Descargar como CSV`, `Search` ➔ `Buscar`) to ensure an entirely cohesive, localized user experience.
+
 ---
 
 ## 📂 Deliverables in this Release

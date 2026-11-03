@@ -59,3 +59,4 @@ class ReconciliationSummary:
     theor_packages: float = 0.0
     received_packages: float = 0.0
     difference_packages: float = 0.0
+    container_parts_breakdown: Dict[str, int] = field(default_factory=dict)

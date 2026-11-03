@@ -25,8 +25,13 @@ def compute_summary(
     dif_pkg = meta.get('difference_packages', 0.0)
 
     total_mat = len(items)
-    part_a_mat = sum(1 for i in items if i.container_part == "A")
-    part_b_mat = sum(1 for i in items if i.container_part == "B")
+    container_parts_breakdown = {}
+    for i in items:
+        p = (i.container_part or "A").upper()
+        container_parts_breakdown[p] = container_parts_breakdown.get(p, 0) + 1
+
+    part_a_mat = container_parts_breakdown.get("A", 0)
+    part_b_mat = container_parts_breakdown.get("B", 0)
     
     total_ped_43 = sum(i.quantity_po_43_units for i in items)
     total_ped_41 = sum(i.quantity_inv_41_units for i in items)
@@ -56,21 +61,23 @@ def compute_summary(
         status=status,
         theor_packages=theor_pkg,
         received_packages=rec_pkg,
-        difference_packages=dif_pkg
+        difference_packages=dif_pkg,
+        container_parts_breakdown=container_parts_breakdown
     )
 
 def filter_items(
     items: List[PrepackItem],
-    part_filter: str = "ALL", # "ALL", "A", "B"
+    part_filter: str = "ALL", # "ALL", "A", "B", "C", "D", "E", "F"...
     status_filter: str = "ALL",
     search_query: str = ""
 ) -> List[PrepackItem]:
     """
     Filters items by container part, status, and search keyword (searches parent or child SKUs).
+    Supports arbitrary container parts dynamically (Parts A through F+).
     """
     filtered = items
-    if part_filter in ["A", "B"]:
-        filtered = [i for i in filtered if i.container_part == part_filter]
+    if part_filter != "ALL":
+        filtered = [i for i in filtered if (i.container_part or "A").upper() == part_filter.upper()]
         
     if status_filter != "ALL":
         filtered = [i for i in filtered if i.status == status_filter]
