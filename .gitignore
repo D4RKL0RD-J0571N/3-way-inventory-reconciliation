@@ -22,6 +22,11 @@ htmlcov/
 # Streamlit
 .streamlit/secrets.toml
 
+# PyInstaller & Build artifacts
+build/
+dist/
+*.spec
+
 # Confidential Business Data & Spreadsheets
 data/
 *.xlsm

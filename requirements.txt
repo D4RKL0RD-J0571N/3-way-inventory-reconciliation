@@ -1,0 +1,10 @@
+# Core dependencies for ReconcileAI - 3-Way Inventory Reconciliation
+streamlit>=1.35.0
+openpyxl>=3.1.2
+pandas>=2.0.0
+
+# Optional packaging tools
+pyinstaller>=6.0.0
+
+# Testing & validation
+pytest>=7.4.0
