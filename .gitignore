@@ -21,3 +21,12 @@ htmlcov/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Confidential Business Data & Spreadsheets
+data/
+*.xlsm
+*.xlsx
+*.xls
+*.csv
+docs/drafts/
+

@@ -3,14 +3,16 @@ Interactive Web Application for 3-Way Inventory Reconciliation.
 Universal Supply Chain, Logistics & Goods Receipt Audit Engine.
 Full-width Widescreen & Professional Dark Theme.
 Agnostic architecture designed for multi-vendor and multi-ERP import audits.
+Direct file explorer & manual selection: zero guessing, zero blind searching.
 """
 import streamlit as st
 import pandas as pd
 import openpyxl
 import os
 import io
+from pathlib import Path
 
-from src.config import DEFAULT_QC_FILE, DEFAULT_CIERRE_FILE, DEFAULT_IMPORT_ID
+from src.config import list_available_local_imports
 from src.parsers import parse_quality_control_boms, parse_cierre_recepcion
 from src.engine import compute_summary, filter_items
 from src.validator import validate_all_items
@@ -28,7 +30,7 @@ st.set_page_config(
 # Custom High-Contrast, Enterprise Dark-Mode & Fluid Widescreen CSS
 st.markdown("""
 <style>
-    /* Fullscreen & High-Resolution True Fluid Layout (Zero wasted side space) */
+    /* Fullscreen & High-Resolution True Fluid Layout */
     .stMainBlockContainer,
     .block-container,
     div[data-testid="stMainBlockContainer"],
@@ -41,7 +43,6 @@ st.markdown("""
         width: 98% !important;
     }
 
-    /* On high-res and widescreen monitors, prevent artificial margin constraints */
     @media (min-width: 1200px) {
         .stMainBlockContainer,
         .block-container,
@@ -53,7 +54,7 @@ st.markdown("""
         }
     }
 
-    /* Streamlit tabs - prevent overflow, cut-offs and awkward scrolling */
+    /* Streamlit tabs styling */
     div[data-baseweb="tab-list"] {
         gap: 8px !important;
         width: 100% !important;
@@ -71,7 +72,7 @@ st.markdown("""
         transition: all 0.15s ease-in-out !important;
     }
 
-    /* Polish for Metric Cards across top row */
+    /* Metric Cards across top row */
     div[data-testid="stMetric"] {
         background-color: var(--secondary-background-color, #1E293B);
         border: 1px solid rgba(148, 163, 184, 0.2);
@@ -113,7 +114,7 @@ st.markdown("""
         margin: 4px 0 0 0;
     }
 
-    /* Dual-Theme Adaptive Detail Cards (Ficha 360) */
+    /* Detail Cards (Ficha 360) */
     .detail-card {
         background-color: var(--secondary-background-color, #1E293B);
         border: 1px solid rgba(148, 163, 184, 0.2);
@@ -151,7 +152,7 @@ st.markdown("""
         text-align: right;
     }
 
-    /* Dual-Theme Status Banners */
+    /* Status Banners */
     .status-banner-clean {
         background: rgba(16, 185, 129, 0.15);
         border: 1px solid rgba(16, 185, 129, 0.4);
@@ -185,58 +186,192 @@ st.markdown("""
         font-weight: 600;
         margin-bottom: 16px;
     }
+
+    /* Welcome Hero Card */
+    .welcome-card {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        border-radius: 10px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar: File Manager & Custom Importations
-st.sidebar.image("https://img.icons8.com/color/96/warehouse.png", width=56)
-st.sidebar.markdown("### Configuración de Auditoría")
-st.sidebar.caption("Auditoría de Precisión de Mercadería y Cierres de Importación.")
+# Session State for Loaded Import Data
+if "audit_data" not in st.session_state:
+    st.session_state.audit_data = None
 
-use_custom = st.sidebar.checkbox(
-    "📁 Cargar otro Contenedor / Archivos",
-    value=False,
-    help="Activa esta casilla para cargar archivos de un contenedor diferente (ej. IMP-183 o histórico)."
-)
-uploaded_qc = None
-uploaded_cierre = None
-
-if use_custom:
-    st.sidebar.info("💡 Sube ambos archivos de Excel para auditar la importación:")
-    uploaded_qc = st.sidebar.file_uploader(
-        "1. Control de Calidad (.xlsm)",
-        type=["xlsm", "xlsx"],
-        help="Archivo generado por calidad en muelle con el conteo físico y las curvas de tallas."
-    )
-    uploaded_cierre = st.sidebar.file_uploader(
-        "2. Plantilla Cierre (.xlsm)",
-        type=["xlsm", "xlsx"],
-        help="Plantilla corporativa donde se realiza el balance de recepción."
-    )
-
-@st.cache_data(show_spinner="Analizando datos de importación...")
-def load_and_process(qc_bytes=None, cierre_bytes=None):
-    if qc_bytes and cierre_bytes:
-        qc_file = io.BytesIO(qc_bytes)
-        cierre_file = io.BytesIO(cierre_bytes)
+@st.cache_data(show_spinner="Procesando y auditando libros de Excel...")
+def run_audit(qc_content, cierre_content):
+    if isinstance(qc_content, bytes):
+        qc_file = io.BytesIO(qc_content)
     else:
-        qc_file = str(DEFAULT_QC_FILE)
-        cierre_file = str(DEFAULT_CIERRE_FILE)
-        
+        qc_file = qc_content
+
+    if isinstance(cierre_content, bytes):
+        cierre_file = io.BytesIO(cierre_content)
+    else:
+        cierre_file = cierre_content
+
     boms, qc_details = parse_quality_control_boms(qc_file)
     items = parse_cierre_recepcion(cierre_file, boms, qc_details)
     summary = compute_summary(items)
     validation = validate_all_items(items)
-    return items, summary, boms, qc_details, validation
+    return {
+        "items": items,
+        "summary": summary,
+        "boms": boms,
+        "qc_details": qc_details,
+        "validation": validation
+    }
 
-try:
-    if use_custom and uploaded_qc and uploaded_cierre:
-        items, summary, boms, qc_details, validation = load_and_process(uploaded_qc.getvalue(), uploaded_cierre.getvalue())
-    else:
-        items, summary, boms, qc_details, validation = load_and_process()
-except Exception as e:
-    st.error(f"Error al procesar archivos de Excel: {e}")
+# Sidebar Navigation & Management
+st.sidebar.image("https://img.icons8.com/color/96/warehouse.png", width=56)
+st.sidebar.markdown("### ReconcileAI")
+st.sidebar.caption("Motor Universal de Conciliación 3-Way & Auditoría de Recepción.")
+
+if st.session_state.audit_data is not None:
+    current_summary = st.session_state.audit_data["summary"]
+    st.sidebar.success(f"📦 **Auditoría Activa:** {current_summary.import_id}")
+    st.sidebar.caption(f"Proveedor: {current_summary.vendor_name[:25]}")
+    st.sidebar.caption(f"Materiales: {current_summary.total_materials} estilos")
+    st.sidebar.divider()
+    if st.sidebar.button("🔄 Cargar Otra Importación / Cerrar", use_container_width=True):
+        st.session_state.audit_data = None
+        st.rerun()
+
+# ----------------- VISTA 1: EXPLORADOR DIRECTO DE ARCHIVOS -----------------
+if st.session_state.audit_data is None:
+    st.markdown("""
+    <div class="app-header">
+        <h1>🛡️ ReconcileAI — Copiloto Universal de Conciliación 3-Way</h1>
+        <p>Auditoría precisa de Órdenes de Compra (PO), Facturación de Nacionalización y Recepción Física en Muelle.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_welcome_left, col_welcome_right = st.columns([1.25, 0.75], gap="large")
+
+    with col_welcome_left:
+        st.markdown("""
+        <div class="welcome-card">
+            <h3 style="margin-top:0; color:#38BDF8;">📂 Explorador y Selección de Archivos</h3>
+            <p style="color:#CBD5E1; font-size:13.5px; line-height:1.6; margin-bottom:0;">
+                Elige directamente los dos archivos de trabajo. Puedes explorar cualquier carpeta de tu disco o arrastrar los archivos desde el Explorador de Windows.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        tab_local_explorer, tab_uploader = st.tabs([
+            "📁 Explorador de Disco (Carpetas Locales)",
+            "📤 Subir Archivos (Examinar / Drag & Drop)"
+        ])
+
+        with tab_local_explorer:
+            local_folders = list_available_local_imports()
+            default_folder = f"data/{local_folders[0]}" if local_folders else "data"
+            
+            col_f1, col_f2 = st.columns([3, 1])
+            with col_f1:
+                folder_input = st.text_input(
+                    "Carpeta del Contenedor / Importación:",
+                    value=default_folder,
+                    help="Escribe la ruta de la carpeta donde están guardados los archivos de la importación (ej. data/IMP-182 o cualquier carpeta local)."
+                )
+            with col_f2:
+                if local_folders:
+                    sel_quick_folder = st.selectbox("Carpetas rápidas:", local_folders, help="Acceso directo a carpetas encontradas en data/")
+                    if st.button("Usar esta"):
+                        folder_input = f"data/{sel_quick_folder}"
+                        st.rerun()
+
+            p = Path(folder_input)
+            if p.exists() and p.is_dir():
+                all_excel_files = sorted([
+                    f.name for f in p.iterdir()
+                    if f.is_file() and f.suffix.lower() in [".xlsm", ".xlsx", ".xls"]
+                ])
+                if all_excel_files:
+                    st.caption(f"Archivos encontrados en `{folder_input}` ({len(all_excel_files)} libros Excel):")
+                    
+                    qc_default_idx = next((i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["calidad", "qc", "conteo"])), 0)
+                    cierre_default_idx = next((i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["cierre", "plantilla", "inprogress"])), min(1, len(all_excel_files)-1))
+                    
+                    col_sel1, col_sel2 = st.columns(2)
+                    with col_sel1:
+                        sel_qc_file = st.selectbox(
+                            "1. Archivo de Control de Calidad (Muelle / Curvas):",
+                            options=all_excel_files,
+                            index=qc_default_idx,
+                            key="sel_qc_local"
+                        )
+                    with col_sel2:
+                        sel_cierre_file = st.selectbox(
+                            "2. Plantilla de Cierre (Balance / Pedidos):",
+                            options=all_excel_files,
+                            index=cierre_default_idx,
+                            key="sel_cierre_local"
+                        )
+                        
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.button("🚀 Iniciar Auditoría de estos Archivos", type="primary", use_container_width=True):
+                        qc_full_path = p / sel_qc_file
+                        cierre_full_path = p / sel_cierre_file
+                        try:
+                            res = run_audit(str(qc_full_path), str(cierre_full_path))
+                            st.session_state.audit_data = res
+                            st.rerun()
+                        except Exception as e_run:
+                            st.error(f"Error al procesar archivos seleccionados: {e_run}")
+                else:
+                    st.warning(f"No se encontraron libros de Excel (.xlsm, .xlsx, .xls) dentro de '{folder_input}'.")
+            else:
+                st.error(f"La ruta '{folder_input}' no existe o no es un directorio válido.")
+
+        with tab_uploader:
+            uploaded_qc = st.file_uploader(
+                "1. Archivo de Control de Calidad (.xlsm / .xlsx):",
+                type=["xlsm", "xlsx"],
+                help="Libro generado en muelle con el conteo físico, bultos y curvas de tallas."
+            )
+            uploaded_cierre = st.file_uploader(
+                "2. Plantilla Oficial de Cierre (.xlsm / .xlsx):",
+                type=["xlsm", "xlsx"],
+                help="Plantilla corporativa donde se asientan los pedidos de SAP (PO 43 y Factura 41)."
+            )
+
+            if uploaded_qc and uploaded_cierre:
+                if st.button("🚀 Iniciar Auditoría con Archivos Subidos", type="primary", use_container_width=True):
+                    try:
+                        res = run_audit(uploaded_qc.getvalue(), uploaded_cierre.getvalue())
+                        st.session_state.audit_data = res
+                        st.rerun()
+                    except Exception as e_up:
+                        st.error(f"Error al procesar archivos: {e_up}")
+
+    with col_welcome_right:
+        st.markdown("### 🧭 Guía de Flujo Operativo")
+        st.markdown("""
+        **¿Cómo funciona la conciliación 3-Way?**
+        1. **Cruce Heurístico:** Vincula los materiales padre (*Prepacks*) con sus tallas hijas (*SKUs*) respetando la curva de compra.
+        2. **Detección de Faltantes & Averías:** Identifica cualquier descuadre entre lo facturado y lo recibido físicamente para generar la Nota de Crédito (NCR).
+        3. **Solución a diferencias artificiales:** La plantilla oficial suele mostrar diferencias negativas porque la macro inicial deja en blanco las columnas de muelle y packing list. Nuestra app genera las dos tiras exactas (**`AS:AT`** y **`AW:AY`**) para copiar y pegar en 10 segundos.
+        
+        ---
+        **Privacidad & Confidencialidad:**  
+        Esta herramienta funciona 100% en memoria local y no almacena datos en servidores externos.
+        """)
+
     st.stop()
+
+# ----------------- VISTA 2: DASHBOARD DE AUDITORÍA ACTIVA -----------------
+audit_res = st.session_state.audit_data
+items = audit_res["items"]
+summary = audit_res["summary"]
+boms = audit_res["boms"]
+qc_details = audit_res["qc_details"]
+validation = audit_res["validation"]
 
 # Header Banner (Agnostic & Corporate-Independent)
 st.markdown(f"""
@@ -313,7 +448,7 @@ with tab_inspector:
     with col_search2:
         part_filter_360 = st.selectbox(
             "Filtrar Contenedor:",
-            ["Todos", "Contenedor A (182-A)", "Contenedor B (182-B)"],
+            ["Todos", "Contenedor A (Parte 1)", "Contenedor B (Parte 2)"],
             index=0,
             help="Separa los materiales descargados en la primera parte de los que vienen en el segundo viaje.",
             key="f360_part"
@@ -322,9 +457,9 @@ with tab_inspector:
     q_norm = query_search.lower().strip()
     matching = []
     for it in items:
-        if "Contenedor A" in part_filter_360 and it.container_part != "A":
+        if "Parte 1" in part_filter_360 and it.container_part != "A":
             continue
-        if "Contenedor B" in part_filter_360 and it.container_part != "B":
+        if "Parte 2" in part_filter_360 and it.container_part != "B":
             continue
         if not q_norm or (
             q_norm in it.material_code.lower() or
@@ -353,7 +488,7 @@ with tab_inspector:
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Dual-theme status banner
+        # Status banner
         if selected_item.status == "LIMPIO":
             st.markdown(f'<div class="status-banner-clean">✅ ESTADO: LIMPIO — {selected_item.observations}</div>', unsafe_allow_html=True)
         elif selected_item.status == "PENDIENTE_PARTE_B":
@@ -430,13 +565,13 @@ with tab_inspector:
 
 # ----------------- TAB 1: TABLA SEMÁFORO -----------------
 with tab_reconcile:
-    st.subheader("🚦 Tabla Semáforo de Cierre (136 Estilos)")
+    st.subheader("🚦 Tabla Semáforo de Cierre (Estilos Verificados)")
     st.caption("🟢 Verde = Conciliación Limpia | 🔵 Azul = Pendiente Contenedor B | 🔴 Rojo = Faltante / Dañado Reclamable")
     
     col_t1, col_t2, col_t3 = st.columns([1.5, 1.5, 3])
     with col_t1:
-        part_table = st.selectbox("Filtrar Contenedor:", ["Todos", "Contenedor A (182-A)", "Contenedor B (182-B)"], index=0, key="t_part")
-        p_val = "ALL" if part_table == "Todos" else ("A" if "A" in part_table else "B")
+        part_table = st.selectbox("Filtrar Contenedor:", ["Todos", "Contenedor A (Parte 1)", "Contenedor B (Parte 2)"], index=0, key="t_part")
+        p_val = "ALL" if part_table == "Todos" else ("A" if "Parte 1" in part_table else "B")
     with col_t2:
         status_table = st.selectbox("Filtrar Estado:", ["Todos", "LIMPIO", "PENDIENTE_PARTE_B", "FALTANTE", "DAÑADO", "SOBRANTE"], index=0, key="t_stat")
         s_val = "ALL" if status_table == "Todos" else status_table
@@ -466,7 +601,6 @@ with tab_reconcile:
         })
     df_t = pd.DataFrame(t_rows)
     
-    # Conditional row highlighting with soft corporate tints
     def highlight_status(row):
         st_val = row["Estado"]
         if "LIMPIO" in st_val:
@@ -576,7 +710,7 @@ with tab_excel_export:
     st.markdown("""
     Este módulo resuelve el problema del llenado manual en la hoja **`CIERRE RECEP`**:
     - **Bloque 1:** Te genera las columnas principales (`A` hasta `BB`).
-    - **Bloque 2 (ZDESCARGA y PACKING LIST):** Te entrega las tiras de datos listas para copiar y pegar en las columnas **`AS:AT`** y **`AW:AY`**, **eliminando instantáneamente los `-51,926` de diferencia artificial** sin alterar las fórmulas del libro.
+    - **Bloque 2 (ZDESCARGA y PACKING LIST):** Te entrega las tiras de datos listas para copiar y pegar en las columnas **`AS:AT`** y **`AW:AY`**, **eliminando instantáneamente las diferencias negativas artificiales** sin alterar las fórmulas del libro.
     """)
     
     subtab_principal, subtab_descarga = st.tabs([
@@ -585,7 +719,7 @@ with tab_excel_export:
     ])
     
     with subtab_principal:
-        st.markdown("#### Columnas Principales de Conciliación (136 Estilos Verificados)")
+        st.markdown("#### Columnas Principales de Conciliación (Estilos Verificados)")
         st.caption("Copia o descarga la tabla ordenada según las 17 columnas que solicita el libro corporativo:")
         
         cierre_export_rows = []
@@ -631,7 +765,7 @@ with tab_excel_export:
     with subtab_descarga:
         st.markdown("#### ⚡ Cuadre Rápido de Muelle y Packing List (Columnas AS a AZ)")
         st.info("""
-        💡 **¿Por qué la plantilla oficial muestra `-51,926` de diferencia al inicio?**  
+        💡 **¿Por qué la plantilla oficial muestra diferencias negativas al inicio?**  
         Porque la macro de SAP solo llena los pedidos del sistema, dejando en blanco o en cero las columnas de **Muelle de Descarga** (`AS:AT`) y de **Packing List** (`AW:AY`). La fórmula `=AT13 - H13` calcula `0 - 888 = -888`.
         
         Para cuadrarlo en **10 segundos** sin escribir nada a mano:
@@ -639,7 +773,6 @@ with tab_excel_export:
         2. Copia la **Tira 2 (PACKING LIST)** y pégala en la celda **`AW13`** de tu Excel. *(La columna AZ de diferencia se calcula automáticamente a 0)*.
         """)
         
-        # Build Dataframe and TSV strips for AS:AT and AW:AY
         descarga_rows = []
         tsv_as_at_lines = []
         tsv_aw_ay_lines = []
