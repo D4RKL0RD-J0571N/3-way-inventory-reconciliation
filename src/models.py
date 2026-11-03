@@ -56,3 +56,6 @@ class ReconciliationSummary:
     total_sobrante_units: float
     total_ncr_amount: float
     status: str
+    theor_packages: float = 0.0
+    received_packages: float = 0.0
+    difference_packages: float = 0.0

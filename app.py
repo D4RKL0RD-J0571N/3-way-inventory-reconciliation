@@ -33,34 +33,34 @@ st.markdown("""
     /* Clean Header Toolbar & Hide Deploy Button */
     header[data-testid="stHeader"] {
         background: transparent !important;
-        height: 3.25rem !important;
+        height: 2.75rem !important;
     }
     div[data-testid="stAppDeployButton"] {
         display: none !important;
     }
 
-    /* Fullscreen & High-Resolution True Fluid Layout with Proper Top Clearance */
+    /* Fullscreen & High-Resolution True Fluid Layout with Guaranteed Top Clearance */
     .stMainBlockContainer,
     .block-container,
     div[data-testid="stMainBlockContainer"],
     div[data-testid="stAppViewBlockContainer"] {
-        padding-top: 3.75rem !important;
+        padding-top: 4.75rem !important;
         padding-bottom: 2.5rem !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
-        max-width: 98% !important;
-        width: 98% !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+        max-width: 99% !important;
+        width: 99% !important;
     }
 
     @media (min-width: 1200px) {
         .stMainBlockContainer,
         .block-container,
         div[data-testid="stMainBlockContainer"] {
-            padding-top: 3.75rem !important;
-            max-width: 98% !important;
-            width: 98% !important;
-            padding-left: 2.5rem !important;
-            padding-right: 2.5rem !important;
+            padding-top: 4.75rem !important;
+            max-width: 99% !important;
+            width: 99% !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
         }
     }
 
@@ -80,6 +80,35 @@ st.markdown("""
         border-radius: 6px 6px 0 0 !important;
         white-space: nowrap !important;
         transition: all 0.15s ease-in-out !important;
+    }
+
+    /* High-contrast Buttons with Explanatory Typography */
+    button[kind="primary"] {
+        background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%) !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        border: none !important;
+        border-radius: 6px !important;
+        padding: 8px 16px !important;
+        box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.4) !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+    button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #0369A1 0%, #075985 100%) !important;
+        box-shadow: 0 6px 12px -2px rgba(2, 132, 199, 0.5) !important;
+        transform: translateY(-1px);
+    }
+    button[kind="secondary"] {
+        background-color: #1E293B !important;
+        color: #F8FAFC !important;
+        font-weight: 600 !important;
+        border: 1px solid rgba(148, 163, 184, 0.3) !important;
+        border-radius: 6px !important;
+    }
+    button[kind="secondary"]:hover {
+        background-color: #334155 !important;
+        border-color: #38BDF8 !important;
+        color: #38BDF8 !important;
     }
 
     /* Metric Cards across top row */
@@ -217,24 +246,30 @@ if "audit_data" not in st.session_state:
 def run_audit(qc_content, cierre_content):
     if isinstance(qc_content, bytes):
         qc_file = io.BytesIO(qc_content)
+        qc_raw = qc_content
     else:
         qc_file = qc_content
+        qc_raw = Path(qc_content).read_bytes()
 
     if isinstance(cierre_content, bytes):
         cierre_file = io.BytesIO(cierre_content)
+        cierre_raw = cierre_content
     else:
         cierre_file = cierre_content
+        cierre_raw = Path(cierre_content).read_bytes()
 
     boms, qc_details = parse_quality_control_boms(qc_file)
-    items = parse_cierre_recepcion(cierre_file, boms, qc_details)
-    summary = compute_summary(items)
+    items, meta = parse_cierre_recepcion(cierre_file, boms, qc_details, return_meta=True)
+    summary = compute_summary(items, metadata=meta)
     validation = validate_all_items(items)
     return {
         "items": items,
         "summary": summary,
         "boms": boms,
         "qc_details": qc_details,
-        "validation": validation
+        "validation": validation,
+        "cierre_raw_bytes": cierre_raw,
+        "qc_raw_bytes": qc_raw
     }
 
 # Sidebar Navigation & Management
@@ -292,7 +327,7 @@ if st.session_state.audit_data is None:
             with col_f2:
                 if local_folders:
                     sel_quick_folder = st.selectbox("Carpetas rápidas:", local_folders, help="Acceso directo a carpetas encontradas en data/")
-                    if st.button("Usar esta"):
+                    if st.button("📂 Cargar Carpeta", help="Selecciona y examina los archivos de esta carpeta"):
                         folder_input = f"data/{sel_quick_folder}"
                         st.rerun()
 
@@ -300,13 +335,16 @@ if st.session_state.audit_data is None:
             if p.exists() and p.is_dir():
                 all_excel_files = sorted([
                     f.name for f in p.iterdir()
-                    if f.is_file() and f.suffix.lower() in [".xlsm", ".xlsx", ".xls"]
+                    if f.is_file() and f.suffix.lower() in [".xlsm", ".xlsx", ".xls"] and not f.name.startswith("~$")
                 ])
                 if all_excel_files:
                     st.caption(f"Archivos encontrados en `{folder_input}` ({len(all_excel_files)} libros Excel):")
                     
-                    qc_default_idx = next((i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["calidad", "qc", "conteo"])), 0)
-                    cierre_default_idx = next((i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["cierre", "plantilla", "inprogress"])), min(1, len(all_excel_files)-1))
+                    qc_candidates_idx = [i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["calidad", "qc", "conteo"])]
+                    cierre_candidates_idx = [i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["cierre", "plantilla", "inprogress", "recep"]) and "final" not in f.lower()]
+                    
+                    qc_default_idx = qc_candidates_idx[0] if qc_candidates_idx else 0
+                    cierre_default_idx = cierre_candidates_idx[0] if cierre_candidates_idx else min(1, len(all_excel_files)-1)
                     
                     col_sel1, col_sel2 = st.columns(2)
                     with col_sel1:
@@ -325,7 +363,7 @@ if st.session_state.audit_data is None:
                         )
                         
                     st.markdown("<br>", unsafe_allow_html=True)
-                    if st.button("🚀 Iniciar Auditoría de estos Archivos", type="primary", use_container_width=True):
+                    if st.button("🚀 Iniciar Auditoría y Conciliación 3-Way", type="primary", use_container_width=True, help="Cruza automáticamente el libro de Control de Calidad con la Plantilla de Cierre"):
                         qc_full_path = p / sel_qc_file
                         cierre_full_path = p / sel_cierre_file
                         try:
@@ -352,7 +390,7 @@ if st.session_state.audit_data is None:
             )
 
             if uploaded_qc and uploaded_cierre:
-                if st.button("🚀 Iniciar Auditoría con Archivos Subidos", type="primary", use_container_width=True):
+                if st.button("🚀 Procesar Archivos Subidos", type="primary", use_container_width=True, help="Ejecuta la conciliación 3-way en memoria con los dos archivos"):
                     try:
                         res = run_audit(uploaded_qc.getvalue(), uploaded_cierre.getvalue())
                         st.session_state.audit_data = res
@@ -391,8 +429,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Top KPIs Row (Expanded across full widescreen)
-k1, k2, k3, k4, k5 = st.columns(5)
+# Top KPIs Row (Expanded across full widescreen - 6 cards)
+k1, k2, k3, k4, k5, k6 = st.columns(6)
 with k1:
     st.metric(
         label="IMPORTACIÓN / FACTURA",
@@ -402,29 +440,50 @@ with k1:
     )
 with k2:
     st.metric(
-        label="MATERIALES PREPACK",
+        label="MATERIALES AUDITADOS",
         value=f"{summary.total_materials} Estilos",
         delta=f"{summary.part_a_materials} Cont. A | {summary.part_b_materials} Cont. B",
-        help="Total de códigos padre (Prepacks) solicitados en la orden de compra."
+        help="Total de códigos padre (Prepacks) o estilos solicitados en la orden de compra."
     )
 with k3:
     st.metric(
         label="UNIDADES FACTURADAS",
         value=f"{summary.total_ped_41_units:,.0f} UN",
+        delta="Declarado en DUA",
         help="Total de piezas individuales declaradas en la factura comercial y DUA."
     )
 with k4:
+    is_squared = (summary.total_ped_41_units == summary.total_received_units)
+    dif_units = summary.total_received_units - summary.total_ped_41_units
     st.metric(
-        label="UNIDADES FÍSICAS",
+        label="UNIDADES FÍSICAS (MUELLE)",
         value=f"{summary.total_received_units:,.0f} UN",
-        delta="Diferencia: 0 UN (Cuadrado)",
+        delta="Cuadrado Exacto (0 UN)" if is_squared else f"Dif: {dif_units:,.0f} UN",
+        delta_color="normal" if is_squared else "inverse",
         help="Total de prendas auditadas físicamente en muelle de descarga."
     )
 with k5:
+    pkg_rec = summary.received_packages
+    pkg_theor = summary.theor_packages
+    pkg_dif = summary.difference_packages
+    if pkg_rec > 0 or pkg_theor > 0:
+        pkg_val = f"{pkg_rec:,.0f} Bultos"
+        pkg_delta = f"Teóricos: {pkg_theor:,.0f} (Dif: {pkg_dif:,.0f})"
+    else:
+        pkg_val = "0 Bultos"
+        pkg_delta = "Verificado en muelle"
+    st.metric(
+        label="BULTOS / CARTONES",
+        value=pkg_val,
+        delta=pkg_delta,
+        delta_color="normal" if pkg_dif == 0 else "off",
+        help="Cuadre de bultos enteros y complementos según filas 5 y 6 de CIERRE RECEP."
+    )
+with k6:
     st.metric(
         label="NOTA DE CRÉDITO (NCR)",
         value=f"${summary.total_ncr_amount:,.2f} USD",
-        delta="Estado: LIMPIO" if summary.status == "LIMPIO" else "Con Reclamo Activo",
+        delta="LIMPIO (0 Discrepancias)" if summary.status == "LIMPIO" else "Con Reclamo Activo",
         delta_color="normal" if summary.status == "LIMPIO" else "inverse",
         help="Monto total reclamable al proveedor por faltantes o prendas con daño de fábrica."
     )
@@ -432,13 +491,14 @@ with k5:
 st.divider()
 
 # Navigation Tabs (Short, punchy, full width - zero cut-offs)
-tab_inspector, tab_reconcile, tab_curves, tab_clipboard, tab_excel_export, tab_checklist = st.tabs([
+tab_inspector, tab_reconcile, tab_curves, tab_clipboard, tab_excel_export, tab_checklist, tab_wiki = st.tabs([
     "🔍 Ficha 360° Material",
     "🚦 Tabla Semáforo (Cierre)",
     "📐 Explosión de Curvas",
     "⚡ Validador SAP (Pre-Macro)",
     "📋 Copiar a Excel Oficial",
-    "🖨️ Checklist Expediente"
+    "🖨️ Checklist Expediente",
+    "📖 Wiki y Guía de Uso (ES/EN)"
 ])
 
 # ----------------- TAB 0: FICHA 360 FLUIDA -----------------
@@ -788,11 +848,12 @@ with tab_excel_export:
         tsv_aw_ay_lines = []
         
         for i in items:
-            bultos_desc = int(i.quantity_inv_41_prk)
-            unidades_desc = int(i.received_real_units)
-            bultos_pl = int(i.quantity_inv_41_prk)
+            qc_item = qc_details.get(i.material_code, {})
+            bultos_desc = int(i.quantity_inv_41_prk) if i.quantity_inv_41_prk > 0 else int(qc_item.get('bultos', 0))
+            unidades_desc = int(qc_item.get('unidades', 0)) if qc_item.get('unidades', 0) > 0 else int(i.received_real_units)
+            bultos_pl = bultos_desc
             unidades_pl = int(i.quantity_inv_41_units)
-            curva_empaque = i.curve_total
+            curva_empaque = i.curve_total if i.curve_total > 0 else int(qc_item.get('curve', 1))
             
             descarga_rows.append({
                 "Fila Excel": len(descarga_rows) + 13,
@@ -835,18 +896,73 @@ with tab_excel_export:
                 help="Selecciona todo este texto, cópialo y pégalo directamente en la celda AW13 de la hoja CIERRE RECEP."
             )
             
-        excel_descarga_buf = io.BytesIO()
-        with pd.ExcelWriter(excel_descarga_buf, engine='openpyxl') as writer:
-            df_descarga.to_excel(writer, index=False, sheet_name="ZDESCARGA_Y_PACKING_LIST")
-        excel_descarga_buf.seek(0)
-        
-        st.download_button(
-            label="📥 Descargar Bloque ZDESCARGA y PACKING LIST (AS a AZ) (.xlsx)",
-            data=excel_descarga_buf,
-            file_name=f"{summary.import_id}_ZDESCARGA_PACKING_LIST_AS_AZ.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            help="Descarga un archivo Excel con las columnas auxiliares organizadas para copiar en bloque a las columnas AS:AZ de la plantilla oficial."
-        )
+        col_dl1, col_dl2 = st.columns(2)
+        with col_dl1:
+            excel_descarga_buf = io.BytesIO()
+            with pd.ExcelWriter(excel_descarga_buf, engine='openpyxl') as writer:
+                df_descarga.to_excel(writer, index=False, sheet_name="ZDESCARGA_Y_PACKING_LIST")
+            excel_descarga_buf.seek(0)
+            
+            st.download_button(
+                label="📥 Descargar Tiras de Cuadre (.xlsx)",
+                data=excel_descarga_buf,
+                file_name=f"{summary.import_id}_ZDESCARGA_PACKING_LIST_AS_AZ.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                help="Descarga un archivo Excel con las columnas auxiliares para copiar en bloque a las columnas AS:AZ."
+            )
+
+        with col_dl2:
+            # 1-Click .xlsm Generator with preserved VBA and repaired formulas
+            in_cierre_bytes = audit_res.get("cierre_raw_bytes")
+            if in_cierre_bytes:
+                try:
+                    in_wb_buf = io.BytesIO(in_cierre_bytes)
+                    wb_closure = openpyxl.load_workbook(in_wb_buf, keep_vba=True)
+                    ws_closure = wb_closure["CIERRE RECEP"]
+                    
+                    for idx_c, it_c in enumerate(items):
+                        row_c = 13 + idx_c
+                        qc_i = qc_details.get(it_c.material_code, {})
+                        b_desc = int(it_c.quantity_inv_41_prk) if it_c.quantity_inv_41_prk > 0 else int(qc_i.get('bultos', 0))
+                        u_desc = int(qc_i.get('unidades', 0)) if qc_i.get('unidades', 0) > 0 else int(it_c.received_real_units)
+                        b_pl = b_desc
+                        u_pl = int(it_c.quantity_inv_41_units)
+                        emp = it_c.curve_total if it_c.curve_total > 0 else int(qc_i.get('curve', 1))
+
+                        # Reparar fórmula de Col H si fue borrada o sobreescrita manualmente
+                        val_h = ws_closure.cell(row=row_c, column=8).value
+                        if val_h is None or not str(val_h).startswith("="):
+                            ws_closure.cell(row=row_c, column=8, value=f"=+G{row_c}-J{row_c}-N{row_c}-O{row_c}+L{row_c}+P{row_c}+Q{row_c}")
+
+                        ws_closure.cell(row=row_c, column=45, value=b_desc)
+                        ws_closure.cell(row=row_c, column=46, value=u_desc)
+                        
+                        val_au = ws_closure.cell(row=row_c, column=47).value
+                        if val_au is None or not str(val_au).startswith("="):
+                            ws_closure.cell(row=row_c, column=47, value=f"=+AT{row_c}-H{row_c}")
+
+                        ws_closure.cell(row=row_c, column=49, value=b_pl)
+                        ws_closure.cell(row=row_c, column=50, value=u_pl)
+                        ws_closure.cell(row=row_c, column=51, value=emp)
+                        
+                        val_az = ws_closure.cell(row=row_c, column=52).value
+                        if val_az is None or not str(val_az).startswith("="):
+                            ws_closure.cell(row=row_c, column=52, value=f"=+AX{row_c}-H{row_c}")
+
+                    out_xlsm_buf = io.BytesIO()
+                    wb_closure.save(out_xlsm_buf)
+                    out_xlsm_buf.seek(0)
+                    
+                    st.download_button(
+                        label="⚡ Descargar Libro Oficial Cuadrado (.xlsm con Macros VBA)",
+                        data=out_xlsm_buf,
+                        file_name=f"{summary.import_id}_Cierre_Oficial_Final.xlsm",
+                        mime="application/vnd.ms-excel.sheet.macroEnabled.12",
+                        type="primary",
+                        help="Genera directamente el libro oficial con las columnas AS:AZ llenas, fórmulas reparadas y macros intactas."
+                    )
+                except Exception as e_xlsm:
+                    st.caption(f"No fue posible autogenerar .xlsm: {e_xlsm}")
 
 # ----------------- TAB 5: CHECKLIST DE EXPEDIENTE INTERACTIVO -----------------
 with tab_checklist:
@@ -870,3 +986,59 @@ with tab_checklist:
         st.success("🎉 ¡Expediente físico 100% completo! Todos los documentos impresos y listos para grapar y entregar a revisión.")
     else:
         st.info(f"Progreso del expediente: {completed_checks} de 7 documentos verificados.")
+
+# ----------------- TAB 6: MANUAL & WIKI DE USUARIO (ES / EN) -----------------
+with tab_wiki:
+    st.subheader("📖 Manual Operativo & Wiki de Usuario (Tutorial)")
+    st.caption("Guía integral de uso, flujo paso a paso y resolución de casos difíciles:")
+
+    subtab_es, subtab_en = st.tabs([
+        "🇪🇸 Guía en Español (Flujo y Casos)",
+        "🇬🇧 English Guide & Documentation"
+    ])
+
+    with subtab_es:
+        st.markdown("""
+        ### 🎯 Flujo de Trabajo: Cómo Cerrar una Importación sin Estrés
+        
+        #### 1. ¿Cómo terminar de llenar la plantilla sin utilizar SAP?
+        Si los pedidos ya fueron descargados o pegados en la plantilla oficial de Excel:
+        - **No necesitas abrir SAP nuevamente.**
+        - Carga la plantilla de cierre y el libro de Control de Calidad en esta aplicación.
+        - La aplicación lee los pedidos de SAP directamente desde la plantilla de cierre (`CIERRE RECEP`), extrae el conteo físico real desde `Control de Calidad`, y efectúa la conciliación 3-way en memoria.
+        - Para asentar el cierre:
+          - **Opción A (1 Clic):** Ve a la pestaña **`📋 Copiar a Excel Oficial`** y haz clic en **`⚡ Descargar Libro Oficial Cuadrado (.xlsm)`**. Te descarga el archivo oficial con macros intactas y diferencias en 0.
+          - **Opción B (Manual Controlado):** Copia la **Tira 1 (ZDESCARGA)** en la celda `AS13` y la **Tira 2 (PACKING LIST)** en la celda `AW13` de tu Excel.
+        
+        #### 2. Caso de Estudio: ¿Por qué era tan difícil cerrar IMP-174?
+        El contenedor **`IMP-174`** presentó trampas típicas del trabajo manual en bodega:
+        1. **Desplazamiento de Columnas:** Un operador insertó una columna extra `"Tarima"` en la columna B de `CONTROL DATA`, desplazando todos los códigos SAP una posición a la derecha. Un `BUSCARV` tradicional de Excel falló al 100%.
+        2. **Código de Material Duplicado:** En la hoja `BASE DE DATOS`, la columna F duplicó el ID de lista (`24987`) en lugar del material SAP (`1456051`), el cual estaba en la columna I.
+        3. **Fórmulas Borradas en Columna H:** En `CIERRE RECEP`, las fórmulas de `=+G - J - N - O + L + P + Q` fueron borradas, y se ingresaron a mano cantidades en PRKs (como 81 o 37) en lugar de unidades (1,728 o 444), o se ingresó únicamente el alisto de A001 ignorando A004 (Resurtido).
+        
+        **Cómo lo resuelve el motor de ReconcileAI:**
+        - **Mapeo dinámico por nombres de encabezado:** Detecta automáticamente dónde está `Material`, `Descripción`, `Total Unidades` y `Bultos`, sin importar cuántas columnas inserte el operador.
+        - **Detección de código de material universal:** Extrae el código SAP desde la columna I de `BASE DE DATOS`.
+        - **Reconstrucción y reparación automática:** Restaura las fórmulas de diferencia y recibido físico en el libro oficial.
+        
+        #### 3. Privacidad & Confidencialidad
+        - Todo el procesamiento se ejecuta en tu navegador web y máquina local.
+        - Ningún dato de productos, órdenes de compra ni nombres de proveedores se envía a servidores externos ni a la nube.
+        """)
+
+    with subtab_en:
+        st.markdown("""
+        ### 🛡️ 3-Way Reconciliation Engine: Standard Operating Procedure (SOP)
+        
+        #### What is 3-Way Reconciliation?
+        A rigorous audit matching three critical legs of supply chain data:
+        1. **Purchase Orders (PO 43):** Goods requested from international suppliers.
+        2. **Nationalization Invoice (Order 41 / Customs DUA):** Quantities officially declared and billed.
+        3. **Dock Physical Receipts (Control de Calidad):** Actual cartons, prepacks, and loose units unloaded and scanned at warehouse docks.
+        
+        #### Key Features:
+        - **Prepack BOM Curve Explosion:** Automatically expands parent assortment codes into child SKU size breakdowns (e.g., S:1, M:2, L:2, XL:1).
+        - **Dynamic Header Resolution:** Tolerant to warehouse operators inserting columns (e.g. pallet tags, bin locations) or duplicate IDs.
+        - **Formula Self-Healing:** Detects and restores overwritten or cleared Excel formulas in `.xlsm` macro templates while preserving VBA code intact.
+        - **Zero Cloud Leakage:** 100% in-memory processing on local machine.
+        """)

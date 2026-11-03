@@ -26,28 +26,25 @@ def list_available_local_imports() -> List[str]:
 def resolve_local_import_files(import_id: str) -> Tuple[Optional[Path], Optional[Path]]:
     """
     Resolves the Quality Control and Closure template files for a given import ID.
-    Looks for common naming conventions without hardcoding rigid paths.
+    Uses case-insensitive and pattern-tolerant matching across all Excel files.
     """
     imp_dir = DATA_DIR / import_id
     if not imp_dir.exists():
         return None, None
     
-    # Heuristic matching for Quality Control file
-    qc_candidates = (
-        list(imp_dir.glob("*Control*calidad*.xlsm")) +
-        list(imp_dir.glob("*Control*Calidad*.xlsx")) +
-        list(imp_dir.glob("*QC*.xlsm")) +
-        list(imp_dir.glob("*QC*.xlsx"))
-    )
+    files = [f for f in imp_dir.iterdir() if f.suffix.lower() in [".xlsm", ".xlsx", ".xls"]]
+    qc_file = None
+    cierre_file = None
     
-    # Heuristic matching for Closure / Macro template file
-    cierre_candidates = (
-        list(imp_dir.glob("*inprogress*.xlsm")) +
-        list(imp_dir.glob("*Cierre*.xlsm")) +
-        list(imp_dir.glob("*Plantilla*.xlsm")) +
-        list(imp_dir.glob("*Cierre*.xlsx"))
-    )
-    
-    qc_file = qc_candidates[0] if qc_candidates else None
-    cierre_file = cierre_candidates[0] if cierre_candidates else None
+    for f in sorted(files, key=lambda x: len(x.name)):
+        f_low = f.name.lower()
+        if "final" in f_low or "resultado" in f_low:
+            continue
+        if "control" in f_low and "calidad" in f_low:
+            qc_file = f
+        elif "qc" in f_low and not qc_file:
+            qc_file = f
+        elif any(k in f_low for k in ["progress", "cierre", "plantilla", "recep"]):
+            cierre_file = f
+            
     return qc_file, cierre_file

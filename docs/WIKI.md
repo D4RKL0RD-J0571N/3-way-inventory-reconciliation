@@ -67,45 +67,57 @@ Antes de pegar cualquier tabla de SAP en la plantilla de Excel:
 
 ---
 
-### Paso 5: El Cuadre de Muelle en Excel (Solución a los `-51,926`)
+### Paso 5: El Cuadre de Muelle en Excel (Solución a los `-51,926` y a Cierres sin SAP)
 En la plantilla oficial de Presidencia (`CIERRE RECEP`), la macro inicial deja vacías las columnas de muelle y packing list, provocando que las fórmulas de diferencia calculen `0 - 888 = -888`, acumulando miles de prendas negativas.
 
-**Para solucionarlo en 10 segundos:**
-1. Ve a la pestaña **`📋 Copiar a Excel Oficial`** y selecciona la sub-pestaña **`📦 Bloque 2: ZDESCARGA y PACKING LIST`**.
-2. **Tira 1 (ZDESCARGA - Cols AS y AT):**
-   - Haz clic en el recuadro de la Tira 1, presiona `Ctrl + A` y luego `Ctrl + C`.
-   - Ve a tu Excel oficial, haz clic en la celda **`AS13`** y presiona `Ctrl + V`.
-   - *La columna AU calcula automáticamente diferencia cero.*
-3. **Tira 2 (PACKING LIST - Cols AW, AX y AY):**
-   - Haz clic en el recuadro de la Tira 2, presiona `Ctrl + A` y luego `Ctrl + C`.
-   - Ve a tu Excel oficial, haz clic en la celda **`AW13`** y presiona `Ctrl + V`.
-   - *La columna AZ calcula automáticamente diferencia cero.*
-4. **Resultado:** La fila totalizadora de Excel pasa inmediatamente de `-51,926` a **`0 DIFERENCIAS (100% Cuadrado)`**.
+**¿Cómo terminar de llenar la plantilla sin volver a usar SAP?**
+Una vez que pegaste los datos iniciales de SAP en la plantilla, **no necesitas abrir SAP nunca más**:
+- **Opción 1 (1 Clic — Automática):** En la pestaña **`📋 Copiar a Excel Oficial`**, haz clic en el botón azul **`⚡ Descargar Libro Oficial Cuadrado (.xlsm con Macros VBA)`**. La app genera el libro corporativo directamente en memoria, escribe las columnas `AS:AT` y `AW:AY`, repara cualquier fórmula dañada y preserva intactas todas las macros VBA.
+- **Opción 2 (Manual Controlada — 10 segundos):**
+  1. Ve a la pestaña **`📋 Copiar a Excel Oficial`** y selecciona la sub-pestaña **`📦 Bloque 2: ZDESCARGA y PACKING LIST`**.
+  2. **Tira 1 (ZDESCARGA - Cols AS y AT):** Haz clic en el recuadro de la Tira 1, presiona `Ctrl + A` y luego `Ctrl + C`. Pégalo en la celda **`AS13`** de tu Excel. *(La columna AU de diferencia calcula 0)*.
+  3. **Tira 2 (PACKING LIST - Cols AW, AX y AY):** Haz clic en el recuadro de la Tira 2, presiona `Ctrl + A` y luego `Ctrl + C`. Pégalo en la celda **`AW13`** de tu Excel. *(La columna AZ de diferencia calcula 0)*.
+- **Resultado:** La fila totalizadora de Excel pasa inmediatamente a **`0 DIFERENCIAS (100% Cuadrado)`**.
 
 ---
 
 ### Paso 6: Checklist de Impresión Física (Expediente Oficial)
 Para armar la carpeta física en el orden reglamentario exigido por auditoría:
 1. [x] **Portada de Proveedor** (Hoja `PORTADA`).
-2. [x] **Datos Generales** (Hoja `DATOS GENERALES` con totales de PO 43 y Factura 41).
-3. [x] **Carátula del Cierre Oficial** (Hoja `CIERRE RECEP`).
-4. [x] **Formulario de Nota de Crédito** (Hoja `PARA N.C RECEP.`).
+2. [x] **Datos Generales** (Hoja `DATOS GENERALES` con totales de PO 43, Factura 41 y bultos).
+3. [x] **Carátula del Cierre Oficial** (Hoja `CIERRE RECEP` con diferencias en 0).
+4. [x] **Formulario de Nota de Crédito** (Hoja `PARA N.C RECEP.` — $0.00 si está limpio).
 5. [x] **Respaldo de Ingreso ERP** (Impresión de `MB51` Mov 101/102).
 6. [x] **Lista de Empaque de Bultos** (Hoja `Bultos`).
 7. [x] **DUA** (Documentación Aduanera sellada con peso y valor CIF).
 
 ---
 
-## ❓ 3. Preguntas Frecuentes & Casos Borde (FAQ)
+## 🔎 3. Caso de Estudio: ¿Por qué era tan difícil cerrar IMP-174?
+El contenedor **`IMP-174`** (61,607 unidades) representaba uno de los casos más frustrantes para los supervisores en bodega por una combinación de 4 trampas humanas:
+1. **La Trampa de las Columnas Desplazadas:** En `Control Calidad.xlsm`, un operador insertó una columna `"Tarima"` en la columna B de `CONTROL DATA`. Esto desplazó todas las columnas una posición a la derecha. Cualquier fórmula manual de `BUSCARV` en Excel apuntó a la columna equivocada (`Material Proveedor` en vez de `Material SAP`), causando que el 100% de los códigos dieran `#N/A`.
+2. **ID de Material Duplicado en `BASE DE DATOS`:** En la hoja de curvas, la columna F tenía duplicado el ID de lista (`24987`) en lugar del material SAP (`1456051`), el cual estaba en la columna I.
+3. **Fórmulas Borradas en Columna H:** En `CIERRE RECEP`, alguien borró las fórmulas oficiales (`=+G - J - N - O + L + P + Q`) y tipeó cantidades parciales o en bultos (como ingresar `81` en vez de `1,728`).
+4. **La Trampa del Alisto Multi-Almacén (A001 vs A004):** En materiales como el `1455686002`, 444 prendas iban para `A001` (Almacén Central) y 372 para `A004` (Resurtido), totalizando 816 UN. El operador sólo copió la columna de A001, dejando 372 unidades aparentemente "desaparecidas" cuando en realidad estaban en resurtido.
+
+**Cómo lo resolvió el motor:**
+- **Mapeo Heurístico:** Detecta los encabezados dinámicamente sin importar si se insertan columnas de tarimas o ubicaciones.
+- **Detección Universal:** Lee la columna I en `BASE DE DATOS` para asociar los 44 Prepacks con sus curvas reales (ej. 1-2-2-1).
+- **Consolidación Total:** Suma todos los destinos (`A001 + A004 + Especial`) para cuadrar exactamente las 61,607 unidades con 0 faltantes.
+
+---
+
+## ❓ 4. Preguntas Frecuentes & Casos Borde (FAQ)
 
 ### ¿Qué pasa si el contenedor viene dividido (Parte A vs Parte B)?
 En importaciones con múltiples contenedores o entregas diferidas, la factura comercial suele declarar el 100% de los materiales, pero el muelle solo descarga la primera parte.
 - ReconcileAI clasifica automáticamente los ítems descargados (`Parte A`) y marca los restantes como `PENDIENTE_PARTE_B`.
 - De esta forma, evitas levantar reclamos falsos de notas de crédito por prendas que simplemente vienen en el segundo viaje.
 
-### ¿Qué pasa si los proveedores usan formatos diferentes de Packing List?
-Los proveedores de China, EE. UU. o Panamá suelen enviar formatos de lista de empaque completamente diferentes.  
-**Solución arquitectónica:** ReconcileAI no intenta descifrar plantillas extranjeras impredecibles; se ancla en los registros oficiales estandarizados del ERP (`ME80FN`) y en el reporte interno del equipo de muelle (`Control de Calidad`), garantizando compatibilidad universal sin importar el origen de la mercancía.
+### ¿Cómo se concilian los Bultos y Cartones para Presidencia?
+Presidencia revisa las filas 5 y 6 de `CIERRE RECEP` antes de mirar las unidades.
+- ReconcileAI compara los **Bultos Teóricos del Packing List** contra los **Bultos Recibidos en Muelle**.
+- Si un contenedor de 767 bultos se consolidó en 713 bultos físicos (diferencia de -54 bultos por empaque), el sistema lo refleja con claridad para justificar la diferencia de volumen sin inconsistencias de prendas.
 
 ---
 ---
@@ -119,6 +131,13 @@ ReconcileAI is a safety copilot designed to eliminate human calculation fatigue 
 1. **SAP GUI Data Export:** Copy ALV grids from `ME80FN` (Purchasing/Invoice) and `MB51` (Goods movements 101/102).
 2. **Pre-Macro Clipboard Validation:** Paste raw SAP data into the Pre-Macro validator to neutralize scientific notation (`1.45E+06`) and verify column delimiters.
 3. **File Selection:** Open the web app, browse local directories or drag-and-drop the Quality Control and Closure spreadsheets.
-4. **Audit Dashboard:** Inspect discrepancies via the color-coded semáforo table or the 360° Material Inspector card.
-5. **Macro Squaring Strips (`AS:AZ`):** Copy the pre-formatted TSV strips for Dock Receiving (`AS:AT`) and Packing List (`AW:AY`) and paste directly into cells `AS13` and `AW13` of the Excel closure sheet to resolve artificial negative variances in seconds.
+4. **Audit Dashboard:** Inspect discrepancies via the color-coded semáforo table, Carton/Package cards, or the 360° Material Inspector card.
+5. **Macro Squaring Strips (`AS:AZ`) or 1-Click `.xlsm` Export:**
+   - **Method A:** Click "Download Official Closure (.xlsm with VBA)" to get a healed official file with 0 variances.
+   - **Method B:** Copy pre-formatted TSV strips (`AS:AT` and `AW:AY`) and paste into cells `AS13` and `AW13` of Excel.
 6. **Physical Binder Assembly:** Follow the 7-step checklist to prepare the official physical closure binder.
+
+## 3. Case Study: Solving Difficult Shipments (IMP-174)
+- **Column Shift Immunity:** Automatically locates SAP codes, descriptions, and totals regardless of inserted warehouse columns (e.g. pallet IDs).
+- **Multi-Warehouse Allocation:** Accurately reconciles split receipts (Distribution Center A001 vs Replenishment A004).
+- **Self-Healing Formulas:** Automatically restores deleted or overwritten formulas in official macro templates.
