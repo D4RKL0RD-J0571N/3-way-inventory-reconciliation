@@ -396,9 +396,10 @@ if st.session_state.audit_data is None:
                                 expanded=True
                             ) as status_box:
                                 st.write("📐 " + ("Extrayendo curvas de muelle y listas de materiales (BOMs)..." if current_lang == "es" else "Extracting dock curves and Bills of Materials (BOMs)..."))
-                                render_skeleton_dashboard()
                                 try:
                                     res = run_audit(str(qc_full_path), str(cierre_full_path))
+                                    st.write("🔍 " + ("Cruzando compras (PO 43), facturación (41) y muelle..." if current_lang == "es" else "Cross-referencing POs, invoice and dock counts..."))
+                                    st.write("🛡️ " + ("Verificando notas de crédito y balances contables..." if current_lang == "es" else "Validating credit notes and accounting balances..."))
                                     status_box.update(
                                         label="✅ " + ("¡Auditoría 3-Way completada con éxito!" if current_lang == "es" else "3-Way audit completed successfully!"),
                                         state="complete",
@@ -433,9 +434,10 @@ if st.session_state.audit_data is None:
                             expanded=True
                         ) as status_box:
                             st.write("📐 " + ("Extrayendo curvas y listas de materiales (BOMs)..." if current_lang == "es" else "Extracting curves and Bills of Materials (BOMs)..."))
-                            render_skeleton_dashboard()
                             try:
                                 res = run_audit(uploaded_qc.getvalue(), uploaded_cierre.getvalue())
+                                st.write("🔍 " + ("Cruzando compras, facturación y muelle..." if current_lang == "es" else "Cross-referencing POs, invoice and dock counts..."))
+                                st.write("🛡️ " + ("Verificando notas de crédito y balances contables..." if current_lang == "es" else "Validating credit notes and accounting balances..."))
                                 status_box.update(
                                     label="✅ " + ("¡Auditoría 3-Way completada con éxito!" if current_lang == "es" else "3-Way audit completed successfully!"),
                                     state="complete",

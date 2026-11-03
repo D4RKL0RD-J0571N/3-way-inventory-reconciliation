@@ -27,52 +27,52 @@ SKELETON_CSS = """
 }
 
 .skeleton-kpi-card {
-    height: 82px;
+    height: 62px;
     background-color: #1E293B;
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 12px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
 }
 
 .skeleton-kpi-title {
-    width: 60%;
-    height: 12px;
-    margin-bottom: 8px;
+    width: 50%;
+    height: 10px;
+    margin-bottom: 4px;
 }
 
 .skeleton-kpi-value {
-    width: 85%;
-    height: 24px;
-    margin-bottom: 6px;
+    width: 75%;
+    height: 18px;
+    margin-bottom: 4px;
 }
 
 .skeleton-kpi-sub {
-    width: 45%;
-    height: 10px;
+    width: 40%;
+    height: 8px;
 }
 
 .skeleton-table-container {
     background-color: #1E293B;
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 8px;
-    padding: 16px;
-    margin-top: 14px;
+    padding: 12px;
+    margin-top: 8px;
 }
 
 .skeleton-table-header {
-    height: 34px;
+    height: 24px;
     width: 100%;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     border-radius: 4px;
 }
 
 .skeleton-table-row {
-    height: 28px;
-    margin-bottom: 8px;
+    height: 18px;
+    margin-bottom: 6px;
     border-radius: 4px;
 }
 
@@ -108,7 +108,7 @@ def render_skeleton_kpis() -> None:
             """, unsafe_allow_html=True)
 
 
-def render_skeleton_table(rows: int = 6) -> None:
+def render_skeleton_table(rows: int = 3) -> None:
     """Renders a shimmering placeholder table to indicate data loading."""
     row_html = "".join([
         f'<div class="skeleton-shimmer skeleton-table-row" style="width: {95 - (i % 3) * 8}%;"></div>'
@@ -123,17 +123,16 @@ def render_skeleton_table(rows: int = 6) -> None:
 
 
 def render_skeleton_dashboard() -> None:
-    """Renders full dashboard skeleton (KPIs + Tabs + Table)."""
+    """Renders a compact dashboard skeleton (KPIs + Tabs + Table)."""
     render_skeleton_kpis()
     st.markdown("""
-    <div style="display: flex; gap: 8px; margin: 18px 0;">
-        <div class="skeleton-shimmer" style="height: 36px; width: 140px;"></div>
-        <div class="skeleton-shimmer" style="height: 36px; width: 160px;"></div>
-        <div class="skeleton-shimmer" style="height: 36px; width: 140px;"></div>
-        <div class="skeleton-shimmer" style="height: 36px; width: 150px;"></div>
+    <div style="display: flex; gap: 8px; margin: 12px 0;">
+        <div class="skeleton-shimmer" style="height: 28px; width: 120px;"></div>
+        <div class="skeleton-shimmer" style="height: 28px; width: 140px;"></div>
+        <div class="skeleton-shimmer" style="height: 28px; width: 120px;"></div>
     </div>
     """, unsafe_allow_html=True)
-    render_skeleton_table(rows=7)
+    render_skeleton_table(rows=3)
 
 
 def paginate_dataframe(
