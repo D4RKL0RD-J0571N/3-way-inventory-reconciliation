@@ -30,7 +30,7 @@ flowchart LR
    - Transacción: `ME80FN` filtrando por el documento `41...`.
 3. **Ingresos Físicos a Almacén:**
    - Transacción: `MB51`.
-   - Filtros: Centro `C001`, Clases de movimiento `101` y `102` (para netear devoluciones).
+   - Filtros: Centro Logístico / Almacén de Recepción, Clases de movimiento `101` y `102` (para netear devoluciones).
 
 ---
 

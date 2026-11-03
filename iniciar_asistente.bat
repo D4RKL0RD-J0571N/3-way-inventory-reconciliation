@@ -1,8 +1,8 @@
 @echo off
-title Ekono - Asistente de Conciliacion 3-Way
+title ReconcileAI - Asistente de Conciliacion 3-Way
 echo ======================================================================
-echo   Cadena de Tiendas Ekono / Almacema S.A. - Centro de Distribucion C001
-echo   Iniciando Asistente de Conciliacion de Inventarios 3-Way (IMP-182)
+echo   ReconcileAI - Copiloto Universal de Conciliacion 3-Way
+echo   Auditoria Inteligente de Inventarios y Recepcion de Mercaderia
 echo ======================================================================
 echo.
 echo Abriendo la aplicacion interactiva en tu navegador web local...

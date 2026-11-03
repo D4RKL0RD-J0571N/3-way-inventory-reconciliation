@@ -28,5 +28,6 @@ data/
 *.xlsx
 *.xls
 *.csv
+*.docx
 docs/drafts/
 
