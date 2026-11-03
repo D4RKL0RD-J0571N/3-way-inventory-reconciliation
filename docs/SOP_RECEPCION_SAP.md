@@ -2,7 +2,8 @@
 
 **Estado:** Documento Maestro Integrado  
 **Propósito:** Estandarizar la secuencia operativa completa desde la llegada del contenedor y consultas en SAP GUI hasta la auditoría física en muelle y el cuadre administrativo final.  
-**Arquitectura:** Agnóstica, aplicable a cualquier Centro de Distribución y multi-proveedor.
+**Arquitectura:** Agnóstica, aplicable a cualquier Centro de Distribución y multi-proveedor.  
+**Documentos Relacionados:** [**Wiki Operativa & Guía**](WIKI.md) | [**Notas de la Versión Demo v1.0.0**](RELEASE_NOTES_DEMO.md) | [**README**](../README.es.md)
 
 ---
 
@@ -29,7 +30,7 @@ flowchart TD
     subgraph S4["4. SAP EWM & EXPEDIENTE FÍSICO"]
         L["VL31N / RFUI: Entrega Entrante y Tareas de Almacén"]
         K --> M["Expediente Físico Impreso (7 Documentos)"]
-        M --> N["Entrega a Jefatura / Presidencia"]
+        M --> N["Entrega a Jefatura y Auditoría Financiera"]
     end
 
     S1 --> S2 --> S3 --> S4
@@ -83,7 +84,7 @@ flowchart TD
 ### 3.1. Conteo de Bultos: Enteros vs. Complementos
 1. **Bultos Enteros:** Cajas cerradas de fábrica con la curva completa de tallas intacta.
 2. **Bultos Complementos:** Cajas con unidades de ajuste, muestras o saldos sueltos.
-3. **El Cuadre de Presidencia:**  
+3. **El Cuadre de Bultos en Auditoría:**  
    Se compara:
    $$\text{Diferencia de Bultos} = \text{Bultos Recibidos en Muelle} - \text{Bultos Teóricos del Packing List}$$
    *Una diferencia de bultos negativa (ej. -54) suele explicarse por consolidación de cajas en fábrica, siempre que las unidades coincidan al 100%.*

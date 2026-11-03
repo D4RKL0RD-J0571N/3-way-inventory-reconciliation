@@ -1,12 +1,26 @@
 # 📖 Wiki Operativa & Guía de Inicio (Tutorial Paso a Paso)
 ### ReconcileAI — Copiloto Universal de Conciliación 3-Way & Recepción
 
-[**English Version Below / Versión en Inglés al Final**](#-english-operational-wiki--tutorial)
+[**English Version Below / Versión en Inglés al Final**](#-english-operational-wiki--tutorial) | [**Notas de la Versión (Demo v1.0.0)**](RELEASE_NOTES_DEMO.md) | [**SOP Recepción SAP**](SOP_RECEPCION_SAP.md)
 
 ---
 
-## 📌 1. Filosofía Operativa: El Copiloto de Precisión
-Esta herramienta fue diseñada con un principio fundamental: **no busca eliminar el uso de Excel ni automatizar tareas que resten visibilidad al operador**. Su objetivo es actuar como un **asistente de pre-validación y cálculo matemático instantáneo**, eliminando el estrés del cruce manual, previniendo errores de notación científica y asegurando que los números presentados a Presidencia y a los dueños estén 100% cuadrados.
+## 🌟 1. Versión Demo Portable v1.0.0 (Distribución Independiente)
+
+Para facilitar la evaluación de la herramienta en cualquier computadora de oficina o bodega:
+1. **Archivo de Distribución:** `dist/ReconcileAI_Portable.zip` (134 MB).
+2. **Cero Instalación:** No requiere instalar Python ni componentes adicionales.
+3. **Cero Permisos Especiales:** Funciona como usuario estándar en Windows 10 y Windows 11 sin pedir credenciales de administrador.
+4. **Instrucciones de Uso Rápido:**
+   - Descomprime el archivo `.zip` en tu equipo o memoria extraíble.
+   - Haz doble clic en **`ReconcileAI.exe`** (o en **`INICIAR_RECONCILEAI.bat`**).
+   - Se abrirá automáticamente tu navegador web en `http://localhost:8501`.
+   - Coloca tus carpetas de importaciones (ej. `IMP-182` o `IMP-174`) dentro de la carpeta `data/` o búscalas con el explorador integrado.
+
+---
+
+## 📌 2. Filosofía Operativa: El Copiloto de Precisión
+Esta herramienta fue diseñada con un principio fundamental: **no busca eliminar el uso de Excel ni automatizar tareas que resten visibilidad al operador**. Su objetivo es actuar como un **asistente de pre-validación y cálculo matemático instantáneo**, eliminando el estrés del cruce manual, previniendo errores de notación científica y asegurando que los números presentados a Gerencia y Auditoría estén 100% cuadrados.
 
 ```mermaid
 flowchart LR
@@ -19,7 +33,21 @@ flowchart LR
 
 ---
 
-## 🚀 2. Tutorial Paso a Paso: Flujo de Trabajo Completo
+## 💼 3. Guía para Presentar una Demostración (Demo de 5 Minutos a Jefatura)
+
+Si deseas presentar ReconcileAI a tu jefatura, supervisores o compañeros de equipo, sigue este guión práctico de 5 minutos:
+
+| Minuto | Acción en Pantalla | Qué Explicar al Evaluador / Jefatura |
+| :---: | :--- | :--- |
+| **01** | Mostrar el Excel oficial con diferencias en rojo (`-51,926 UN`). | *"Nuestra macro oficial deja vacías las columnas de muelle y packing list, obligando a digitar cientos de números a mano celda por celda y arriesgando errores humanos."* |
+| **02** | Abrir ReconcileAI y seleccionar la carpeta del contenedor. | *"Con ReconcileAI, simplemente seleccionamos la carpeta de la importación o arrastramos los archivos. El sistema lee en 1 segundo ambos libros sin modificar el disco."* |
+| **03** | Mostrar la **Barra de 6 KPIs** y la **Tabla Semáforo**. | *"El sistema identifica inmediatamente los bultos teóricos vs físicos, clasifica los materiales cuadrados en verde y detecta si hay entregas diferidas (Parte B) o faltantes reales."* |
+| **04** | Abrir la **Ficha 360° del Material** y buscar un estilo. | *"En una sola tarjeta vemos compras, factura, físico, costos y la explosión matemática de tallas hijas sin tener que armar fórmulas de BUSCARV."* |
+| **05** | Pestaña **`Copiar a Excel Oficial`** y botón de descarga. | *"Para cerrar el expediente: o descargamos el libro .xlsm ya cuadrado con 1 clic en memoria, o copiamos las dos tiras preformateadas en 10 segundos. Las diferencias bajan a cero de inmediato."* |
+
+---
+
+## 🚀 4. Tutorial Paso a Paso: Flujo de Trabajo Completo
 
 ### Paso 1: Extracción Segura desde SAP GUI
 1. **Pedidos de Compra (PO 43):**
@@ -68,7 +96,7 @@ Antes de pegar cualquier tabla de SAP en la plantilla de Excel:
 ---
 
 ### Paso 5: El Cuadre de Muelle en Excel (Solución a los `-51,926` y a Cierres sin SAP)
-En la plantilla oficial de Presidencia (`CIERRE RECEP`), la macro inicial deja vacías las columnas de muelle y packing list, provocando que las fórmulas de diferencia calculen `0 - 888 = -888`, acumulando miles de prendas negativas.
+En la plantilla oficial de Cierre Administrativo (`CIERRE RECEP`), la macro inicial deja vacías las columnas de muelle y packing list, provocando que las fórmulas de diferencia calculen `0 - 888 = -888`, acumulando miles de prendas negativas.
 
 **¿Cómo terminar de llenar la plantilla sin volver a usar SAP?**
 Una vez que pegaste los datos iniciales de SAP en la plantilla, **no necesitas abrir SAP nunca más**:
@@ -93,7 +121,7 @@ Para armar la carpeta física en el orden reglamentario exigido por auditoría:
 
 ---
 
-## 🔎 3. Caso de Estudio: ¿Por qué era tan difícil cerrar IMP-174?
+## 🔎 5. Caso de Estudio: ¿Por qué era tan difícil cerrar IMP-174?
 El contenedor **`IMP-174`** (61,607 unidades) representaba uno de los casos más frustrantes para los supervisores en bodega por una combinación de 4 trampas humanas:
 1. **La Trampa de las Columnas Desplazadas:** En `Control Calidad.xlsm`, un operador insertó una columna `"Tarima"` en la columna B de `CONTROL DATA`. Esto desplazó todas las columnas una posición a la derecha. Cualquier fórmula manual de `BUSCARV` en Excel apuntó a la columna equivocada (`Material Proveedor` en vez de `Material SAP`), causando que el 100% de los códigos dieran `#N/A`.
 2. **ID de Material Duplicado en `BASE DE DATOS`:** En la hoja de curvas, la columna F tenía duplicado el ID de lista (`24987`) en lugar del material SAP (`1456051`), el cual estaba en la columna I.
@@ -107,15 +135,15 @@ El contenedor **`IMP-174`** (61,607 unidades) representaba uno de los casos más
 
 ---
 
-## ❓ 4. Preguntas Frecuentes & Casos Borde (FAQ)
+## ❓ 6. Preguntas Frecuentes & Casos Borde (FAQ)
 
 ### ¿Qué pasa si el contenedor viene dividido (Parte A vs Parte B)?
 En importaciones con múltiples contenedores o entregas diferidas, la factura comercial suele declarar el 100% de los materiales, pero el muelle solo descarga la primera parte.
 - ReconcileAI clasifica automáticamente los ítems descargados (`Parte A`) y marca los restantes como `PENDIENTE_PARTE_B`.
 - De esta forma, evitas levantar reclamos falsos de notas de crédito por prendas que simplemente vienen en el segundo viaje.
 
-### ¿Cómo se concilian los Bultos y Cartones para Presidencia?
-Presidencia revisa las filas 5 y 6 de `CIERRE RECEP` antes de mirar las unidades.
+### ¿Cómo se concilian los Bultos y Cartones para Auditoría y Gerencia?
+Auditoría y Gerencia revisan las filas 5 y 6 de `CIERRE RECEP` antes de mirar las unidades.
 - ReconcileAI compara los **Bultos Teóricos del Packing List** contra los **Bultos Recibidos en Muelle**.
 - Si un contenedor de 767 bultos se consolidó en 713 bultos físicos (diferencia de -54 bultos por empaque), el sistema lo refleja con claridad para justificar la diferencia de volumen sin inconsistencias de prendas.
 
@@ -124,20 +152,19 @@ Presidencia revisa las filas 5 y 6 de `CIERRE RECEP` antes de mirar las unidades
 
 # 📖 English Operational Wiki & Tutorial
 
-## 1. Operating Concept
-ReconcileAI is a safety copilot designed to eliminate human calculation fatigue during 3-Way inventory reconciliation without disrupting established corporate spreadsheet workflows.
+## 1. Demo Edition v1.0.0 (Standalone Portable)
+- **Zero Python Installation:** Runs standalone from `ReconcileAI_Portable.zip` on any Windows 10/11 system.
+- **USB & Offline Friendly:** Unpack anywhere, double-click `ReconcileAI.exe`, and audit containers immediately.
+- **Enterprise Privacy:** Zero sensitive data baked in. Runs 100% in local memory.
 
-## 2. Fast Workflow Steps
-1. **SAP GUI Data Export:** Copy ALV grids from `ME80FN` (Purchasing/Invoice) and `MB51` (Goods movements 101/102).
-2. **Pre-Macro Clipboard Validation:** Paste raw SAP data into the Pre-Macro validator to neutralize scientific notation (`1.45E+06`) and verify column delimiters.
-3. **File Selection:** Open the web app, browse local directories or drag-and-drop the Quality Control and Closure spreadsheets.
-4. **Audit Dashboard:** Inspect discrepancies via the color-coded semáforo table, Carton/Package cards, or the 360° Material Inspector card.
-5. **Macro Squaring Strips (`AS:AZ`) or 1-Click `.xlsm` Export:**
-   - **Method A:** Click "Download Official Closure (.xlsm with VBA)" to get a healed official file with 0 variances.
-   - **Method B:** Copy pre-formatted TSV strips (`AS:AT` and `AW:AY`) and paste into cells `AS13` and `AW13` of Excel.
-6. **Physical Binder Assembly:** Follow the 7-step checklist to prepare the official physical closure binder.
+## 2. 5-Minute Evaluation Walkthrough for Leadership
+1. **Show the Legacy Pain:** Point out the artificial `-51,926 UN` negative difference in standard Excel closure sheets.
+2. **Select Container:** Load Quality Control and Closure files with drag-and-drop or local folder browser.
+3. **Inspect KPIs:** Immediate 6-metric summary of Cartons/Bultos, Invoiced Units, and Physical Dock Counts.
+4. **Drill Down 360°:** Instant size-curve breakdown without manual VLOOKUP formulas.
+5. **Square Closure:** Click 1-Click `.xlsm` Export or copy pre-formatted TSV strips (`Cols AS:AT` & `Cols AW:AY`) to square differences to `0`.
 
 ## 3. Case Study: Solving Difficult Shipments (IMP-174)
-- **Column Shift Immunity:** Automatically locates SAP codes, descriptions, and totals regardless of inserted warehouse columns (e.g. pallet IDs).
-- **Multi-Warehouse Allocation:** Accurately reconciles split receipts (Distribution Center A001 vs Replenishment A004).
+- **Column Shift Immunity:** Dynamically maps headers even when operators insert custom columns (e.g. Pallet/Tarima IDs).
+- **Multi-Warehouse Allocation:** Accurately consolidates multi-destination shipments (Central A001 + Replenishment A004).
 - **Self-Healing Formulas:** Automatically restores deleted or overwritten formulas in official macro templates.

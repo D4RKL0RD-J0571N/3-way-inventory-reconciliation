@@ -5,11 +5,28 @@ Agnostic architecture for multi-vendor and multi-ERP reconciliation.
 from pathlib import Path
 from typing import List, Tuple, Optional
 
+import sys
+from pathlib import Path
+from typing import List, Tuple, Optional
+
 # Base directories
 SRC_DIR = Path(__file__).resolve().parent
-BASE_DIR = SRC_DIR.parent
+
+if getattr(sys, "frozen", False):
+    # PyInstaller executable root folder
+    BASE_DIR = Path(sys.executable).parent
+    INTERNAL_DIR = Path(getattr(sys, "_MEIPASS", BASE_DIR))
+else:
+    BASE_DIR = SRC_DIR.parent
+    INTERNAL_DIR = BASE_DIR
+
 DATA_DIR = BASE_DIR / "data"
+if not DATA_DIR.exists() and (INTERNAL_DIR / "data").exists():
+    DATA_DIR = INTERNAL_DIR / "data"
+
 DOCS_DIR = BASE_DIR / "docs"
+if not DOCS_DIR.exists() and (INTERNAL_DIR / "docs").exists():
+    DOCS_DIR = INTERNAL_DIR / "docs"
 
 def list_available_local_imports() -> List[str]:
     """

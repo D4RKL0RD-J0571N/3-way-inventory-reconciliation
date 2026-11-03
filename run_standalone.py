@@ -9,7 +9,11 @@ from pathlib import Path
 import streamlit.web.cli as stcli
 
 def main():
-    base_dir = Path(__file__).resolve().parent
+    if getattr(sys, "frozen", False):
+        base_dir = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    else:
+        base_dir = Path(__file__).resolve().parent
+
     os.chdir(base_dir)
 
     app_path = base_dir / "app.py"
