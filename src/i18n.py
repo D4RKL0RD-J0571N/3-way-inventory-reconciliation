@@ -462,9 +462,18 @@ def get_table_toolbar_js(lang: str) -> str:
             "buscar en tabla": "{t_search}"
         }};
 
+        function getRootDoc() {{
+            try {{
+                if (window.parent && window.parent.document && window.parent.document.body) {{
+                    return window.parent.document;
+                }}
+            }} catch(e) {{}}
+            return window.document;
+        }}
+
         function translateToolbars() {{
             try {{
-                const doc = window.parent.document;
+                const doc = getRootDoc();
                 if (!doc) return;
 
                 // 1. Update aria-labels and titles on toolbar buttons
@@ -494,9 +503,10 @@ def get_table_toolbar_js(lang: str) -> str:
         translateToolbars();
 
         try {{
-            const doc = window.parent.document;
-            if (doc && !window._reconcileToolbarObserverAttached) {{
-                window._reconcileToolbarObserverAttached = true;
+            const doc = getRootDoc();
+            const rootWin = (window.parent && window.parent.document) ? window.parent : window;
+            if (doc && !rootWin._reconcileToolbarObserverAttached) {{
+                rootWin._reconcileToolbarObserverAttached = true;
                 
                 // Mutation observer for newly mounted popovers/tooltips
                 const observer = new MutationObserver(function() {{

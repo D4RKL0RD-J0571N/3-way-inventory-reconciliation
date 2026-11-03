@@ -50,3 +50,15 @@ def test_toolbar_js_generation():
     assert "Fullscreen" in js_en
     assert "Download as CSV" in js_en
     assert "Search" in js_en
+
+def test_paginate_dataframe_returns_dataframe():
+    """Verifies that paginate_dataframe returns a DataFrame (not a tuple) so .style can be called."""
+    import pandas as pd
+    from src.ui_helpers import paginate_dataframe
+
+    # Small dataframe
+    df = pd.DataFrame({"A": range(10), "B": range(10)})
+    res = paginate_dataframe(df, page_size_options=[50, 100])
+    assert isinstance(res, pd.DataFrame)
+    assert hasattr(res, "style")
+    assert len(res) == 10

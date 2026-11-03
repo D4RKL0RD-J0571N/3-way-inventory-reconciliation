@@ -295,7 +295,10 @@ current_lang = render_language_selector()
 st.sidebar.divider()
 
 # Inject Dynamic Client-Side Tooltip Translator for Table Toolbars
-components.html(get_table_toolbar_js(current_lang), height=0, width=0)
+if hasattr(st, "html"):
+    st.html(get_table_toolbar_js(current_lang), unsafe_allow_javascript=True)
+else:
+    components.html(get_table_toolbar_js(current_lang), height=0, width=0)
 
 if st.session_state.audit_data is not None:
     current_summary = st.session_state.audit_data["summary"]

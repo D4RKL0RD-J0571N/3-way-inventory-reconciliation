@@ -141,15 +141,15 @@ def paginate_dataframe(
     page_size_options: List[int] = [50, 100, 250, 500],
     default_page_size: int = 100,
     key_prefix: str = "table"
-) -> Tuple[pd.DataFrame, int, int]:
+) -> pd.DataFrame:
     """
     High-performance pagination utility for huge tables (e.g. 5,000+ items across Parts A through F).
     Prevents browser UI freezing and maintains responsive rendering speeds (<50ms).
-    Returns (sliced_dataframe, current_page, total_pages).
+    Returns sliced_dataframe (pd.DataFrame).
     """
     total_rows = len(df)
-    if total_rows <= min(page_size_options):
-        return df, 1, 1
+    if total_rows == 0 or total_rows <= min(page_size_options):
+        return df
 
     col_size, col_page, col_info = st.columns([1.5, 2, 2.5])
     
@@ -184,4 +184,4 @@ def paginate_dataframe(
     with col_info:
         st.caption(f"Mostrando {start_idx + 1} - {end_idx} de {total_rows} materiales")
 
-    return df.iloc[start_idx:end_idx], current_page, total_pages
+    return df.iloc[start_idx:end_idx]
