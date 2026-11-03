@@ -2,6 +2,7 @@
 Interactive Web Application for 3-Way Inventory Reconciliation.
 Ekono / Almacema S.A. — Centro de Distribución C001
 Rol: Supervisión UPC (Copiloto de Verificación y Precisión de Recepción)
+Full-width Widescreen & Professional Dark Theme.
 """
 import streamlit as st
 import pandas as pd
@@ -16,6 +17,7 @@ from src.validator import validate_all_items
 from src.sanitizer import clean_material_code, clean_number, clean_string
 from src.models import PrepackItem
 
+# High-Resolution Widescreen Layout
 st.set_page_config(
     page_title="Ekono — Copiloto de Recepción UPC",
     page_icon="🛡️",
@@ -23,151 +25,165 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom High-Contrast, Enterprise Theme Styling
+# Custom High-Contrast, Enterprise Dark-Mode & Fluid Widescreen CSS
 st.markdown("""
 <style>
-    /* Main Layout */
-    .block-container {
-        padding-top: 1.5rem;
-        padding-bottom: 2.5rem;
-        max-width: 1300px;
+    /* Fullscreen & High-Resolution True Fluid Layout (Zero wasted side space) */
+    .stMainBlockContainer,
+    .block-container,
+    div[data-testid="stMainBlockContainer"],
+    div[data-testid="stAppViewBlockContainer"] {
+        padding-top: 1rem !important;
+        padding-bottom: 2.5rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+        max-width: 98% !important;
+        width: 98% !important;
     }
-    
-    /* Typography */
+
+    /* On high-res and widescreen monitors, prevent artificial margin constraints */
+    @media (min-width: 1200px) {
+        .stMainBlockContainer,
+        .block-container,
+        div[data-testid="stMainBlockContainer"] {
+            max-width: 98% !important;
+            width: 98% !important;
+            padding-left: 2.5rem !important;
+            padding-right: 2.5rem !important;
+        }
+    }
+
+    /* Streamlit tabs - prevent overflow, cut-offs and awkward scrolling */
+    div[data-baseweb="tab-list"] {
+        gap: 8px !important;
+        width: 100% !important;
+        flex-wrap: wrap !important;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.25) !important;
+        padding-bottom: 6px !important;
+        margin-bottom: 1.25rem !important;
+    }
+    button[data-baseweb="tab"] {
+        padding: 9px 18px !important;
+        font-size: 13.5px !important;
+        font-weight: 600 !important;
+        border-radius: 6px 6px 0 0 !important;
+        white-space: nowrap !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+
+    /* Polish for Metric Cards across top row */
+    div[data-testid="stMetric"] {
+        background-color: var(--secondary-background-color, #1E293B);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 8px;
+        padding: 12px 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+    div[data-testid="stMetricLabel"] p {
+        font-size: 11.5px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        color: #94A3B8 !important;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 22px !important;
+        font-weight: 800 !important;
+    }
+
+    /* Enterprise App Header (Rich Blue Gradient) */
     .app-header {
-        background: linear-gradient(135deg, #0F4C81 0%, #1B365D 100%);
+        background: linear-gradient(135deg, #0F4C81 0%, #1E3A8A 100%);
         color: #FFFFFF !important;
-        padding: 20px 24px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        padding: 14px 20px;
+        border-radius: 8px;
+        margin-bottom: 14px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
     }
     .app-header h1 {
         color: #FFFFFF !important;
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 700;
         margin: 0;
         padding: 0;
     }
     .app-header p {
         color: #E2E8F0 !important;
-        font-size: 13px;
+        font-size: 12.5px;
         margin: 4px 0 0 0;
     }
 
-    /* KPI Summary Cards */
-    .kpi-container {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 12px;
-        margin-bottom: 20px;
-    }
-    .kpi-card {
-        background-color: #FFFFFF;
-        border: 1px solid #CBD5E1;
-        border-radius: 8px;
-        padding: 12px 14px;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
-    }
-    .kpi-label {
-        color: #475569;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 4px;
-    }
-    .kpi-value {
-        color: #0F172A;
-        font-size: 20px;
-        font-weight: 700;
-    }
-    .kpi-delta {
-        font-size: 11.5px;
-        color: #0284C7;
-        margin-top: 2px;
-    }
-
-    /* Detail Card Boxes in Ficha 360 */
+    /* Dual-Theme Adaptive Detail Cards (Ficha 360) */
     .detail-card {
-        background-color: #FFFFFF;
-        border: 1px solid #CBD5E1;
-        border-top: 3px solid #0F4C81;
-        border-radius: 6px;
-        padding: 14px;
+        background-color: var(--secondary-background-color, #1E293B);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-top: 3px solid #0284C7;
+        color: var(--text-color, #F8FAFC);
+        border-radius: 8px;
+        padding: 14px 16px;
         margin-bottom: 12px;
-        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     }
     .detail-title {
-        color: #0F4C81;
+        color: #38BDF8;
         font-size: 12px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 8px;
-        border-bottom: 1px solid #F1F5F9;
-        padding-bottom: 4px;
+        letter-spacing: 0.6px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        padding-bottom: 5px;
     }
     .detail-row {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 5px;
+        align-items: center;
+        margin-bottom: 7px;
         font-size: 13px;
     }
     .detail-label {
-        color: #475569;
+        color: #94A3B8;
         font-weight: 500;
     }
     .detail-value {
-        color: #0F172A;
+        color: #F8FAFC;
         font-weight: 700;
         text-align: right;
     }
 
-    /* Status Banner */
+    /* Dual-Theme Status Banners */
     .status-banner-clean {
-        background-color: #ECFDF5;
-        border: 1px solid #A7F3D0;
-        border-left: 5px solid #059669;
-        color: #065F46;
-        padding: 10px 14px;
+        background: rgba(16, 185, 129, 0.15);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        border-left: 5px solid #10B981;
+        color: #34D399;
+        padding: 11px 16px;
         border-radius: 6px;
-        font-size: 13px;
+        font-size: 13.5px;
         font-weight: 600;
-        margin-bottom: 14px;
+        margin-bottom: 16px;
     }
     .status-banner-info {
-        background-color: #EFF6FF;
-        border: 1px solid #BFDBFE;
-        border-left: 5px solid #2563EB;
-        color: #1E40AF;
-        padding: 10px 14px;
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.4);
+        border-left: 5px solid #3B82F6;
+        color: #60A5FA;
+        padding: 11px 16px;
         border-radius: 6px;
-        font-size: 13px;
+        font-size: 13.5px;
         font-weight: 600;
-        margin-bottom: 14px;
+        margin-bottom: 16px;
     }
     .status-banner-warn {
-        background-color: #FEF2F2;
-        border: 1px solid #FECACA;
-        border-left: 5px solid #DC2626;
-        color: #991B1B;
-        padding: 10px 14px;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        border-left: 5px solid #EF4444;
+        color: #F87171;
+        padding: 11px 16px;
         border-radius: 6px;
-        font-size: 13px;
+        font-size: 13.5px;
         font-weight: 600;
-        margin-bottom: 14px;
-    }
-
-    /* Checklist Box */
-    .checklist-row {
-        background-color: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 6px;
-        padding: 10px 14px;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
+        margin-bottom: 16px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -177,14 +193,26 @@ st.sidebar.image("https://img.icons8.com/color/96/warehouse.png", width=56)
 st.sidebar.markdown("### Configuración de Datos")
 st.sidebar.caption("Copiloto de Precisión para el Área de Recepción C001.")
 
-use_custom = st.sidebar.checkbox("📁 Cargar otro Contenedor / Archivos", value=False, help="Activa esta casilla para cargar archivos de un contenedor diferente (ej. IMP-183 o histórico).")
+use_custom = st.sidebar.checkbox(
+    "📁 Cargar otro Contenedor / Archivos",
+    value=False,
+    help="Activa esta casilla para cargar archivos de un contenedor diferente (ej. IMP-183 o histórico)."
+)
 uploaded_qc = None
 uploaded_cierre = None
 
 if use_custom:
     st.sidebar.info("💡 Sube ambos archivos de Excel para auditar la importación:")
-    uploaded_qc = st.sidebar.file_uploader("1. Control de Calidad (.xlsm)", type=["xlsm", "xlsx"], help="Archivo generado por calidad en muelle con el conteo y las curvas.")
-    uploaded_cierre = st.sidebar.file_uploader("2. Plantilla Cierre (.xlsm)", type=["xlsm", "xlsx"], help="Plantilla oficial donde se realiza el cierre de recepción.")
+    uploaded_qc = st.sidebar.file_uploader(
+        "1. Control de Calidad (.xlsm)",
+        type=["xlsm", "xlsx"],
+        help="Archivo generado por calidad en muelle con el conteo físico y las curvas de tallas."
+    )
+    uploaded_cierre = st.sidebar.file_uploader(
+        "2. Plantilla Cierre (.xlsm)",
+        type=["xlsm", "xlsx"],
+        help="Plantilla oficial corporativa donde se realiza el balance de recepción."
+    )
 
 @st.cache_data(show_spinner="Analizando datos de importación...")
 def load_and_process(qc_bytes=None, cierre_bytes=None):
@@ -218,14 +246,14 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Top KPIs Row
+# Top KPIs Row (Expanded across full widescreen)
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1:
     st.metric(
         label="IMPORTACIÓN / FACTURA",
         value=summary.import_id,
         delta=f"Doc. 41: {summary.invoice_number}",
-        help="Código único de contenedor y número de documento de nacionalización en SAP."
+        help="Código único de importación y documento de nacionalización registrado en SAP."
     )
 with k2:
     st.metric(
@@ -258,33 +286,33 @@ with k5:
 
 st.divider()
 
-# Navigation Tabs
+# Navigation Tabs (Short, punchy, full width - zero cut-offs)
 tab_inspector, tab_reconcile, tab_curves, tab_clipboard, tab_excel_export, tab_checklist = st.tabs([
-    "🔎 Ficha 360° (Búsqueda Fluida)",
-    "📊 Tabla con Semáforos de Color",
-    "🔍 Explosión de Curvas y Tallas",
-    "📋 Verificador Pre-Macro (SAP)",
-    "📑 Generador para Excel Oficial",
-    "🖨️ Checklist de Impresión Físico"
+    "🔍 Ficha 360° Material",
+    "🚦 Tabla Semáforo (Cierre)",
+    "📐 Explosión de Curvas",
+    "⚡ Validador SAP (Pre-Macro)",
+    "📋 Copiar a Excel Oficial",
+    "🖨️ Checklist Expediente"
 ])
 
 # ----------------- TAB 0: FICHA 360 FLUIDA -----------------
 with tab_inspector:
-    st.markdown("### 🔎 Ficha 360° del Material (Inspección sin Desplazamiento)")
-    st.caption("Escribe el código SAP, estilo de proveedor o descripción. La ficha completa se despliega abajo de forma inmediata:")
+    st.markdown("### 🔍 Ficha 360° del Material (Auditoría Instantánea)")
+    st.caption("Inspecciona cualquier material padre, sus curvas de compra y su balance físico sin desplazarte entre hojas:")
     
     col_search1, col_search2 = st.columns([3, 1])
     with col_search1:
         query_search = st.text_input(
-            "Buscar código o descripción:",
-            value="1455103",
-            placeholder="Ejemplo: 1455103, 25B03, Falda, Camisa...",
-            help="Filtra en tiempo real por cualquier campo del material padre o de sus tallas hijas.",
+            "Buscar por código SAP, estilo de proveedor o descripción:",
+            value="",
+            placeholder="Escribe código (ej: 1455103), estilo (ej: 25B03), o prenda (ej: Falda, Pantalón)...",
+            help="Filtra en tiempo real por cualquier dato del material padre o de sus tallas hijas.",
             key="f360_search"
         )
     with col_search2:
         part_filter_360 = st.selectbox(
-            "Filtrar por Contenedor:",
+            "Filtrar Contenedor:",
             ["Todos", "Contenedor A (182-A)", "Contenedor B (182-B)"],
             index=0,
             help="Separa los materiales descargados en la primera parte de los que vienen en el segundo viaje.",
@@ -308,16 +336,24 @@ with tab_inspector:
             
     if matching:
         if len(matching) > 1:
-            st.caption(f"Coincidencias encontradas: **{len(matching)} materiales**. Selecciona uno para visualizar:")
-            opt_labels = {f"{it.material_code} | {it.vendor_material} | {it.description[:35]} (Cont. {it.container_part})": it for it in matching[:20]}
-            selected_label = st.radio("Resultados de búsqueda:", list(opt_labels.keys()), horizontal=True, label_visibility="collapsed")
+            opt_labels = {
+                f"📦 {it.material_code} | {it.vendor_material} | {it.description[:45]} (Parte {it.container_part})": it
+                for it in matching
+            }
+            selected_label = st.selectbox(
+                f"Selecciona un estilo ({len(matching)} coincidencias disponibles):",
+                options=list(opt_labels.keys()),
+                key="f360_selected_mat",
+                help="Despliega la lista para buscar o elegir directamente el material a auditar."
+            )
             selected_item = opt_labels[selected_label]
         else:
             selected_item = matching[0]
+            st.info(f"Mostrando resultado único: **{selected_item.material_code}** — {selected_item.description}")
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Status Banner with High Contrast
+        # Dual-theme status banner
         if selected_item.status == "LIMPIO":
             st.markdown(f'<div class="status-banner-clean">✅ ESTADO: LIMPIO — {selected_item.observations}</div>', unsafe_allow_html=True)
         elif selected_item.status == "PENDIENTE_PARTE_B":
@@ -325,7 +361,7 @@ with tab_inspector:
         else:
             st.markdown(f'<div class="status-banner-warn">⚠️ ESTADO: {selected_item.status} — {selected_item.observations} (Reclamo NCR: ${selected_item.ncr_amount:,.2f} USD)</div>', unsafe_allow_html=True)
             
-        # 4 High-Contrast Executive Cards
+        # 4 High-Contrast Adaptive Cards
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.markdown(f"""
@@ -334,7 +370,7 @@ with tab_inspector:
                 <div class="detail-row"><span class="detail-label">Código SAP:</span><span class="detail-value">{selected_item.material_code}</span></div>
                 <div class="detail-row"><span class="detail-label">Estilo Prov:</span><span class="detail-value">{selected_item.vendor_material}</span></div>
                 <div class="detail-row"><span class="detail-label">Categoría:</span><span class="detail-value">{selected_item.category}</span></div>
-                <div class="detail-row"><span class="detail-label">Descripción:</span><span class="detail-value" style="font-size:11px;">{selected_item.description[:30]}</span></div>
+                <div class="detail-row"><span class="detail-label">Descripción:</span><span class="detail-value" style="font-size:12px;">{selected_item.description[:32]}</span></div>
                 <div class="detail-row"><span class="detail-label">Contenedor:</span><span class="detail-value">Parte {selected_item.container_part}</span></div>
             </div>
             """, unsafe_allow_html=True)
@@ -392,20 +428,20 @@ with tab_inspector:
     else:
         st.warning(f"No se encontraron materiales que coincidan con la búsqueda: '{query_search}'.")
 
-# ----------------- TAB 1: TABLA CON SEMÁFOROS -----------------
+# ----------------- TAB 1: TABLA SEMÁFORO -----------------
 with tab_reconcile:
-    st.subheader("📊 Tabla Consolidada de Recepción (136 Materiales)")
-    st.caption("🟢 Verde = Conciliación Limpia | 🔴 Rojo = Faltante / Dañado | 🔵 Azul = Mercadería de Contenedor B")
+    st.subheader("🚦 Tabla Semáforo de Cierre (136 Estilos)")
+    st.caption("🟢 Verde = Conciliación Limpia | 🔵 Azul = Pendiente Contenedor B | 🔴 Rojo = Faltante / Dañado Reclamable")
     
     col_t1, col_t2, col_t3 = st.columns([1.5, 1.5, 3])
     with col_t1:
         part_table = st.selectbox("Filtrar Contenedor:", ["Todos", "Contenedor A (182-A)", "Contenedor B (182-B)"], index=0, key="t_part")
         p_val = "ALL" if part_table == "Todos" else ("A" if "A" in part_table else "B")
     with col_t2:
-        status_table = st.selectbox("Filtrar Estado:", ["Todos", "LIMPIO", "FALTANTE", "DAÑADO", "SOBRANTE"], index=0, key="t_stat")
+        status_table = st.selectbox("Filtrar Estado:", ["Todos", "LIMPIO", "PENDIENTE_PARTE_B", "FALTANTE", "DAÑADO", "SOBRANTE"], index=0, key="t_stat")
         s_val = "ALL" if status_table == "Todos" else status_table
     with col_t3:
-        search_table = st.text_input("Buscar en la tabla:", placeholder="Escribe código, estilo o descripción...", key="t_search")
+        search_table = st.text_input("Buscar en la grilla:", placeholder="Filtrar por código, estilo o descripción...", key="t_search")
         
     items_table = filter_items(items, part_filter=p_val, status_filter=s_val, search_query=search_table)
     
@@ -430,10 +466,22 @@ with tab_reconcile:
         })
     df_t = pd.DataFrame(t_rows)
     
+    # Conditional row highlighting with soft corporate tints
+    def highlight_status(row):
+        st_val = row["Estado"]
+        if "LIMPIO" in st_val:
+            return ["background-color: rgba(16, 185, 129, 0.08)"] * len(row)
+        elif "CONT. B" in st_val:
+            return ["background-color: rgba(59, 130, 246, 0.08)"] * len(row)
+        else:
+            return ["background-color: rgba(239, 68, 68, 0.15)"] * len(row)
+
+    styled_df = df_t.style.apply(highlight_status, axis=1)
+    
     st.dataframe(
-        df_t,
+        styled_df,
         use_container_width=True,
-        height=480,
+        height=540,
         column_config={
             "Costo Unit": st.column_config.NumberColumn(format="$%.2f"),
             "Ped. 41 (PRK)": st.column_config.NumberColumn(format="%d PRK"),
@@ -447,13 +495,13 @@ with tab_reconcile:
 
 # ----------------- TAB 2: EXPLOSIÓN DE CURVAS -----------------
 with tab_curves:
-    st.subheader("🔍 Desglose Jerárquico: Prepack Padre ➔ Tallas Hijas")
+    st.subheader("📐 Desglose Jerárquico: Prepack Padre ➔ Tallas Hijas")
     st.caption("Selecciona cualquier Prepack para comprobar cómo se calculan las tallas individuales de acuerdo con su ratio:")
     
-    parent_choices = [f"{i.material_code} | {i.vendor_material} | {i.description[:35]}" for i in items if i.children]
+    parent_choices = [f"📦 {i.material_code} | {i.vendor_material} | {i.description[:45]} (Curva {i.curve_total} UN)" for i in items if i.children]
     if parent_choices:
         sel_p = st.selectbox("Selecciona Prepack:", parent_choices, key="curv_p")
-        sel_code_curv = sel_p.split(" | ")[0]
+        sel_code_curv = sel_p.split(" | ")[0].replace("📦 ", "").strip()
         curv_item = next((i for i in items if i.material_code == sel_code_curv), None)
         
         if curv_item:
@@ -479,22 +527,27 @@ with tab_curves:
 
 # ----------------- TAB 3: VERIFICADOR PRE-MACRO -----------------
 with tab_clipboard:
-    st.subheader("📋 Verificador Pre-Macro de SAP (Antes de Pegar en Excel)")
+    st.subheader("⚡ Validador de Portapapeles SAP (Pre-Macro)")
     st.markdown("""
-    Este módulo sirve para **eliminar el estrés del copiado y pegado**:
-    1. Copias la tabla en SAP con `Ctrl + C` (desde `ME80FN`, `SE16N` o `MB51`).
+    Este módulo sirve para **eliminar el estrés del copiado y pegado desde SAP**:
+    1. Copias la tabla en SAP con `Ctrl + C` (desde transacciones `ME80FN`, `SE16N`, `MB51` o reporte de compras).
     2. La pegas en el recuadro de abajo.
-    3. Haces clic en el botón de verificación: el sistema valida en **1 segundo** que no haya saltos de renglón, limpia la notación científica y te confirma la cantidad exacta de filas antes de que las lleves al Excel oficial.
+    3. Haces clic en **Auditar y Limpiar**: el sistema desactiva notación científica (`1.45E+06`), normaliza formatos numéricos y te valida que las columnas no estén desplazadas antes de que las lleves al Excel corporativo.
     """)
     
     paste_area = st.text_area(
         "Pega aquí la grilla copiada de SAP (Ctrl + V):",
         height=160,
-        placeholder="Pega aquí los datos de SAP...",
-        help="Acepta texto separado por tabulaciones, barras | o punto y coma."
+        placeholder="Pega aquí los datos de SAP (separados por tabulaciones, barras | o comas)...",
+        help="Acepta texto copiado directamente desde el GUI de SAP o exportaciones de tabla.",
+        key="paste_area_input"
     )
     
-    if st.button("🔍 Validar Datos Copiados de SAP", help="Analiza las filas en memoria, remueve códigos con notación científica y valida que el separador sea correcto antes de llevar los datos al Excel oficial."):
+    col_btn1, col_btn2 = st.columns([2, 3])
+    with col_btn1:
+        validate_clicked = st.button("⚡ Auditar y Limpiar Portapapeles", type="primary", help="Analiza las filas en memoria, remueve códigos científicos y valida columnas.")
+        
+    if validate_clicked:
         if paste_area.strip():
             try:
                 first_line = paste_area.strip().split("\n")[0]
@@ -519,10 +572,10 @@ with tab_clipboard:
 
 # ----------------- TAB 4: GENERADOR PARA EXCEL OFICIAL -----------------
 with tab_excel_export:
-    st.subheader("📑 Valores Conciliados para la Hoja 'CIERRE RECEP'")
+    st.subheader("📋 Valores Conciliados para la Hoja 'CIERRE RECEP'")
     st.markdown("""
     Esta tabla contiene los **136 materiales con sus cálculos verificados** en el **orden exacto de columnas** que solicita la plantilla oficial de Presidencia (`CIERRE RECEP`, desde Columna A hasta BB).
-    Puedes descargar el archivo o copiar los datos para alimentar el libro oficial con la certeza de que las matemáticas están cuadradas:
+    Puedes descargar el archivo o copiar los datos para alimentar el libro oficial con la certeza de que las matemáticas están 100% cuadradas:
     """)
     
     cierre_export_rows = []
@@ -549,7 +602,7 @@ with tab_excel_export:
         })
         
     df_exp = pd.DataFrame(cierre_export_rows)
-    st.dataframe(df_exp, use_container_width=True, height=380)
+    st.dataframe(df_exp, use_container_width=True, height=420)
     
     excel_buf = io.BytesIO()
     with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
@@ -557,19 +610,19 @@ with tab_excel_export:
     excel_buf.seek(0)
     
     st.download_button(
-        label="📥 Descargar Hoja Lista para Pegar en CIERRE RECEP (.xlsx)",
+        label="📥 Descargar Hoja Conciliada para Pegar en CIERRE RECEP (.xlsx)",
         data=excel_buf,
         file_name=f"{summary.import_id}_Valores_Cierre_Recep_Limpio.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        type="primary",
         help="Descarga un archivo Excel con las 17 columnas limpias ordenadas según la plantilla oficial para alimentar el libro de Presidencia."
     )
 
-# ----------------- TAB 5: CHECKLIST DE IMPRESIÓN INTERACTIVO -----------------
+# ----------------- TAB 5: CHECKLIST DE EXPEDIENTE INTERACTIVO -----------------
 with tab_checklist:
     st.subheader("🖨️ Checklist Interactivo de Impresión (Expediente Presidencia)")
     st.caption("Marca cada documento conforme lo imprimas para asegurar que la carpeta física esté en el orden reglamentario:")
     
-    # Interactive checkboxes
     c_p1 = st.checkbox("1. Portada de Proveedor (Hoja 'PORTADA') — Carátula oficial con nombre del proveedor y código de importación.", value=True)
     c_p2 = st.checkbox(f"2. Datos Generales (Hoja 'DATOS GENERALES') — Resumen con POs ({summary.total_ped_43_units:,.0f} UN), Factura 41 ({summary.total_ped_41_units:,.0f} UN) y totales.", value=True)
     c_p3 = st.checkbox(f"3. Carátula del Cierre para Presidencia (Hoja 'CIERRE RECEP') — Balance general con unidades recibidas ({summary.total_received_units:,.0f} UN) y bultos.", value=True)

@@ -20,4 +20,4 @@ htmlcov/
 .idea/
 
 # Streamlit
-.streamlit/
+.streamlit/secrets.toml
