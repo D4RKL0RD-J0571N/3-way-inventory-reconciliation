@@ -30,12 +30,21 @@ st.set_page_config(
 # Custom High-Contrast, Enterprise Dark-Mode & Fluid Widescreen CSS
 st.markdown("""
 <style>
-    /* Fullscreen & High-Resolution True Fluid Layout */
+    /* Clean Header Toolbar & Hide Deploy Button */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        height: 3.25rem !important;
+    }
+    div[data-testid="stAppDeployButton"] {
+        display: none !important;
+    }
+
+    /* Fullscreen & High-Resolution True Fluid Layout with Proper Top Clearance */
     .stMainBlockContainer,
     .block-container,
     div[data-testid="stMainBlockContainer"],
     div[data-testid="stAppViewBlockContainer"] {
-        padding-top: 1rem !important;
+        padding-top: 3.75rem !important;
         padding-bottom: 2.5rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
@@ -47,6 +56,7 @@ st.markdown("""
         .stMainBlockContainer,
         .block-container,
         div[data-testid="stMainBlockContainer"] {
+            padding-top: 3.75rem !important;
             max-width: 98% !important;
             width: 98% !important;
             padding-left: 2.5rem !important;
