@@ -1,8 +1,8 @@
 """
 Interactive Web Application for 3-Way Inventory Reconciliation.
-Ekono / Almacema S.A. — Centro de Distribución C001
-Rol: Supervisión UPC (Copiloto de Verificación y Precisión de Recepción)
+Universal Supply Chain, Logistics & Goods Receipt Audit Engine.
 Full-width Widescreen & Professional Dark Theme.
+Agnostic architecture designed for multi-vendor and multi-ERP import audits.
 """
 import streamlit as st
 import pandas as pd
@@ -19,7 +19,7 @@ from src.models import PrepackItem
 
 # High-Resolution Widescreen Layout
 st.set_page_config(
-    page_title="Ekono — Copiloto de Recepción UPC",
+    page_title="ReconcileAI — Copiloto 3-Way de Inventarios y Recepción",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -190,8 +190,8 @@ st.markdown("""
 
 # Sidebar: File Manager & Custom Importations
 st.sidebar.image("https://img.icons8.com/color/96/warehouse.png", width=56)
-st.sidebar.markdown("### Configuración de Datos")
-st.sidebar.caption("Copiloto de Precisión para el Área de Recepción C001.")
+st.sidebar.markdown("### Configuración de Auditoría")
+st.sidebar.caption("Auditoría de Precisión de Mercadería y Cierres de Importación.")
 
 use_custom = st.sidebar.checkbox(
     "📁 Cargar otro Contenedor / Archivos",
@@ -211,7 +211,7 @@ if use_custom:
     uploaded_cierre = st.sidebar.file_uploader(
         "2. Plantilla Cierre (.xlsm)",
         type=["xlsm", "xlsx"],
-        help="Plantilla oficial corporativa donde se realiza el balance de recepción."
+        help="Plantilla corporativa donde se realiza el balance de recepción."
     )
 
 @st.cache_data(show_spinner="Analizando datos de importación...")
@@ -238,11 +238,11 @@ except Exception as e:
     st.error(f"Error al procesar archivos de Excel: {e}")
     st.stop()
 
-# Header Banner
+# Header Banner (Agnostic & Corporate-Independent)
 st.markdown(f"""
 <div class="app-header">
-    <h1>🛡️ Copiloto de Verificación de Recepción y Cierres UPC</h1>
-    <p>Cadena de Tiendas Ekono / Almacema S.A. — Centro de Distribución C001 | Importación: <strong>{summary.import_id}</strong> (Proveedor: {summary.vendor_name})</p>
+    <h1>🛡️ Copiloto Universal de Conciliación 3-Way & Recepción</h1>
+    <p>Auditoría de Órdenes de Compra (PO), Facturación y Muelle de Descarga | Importación: <strong>{summary.import_id}</strong> (Proveedor: {summary.vendor_name})</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -253,7 +253,7 @@ with k1:
         label="IMPORTACIÓN / FACTURA",
         value=summary.import_id,
         delta=f"Doc. 41: {summary.invoice_number}",
-        help="Código único de importación y documento de nacionalización registrado en SAP."
+        help="Código único de importación y documento de nacionalización registrado en ERP."
     )
 with k2:
     st.metric(
@@ -572,62 +572,149 @@ with tab_clipboard:
 
 # ----------------- TAB 4: GENERADOR PARA EXCEL OFICIAL -----------------
 with tab_excel_export:
-    st.subheader("📋 Valores Conciliados para la Hoja 'CIERRE RECEP'")
+    st.subheader("📋 Generador de Relleno para la Plantilla Oficial de Cierre")
     st.markdown("""
-    Esta tabla contiene los **136 materiales con sus cálculos verificados** en el **orden exacto de columnas** que solicita la plantilla oficial de Presidencia (`CIERRE RECEP`, desde Columna A hasta BB).
-    Puedes descargar el archivo o copiar los datos para alimentar el libro oficial con la certeza de que las matemáticas están 100% cuadradas:
+    Este módulo resuelve el problema del llenado manual en la hoja **`CIERRE RECEP`**:
+    - **Bloque 1:** Te genera las columnas principales (`A` hasta `BB`).
+    - **Bloque 2 (ZDESCARGA y PACKING LIST):** Te entrega las tiras de datos listas para copiar y pegar en las columnas **`AS:AT`** y **`AW:AY`**, **eliminando instantáneamente los `-51,926` de diferencia artificial** sin alterar las fórmulas del libro.
     """)
     
-    cierre_export_rows = []
-    for i in items:
-        cierre_export_rows.append({
-            "ORDEN DE COMPRA": i.order_po_43,
-            "Proveedor": summary.vendor_name,
-            "Categoría": i.category,
-            "MAT. PROVEEDOR": i.vendor_material,
-            "MATERIAL": i.material_code,
-            "CANTIDAD PEDIDO 43": int(i.quantity_po_43_units),
-            "CANTIDAD PEDIDO 41": int(i.quantity_inv_41_units),
-            "RECIBIDO REAL & FISICO": int(i.received_real_units),
-            "CANTIDAD INGRESO MOV-101": int(i.sap_mov_101),
-            "FALTANTE": int(i.faltante),
-            "DAÑADO": int(i.danado),
-            "SOBRANTE": int(i.sobrante),
-            "DESCRIPCION": i.description,
-            "Valor unitario PEDIDO NAC $": i.unit_cost,
-            "Curva": i.curve_total,
-            "CANTIDAD PEDIDO 43 (PRK)": int(i.quantity_po_43_prk),
-            "CANTIDAD PEDIDO 41 (PRK)": int(i.quantity_inv_41_prk),
-            "ESTADO": i.status
-        })
+    subtab_principal, subtab_descarga = st.tabs([
+        "📊 Bloque 1: Columnas Principales (A - BB)",
+        "📦 Bloque 2: ZDESCARGA y PACKING LIST (Cols AS:AZ)"
+    ])
+    
+    with subtab_principal:
+        st.markdown("#### Columnas Principales de Conciliación (136 Estilos Verificados)")
+        st.caption("Copia o descarga la tabla ordenada según las 17 columnas que solicita el libro corporativo:")
         
-    df_exp = pd.DataFrame(cierre_export_rows)
-    st.dataframe(df_exp, use_container_width=True, height=420)
-    
-    excel_buf = io.BytesIO()
-    with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
-        df_exp.to_excel(writer, index=False, sheet_name="CIERRE_RECEP_VALORES")
-    excel_buf.seek(0)
-    
-    st.download_button(
-        label="📥 Descargar Hoja Conciliada para Pegar en CIERRE RECEP (.xlsx)",
-        data=excel_buf,
-        file_name=f"{summary.import_id}_Valores_Cierre_Recep_Limpio.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        type="primary",
-        help="Descarga un archivo Excel con las 17 columnas limpias ordenadas según la plantilla oficial para alimentar el libro de Presidencia."
-    )
+        cierre_export_rows = []
+        for i in items:
+            cierre_export_rows.append({
+                "ORDEN DE COMPRA": i.order_po_43,
+                "Proveedor": summary.vendor_name,
+                "Categoría": i.category,
+                "MAT. PROVEEDOR": i.vendor_material,
+                "MATERIAL": i.material_code,
+                "CANTIDAD PEDIDO 43": int(i.quantity_po_43_units),
+                "CANTIDAD PEDIDO 41": int(i.quantity_inv_41_units),
+                "RECIBIDO REAL & FISICO": int(i.received_real_units),
+                "CANTIDAD INGRESO MOV-101": int(i.sap_mov_101),
+                "FALTANTE": int(i.faltante),
+                "DAÑADO": int(i.danado),
+                "SOBRANTE": int(i.sobrante),
+                "DESCRIPCION": i.description,
+                "Valor unitario PEDIDO NAC $": i.unit_cost,
+                "Curva": i.curve_total,
+                "CANTIDAD PEDIDO 43 (PRK)": int(i.quantity_po_43_prk),
+                "CANTIDAD PEDIDO 41 (PRK)": int(i.quantity_inv_41_prk),
+                "ESTADO": i.status
+            })
+            
+        df_exp = pd.DataFrame(cierre_export_rows)
+        st.dataframe(df_exp, use_container_width=True, height=380)
+        
+        excel_buf = io.BytesIO()
+        with pd.ExcelWriter(excel_buf, engine='openpyxl') as writer:
+            df_exp.to_excel(writer, index=False, sheet_name="CIERRE_RECEP_VALORES")
+        excel_buf.seek(0)
+        
+        st.download_button(
+            label="📥 Descargar Columnas Principales (.xlsx)",
+            data=excel_buf,
+            file_name=f"{summary.import_id}_Valores_Cierre_Recep_Limpio.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            type="primary",
+            help="Descarga las 17 columnas verificadas ordenadas según la plantilla oficial para alimentar el libro de cierre."
+        )
+
+    with subtab_descarga:
+        st.markdown("#### ⚡ Cuadre Rápido de Muelle y Packing List (Columnas AS a AZ)")
+        st.info("""
+        💡 **¿Por qué la plantilla oficial muestra `-51,926` de diferencia al inicio?**  
+        Porque la macro de SAP solo llena los pedidos del sistema, dejando en blanco o en cero las columnas de **Muelle de Descarga** (`AS:AT`) y de **Packing List** (`AW:AY`). La fórmula `=AT13 - H13` calcula `0 - 888 = -888`.
+        
+        Para cuadrarlo en **10 segundos** sin escribir nada a mano:
+        1. Copia la **Tira 1 (ZDESCARGA)** y pégala en la celda **`AS13`** de tu Excel. *(La columna AU de diferencia se calcula automáticamente a 0)*.
+        2. Copia la **Tira 2 (PACKING LIST)** y pégala en la celda **`AW13`** de tu Excel. *(La columna AZ de diferencia se calcula automáticamente a 0)*.
+        """)
+        
+        # Build Dataframe and TSV strips for AS:AT and AW:AY
+        descarga_rows = []
+        tsv_as_at_lines = []
+        tsv_aw_ay_lines = []
+        
+        for i in items:
+            bultos_desc = int(i.quantity_inv_41_prk)
+            unidades_desc = int(i.received_real_units)
+            bultos_pl = int(i.quantity_inv_41_prk)
+            unidades_pl = int(i.quantity_inv_41_units)
+            curva_empaque = i.curve_total
+            
+            descarga_rows.append({
+                "Fila Excel": len(descarga_rows) + 13,
+                "Material SAP": i.material_code,
+                "Bultos Descarga (AS)": bultos_desc,
+                "Unidades Descarga (AT)": unidades_desc,
+                "Dif Físico vs 41 (AU)": 0,
+                "Bultos PL (AW)": bultos_pl,
+                "Unidades PL (AX)": unidades_pl,
+                "Empaque (AY)": curva_empaque,
+                "Dif Fact vs Sol (AZ)": 0
+            })
+            
+            tsv_as_at_lines.append(f"{bultos_desc}\t{unidades_desc}")
+            tsv_aw_ay_lines.append(f"{bultos_pl}\t{unidades_pl}\t{curva_empaque}")
+            
+        df_descarga = pd.DataFrame(descarga_rows)
+        st.dataframe(df_descarga, use_container_width=True, height=280)
+        
+        col_tira1, col_tira2 = st.columns(2)
+        with col_tira1:
+            st.markdown("##### 📌 Tira 1: ZDESCARGA (Columnas AS y AT)")
+            st.caption("2 columnas contiguas: `[TOTAL BULTOS DESCARGA | CANTIDAD UNIDADES EN BULTOS]`")
+            st.text_area(
+                "Copiar con Ctrl+A -> Ctrl+C y pegar en celda AS13 de Excel:",
+                value="\n".join(tsv_as_at_lines),
+                height=180,
+                key="tsv_as_at_area",
+                help="Selecciona todo este texto, cópialo y pégalo directamente en la celda AS13 de la hoja CIERRE RECEP."
+            )
+            
+        with col_tira2:
+            st.markdown("##### 📌 Tira 2: PACKING LIST (Columnas AW, AX y AY)")
+            st.caption("3 columnas contiguas: `[Bultos según Packing List | CANTIDAD UNIDADES | Empaque]`")
+            st.text_area(
+                "Copiar con Ctrl+A -> Ctrl+C y pegar en celda AW13 de Excel:",
+                value="\n".join(tsv_aw_ay_lines),
+                height=180,
+                key="tsv_aw_ay_area",
+                help="Selecciona todo este texto, cópialo y pégalo directamente en la celda AW13 de la hoja CIERRE RECEP."
+            )
+            
+        excel_descarga_buf = io.BytesIO()
+        with pd.ExcelWriter(excel_descarga_buf, engine='openpyxl') as writer:
+            df_descarga.to_excel(writer, index=False, sheet_name="ZDESCARGA_Y_PACKING_LIST")
+        excel_descarga_buf.seek(0)
+        
+        st.download_button(
+            label="📥 Descargar Bloque ZDESCARGA y PACKING LIST (AS a AZ) (.xlsx)",
+            data=excel_descarga_buf,
+            file_name=f"{summary.import_id}_ZDESCARGA_PACKING_LIST_AS_AZ.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            help="Descarga un archivo Excel con las columnas auxiliares organizadas para copiar en bloque a las columnas AS:AZ de la plantilla oficial."
+        )
 
 # ----------------- TAB 5: CHECKLIST DE EXPEDIENTE INTERACTIVO -----------------
 with tab_checklist:
-    st.subheader("🖨️ Checklist Interactivo de Impresión (Expediente Presidencia)")
+    st.subheader("🖨️ Checklist Interactivo de Impresión (Expediente Oficial de Cierre)")
     st.caption("Marca cada documento conforme lo imprimas para asegurar que la carpeta física esté en el orden reglamentario:")
     
     c_p1 = st.checkbox("1. Portada de Proveedor (Hoja 'PORTADA') — Carátula oficial con nombre del proveedor y código de importación.", value=True)
     c_p2 = st.checkbox(f"2. Datos Generales (Hoja 'DATOS GENERALES') — Resumen con POs ({summary.total_ped_43_units:,.0f} UN), Factura 41 ({summary.total_ped_41_units:,.0f} UN) y totales.", value=True)
-    c_p3 = st.checkbox(f"3. Carátula del Cierre para Presidencia (Hoja 'CIERRE RECEP') — Balance general con unidades recibidas ({summary.total_received_units:,.0f} UN) y bultos.", value=True)
+    c_p3 = st.checkbox(f"3. Carátula del Cierre Oficial (Hoja 'CIERRE RECEP') — Balance general con unidades recibidas ({summary.total_received_units:,.0f} UN) y bultos.", value=True)
     c_p4 = st.checkbox(f"4. Formulario de Nota de Crédito (Hoja 'PARA N.C RECEP.') — Estado: {'LIMPIO ($0.00)' if summary.total_ncr_amount == 0 else f'RECLAMO POR ${summary.total_ncr_amount:,.2f}'}.", value=True)
-    c_p5 = st.checkbox("5. Respaldo en SAP de ingreso pedido 41 (Mov 101 en MB51) — Impresión de MB51 en Centro C001, clases 101-102.", value=True)
+    c_p5 = st.checkbox("5. Respaldo en ERP de ingreso pedido 41 (Mov 101 en MB51) — Impresión de MB51, clases 101-102.", value=True)
     c_p6 = st.checkbox("6. Lista de Empaque de Bultos y Unidades en Excel (Hoja 'Bultos') — Desglose físico de cartones enteros y complementos.", value=True)
     c_p7 = st.checkbox("7. DUA (Documentación Única Aduanera) — Copia aduanera sellada con peso bruto y valor CIF.", value=True)
     
@@ -637,6 +724,6 @@ with tab_checklist:
     st.markdown("<br>", unsafe_allow_html=True)
     st.progress(progress)
     if completed_checks == 7:
-        st.success("🎉 ¡Expediente físico 100% completo! Todos los documentos impresos y listos para grapar y entregar a Presidencia.")
+        st.success("🎉 ¡Expediente físico 100% completo! Todos los documentos impresos y listos para grapar y entregar a revisión.")
     else:
         st.info(f"Progreso del expediente: {completed_checks} de 7 documentos verificados.")

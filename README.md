@@ -1,7 +1,7 @@
-# 📦 Sistema de Conciliación de Inventarios 3-Way (Recepción UPC)
-### Cadena de Tiendas Ekono / Almacema S.A. — Centro de Distribución C001
+# 📦 Sistema de Conciliación de Inventarios 3-Way (Auditoría de Recepción)
+### Enterprise Supply Chain, Logistics & Goods Receipt Audit Engine
 
-Este proyecto proporciona un asistente automatizado de cálculo, explosión de curvas y auditoría de inventario para la fase de **RECEPCIÓN Y CIERRES** de importaciones (contenedores `IMP-XXX`), contrastando las órdenes de compra (PO `43...`), facturas de nacionalización (`41...`), descargas de muelle/calidad y movimientos contables de SAP S/4HANA & EWM (`Mov 101`).
+Este proyecto proporciona un asistente automatizado de cálculo, explosión de curvas y auditoría de inventario para la fase de **RECEPCIÓN Y CIERRES** de importaciones (contenedores internacionales), contrastando órdenes de compra (PO), facturas comerciales, descargas físicas de muelle y movimientos contables ERP (SAP S/4HANA / EWM Mov 101).
 
 ---
 

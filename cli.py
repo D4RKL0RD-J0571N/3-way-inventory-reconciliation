@@ -16,7 +16,7 @@ from src.engine import compute_summary
 
 def main():
     print("=" * 70)
-    print("  3-WAY INVENTORY RECONCILIATION ENGINE — EKONO / ALMACEMA")
+    print("  3-WAY INVENTORY RECONCILIATION & AUDIT ENGINE")
     print("=" * 70)
     print(f"Cargando y parseando datos de importación {DEFAULT_IMPORT_ID}...")
     
