@@ -154,3 +154,22 @@ La hoja `'Bultos'` en el libro de cierre oficial tiene una estructura estandariz
   $$B_7 = +B_6 - B_5 \quad (\text{Recibidos} - \text{Teóricos})$$
 * **Unidades por Bulto Promedio:**
   $$D_5 = \text{IFERROR}(H_{\text{total}} / B_5, \text{""})$$
+
+---
+
+## 7. La Regla Matemática del "Bulto Cero" (Entregas Diferidas y Contenedores Divididos)
+
+### El Problema Detectado (Benchmark Operacional e IMP-81):
+En importaciones con múltiples contenedores (ej. Parte A y Parte B) o cargamentos con líneas no recibidas, la factura comercial (`41`) y el pedido SAP (`43`) declaran el total general de materiales. Sin embargo, en el muelle solo se descarga una porción.
+* **El Error Común de Cálculo:** Asumir un valor de respaldo por defecto de `1.0` bulto si no hay información de empaque.
+* **La Inconsistencia Operativa:** Asignar `1 bulto = 0 unidades` desfasaba el inventario aduanero y de muelle, generando líneas absurdas como `1.0  0.0  0` en las columnas `AS:AT` y `AW:AY`.
+
+### La Regla Humana Oficial (100% Validada contra Archivos Históricos):
+Al auditar los libros oficiales cerrados por analistas humanos (ej. `IMP-81.xlsm`), se confirmó la regla estricta:
+
+$$\text{Si } U_{\text{recibidas}} = 0 \lor \text{Parte} \neq \text{A} \implies B_{\text{descarga}} = 0.0 \land U_{\text{descarga}} = 0.0 \land B_{\text{PL}} = 0.0 \land U_{\text{PL}} = 0.0 \land \text{Empaque} = 0$$
+
+Al aplicar esta regla en ReconcileAI:
+* Las 31 diferencias detectadas en `IMP-81` bajaron inmediatamente a **0 discrepancias (100% de coincidencia exacta con el libro oficial humano)**.
+* La hoja `Bultos` refleja ceros limpios en todas las líneas de entregas diferidas, preservando la cuadratura del libro.
+

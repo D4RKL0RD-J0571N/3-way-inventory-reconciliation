@@ -5,10 +5,10 @@
 
 ---
 
-## 🌟 Standalone Portable Edition (v1.1.0)
+## 🌟 Standalone Portable Edition (v1.2.0)
 
 > [!TIP]
-> **Zero Installation Required:** ReconcileAI is packaged as a **100% portable standalone distribution** (`ReconcileAI_Portable.zip`). It runs out of the box on Windows 10/11 **without requiring a Python installation or administrator privileges**.
+> **Zero Installation Required:** ReconcileAI is packaged as a **100% portable standalone distribution** (`ReconcileAI_Portable.zip`, 134 MB). It runs out of the box on Windows 10/11 **without requiring a Python installation or administrator privileges**.
 
 An agnostic, enterprise-grade calculation engine and interactive audit copilot for **3-Way Supply Chain Inventory Reconciliation**. Designed to eliminate manual cross-referencing between Purchase Orders (PO), Commercial Invoices/Customs Declarations, Physical Warehouse Receiving counts, and ERP Material Movements (`Mov 101` and `Mov 641`).
 

@@ -109,11 +109,24 @@ En la plantilla oficial de Cierre Administrativo (`CIERRE RECEP`), la macro inic
 **¿Cómo terminar de llenar la plantilla sin volver a usar SAP?**
 Una vez que pegaste los datos iniciales de SAP en la plantilla, **no necesitas abrir SAP nunca más**:
 - **Opción 1 (1 Clic — Automática):** En la pestaña **`📋 Copiar a Excel Oficial`**, haz clic en el botón azul **`⚡ Descargar Libro Oficial Cuadrado (.xlsm con Macros VBA)`**. La app genera el libro corporativo directamente en memoria, escribe las columnas `AS:AT` y `AW:AY`, repara cualquier fórmula dañada y preserva intactas todas las macros VBA.
-- **Opción 2 (Manual Controlada — 10 segundos):**
-  1. Ve a la pestaña **`📋 Copiar a Excel Oficial`** y selecciona la sub-pestaña **`📦 Bloque 2: ZDESCARGA y PACKING LIST`**.
-  2. **Tira 1 (ZDESCARGA - Cols AS y AT):** Haz clic en el recuadro de la Tira 1, presiona `Ctrl + A` y luego `Ctrl + C`. Pégalo en la celda **`AS13`** de tu Excel. *(La columna AU de diferencia calcula 0)*.
-  3. **Tira 2 (PACKING LIST - Cols AW, AX y AY):** Haz clic en el recuadro de la Tira 2, presiona `Ctrl + A` y luego `Ctrl + C`. Pégalo en la celda **`AW13`** de tu Excel. *(La columna AZ de diferencia calcula 0)*.
+- **Opción 2 (Copiado Rápido en 1 Clic — 5 segundos):**
+  1. Ve a la sub-pestaña **`📦 Bloque 2: ZDESCARGA y PACKING LIST`**.
+  2. Haz clic en el botón **`📋 Copiar Tira 1 (AS13)`**. El bloque completo se copia automáticamente al portapapeles con confirmación visual verde. Pégalo directamente en la celda **`AS13`** de tu Excel. *(La columna AU de diferencia calcula 0)*.
+  3. Haz clic en el botón **`📋 Copiar Tira 2 (AW13)`**. Pégalo en la celda **`AW13`** de tu Excel. *(La columna AZ de diferencia calcula 0)*.
+  *(También tienes los recuadros de texto debajo si prefieres la copia manual con `Ctrl + A` y `Ctrl + C`).*
 - **Resultado:** La fila totalizadora de Excel pasa inmediatamente a **`0 DIFERENCIAS (100% Cuadrado)`**.
+
+#### 📦 Regla Matemática del "Bulto Cero":
+Para entregas diferidas (`Parte B`, `Parte C`...) o materiales con `0` unidades recibidas:
+- **Bultos Descarga (`AS`):** `0.0`
+- **Unidades Descarga (`AT`):** `0.0`
+- **Bultos Packing List (`AW`):** `0.0`
+- **Unidades Packing List (`AX`):** `0.0`
+- **Empaque (`AY`):** `0`
+Esto elimina cualquier bulto fantasma (`1.0`) y garantiza un **100% de coincidencia exacta** con el llenado oficial humano de las hojas `CIERRE RECEP` y `Bultos`.
+
+#### ⏸️ Modo Pausa para Montaje a Ciegas (Sin Control de Calidad):
+Si una importación aún no tiene el informe de muelle de Control de Calidad, **no se puede emitir el cierre oficial**. ReconcileAI permite realizar el montaje preliminar desde SAP, dejando el estado en **`PAUSA_SIN_CONTROL_CALIDAD`** con advertencia visual hasta que se incorpore el conteo físico de descarga.
 
 ---
 

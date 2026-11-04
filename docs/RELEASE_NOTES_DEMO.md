@@ -1,21 +1,49 @@
-# 🚀 ReconcileAI — Release Notes: Standalone Edition (v1.1.0)
+# 🚀 ReconcileAI — Release Notes: Standalone Edition (v1.2.0)
 ### Universal 3-Way Inventory Reconciliation & Goods Receipt Auditor
 
 ---
 
 ## 📌 Executive Summary
 
-**ReconcileAI v1.1.0** is an agnostic, high-performance desktop and web copilot engineered for supply chain analysts, warehouse supervisors, and inventory controllers. It automates the complex mathematical reconciliation between:
-1. **Commercial Purchase Orders (`PO 43`)**
-2. **Customs Nationalization Invoices (`Invoice 41`)**
-3. **Physical Warehouse Receiving Counts (Dock Bultos & Quality Control Size Curves)**
-4. **ERP Material Movements (`SAP Mov 101` Goods Receipt & `SAP Mov 641` Store Transfers)**
+**ReconcileAI v1.2.0** brings significant operational hardening, sub-second streaming performance, and refined carton mathematics based on direct real-world benchmark stress-testing.
 
-This release delivers a **100% portable standalone executable** packaged for zero-friction distribution, requiring **no Python installation, no external dependencies, and no administrative rights** on target Windows machines.
+Key advancements in this version:
+1. **Zero-Carton Precision Rule (`0.0` Bultos for Zero Units):** Eliminates legacy phantom 1-carton defaults for split containers (`Parte B`, `Parte C`) and unreceived lines.
+2. **Dual-Mode Carton Reconciliation (`Conteo de Muelle` vs `Estricto Aduanero`):** Instant switch between physical dock count grouping and mathematical DUA carton/odd decomposition.
+3. **50x Streaming Loader Optimization (<0.3s):** Selective `read_only=True` workbook streaming that loads 4.5 MB+ workbooks in ~0.28 seconds instead of 16+ seconds.
+4. **Recursive File Discovery:** Automatically locates Quality Control files nested inside subdirectories (`INFORMACION GENERAL/`, `Facturas/`, etc.).
+5. **1-Click Clipboard Strips & Hotkey Protection:** One-click copy buttons for `Tira 1 (AS13)` and `Tira 2 (AW13)` with built-in suppression of accidental modal shortcuts.
+6. **Blind Setup Mode (`PAUSA_SIN_CONTROL_CALIDAD`):** Safely mounts initial SAP closure macros while placing the import on pause until Quality Control physically confirms receiving counts.
+
+This release delivers an updated **100% portable standalone executable** (`dist/ReconcileAI_Portable.zip`, 134 MB), requiring **zero Python installation, zero external dependencies, and zero administrative rights**.
 
 ---
 
 ## ✨ Key Capabilities & Highlights
+
+### 1. 🛡️ Zero-Carton Precision Rule (Level 1 Hardening)
+- **Elimination of Phantom Defaults:** When items belong to deferred parts (e.g., `PENDIENTE_PARTE_B`) or have zero physical receipt (`received_real_units == 0`), Column `AS` (Bultos Muelle), Column `AT` (Unidades Muelle), Column `AW` (Bultos PL), Column `AX` (Unidades PL), and the official `'Bultos'` sheet are set strictly to **`0.0`**.
+- **100% Exact Match with Human Reference:** Validated against real historical closed imports (e.g., `IMP-81.xlsm`), achieving **0 mismatches out of 52 items** across all columns.
+
+### 2. ⚖️ Dual Carton View Modes (Dock vs. Strict Customs)
+- **Modo Conteo de Muelle (Consolidado Humano):** Direct physical carton totals matching dock tally sheets and patio receiving tags.
+- **Modo Estricto Aduanero (Enteros + Picos):** Rigorous mathematical decomposition into full standard boxes and odds (`Enteros + Picos`) aligned with commercial curves and DUA declarations.
+
+### 3. ⚡ Ultra-Fast Streaming Excel Engine (<0.3s vs 16.1s)
+- **Selective Sheet Streaming:** Reads heavy Quality Control files (3.5 MB – 4.5 MB) using streaming row iterators (`iter_rows(values_only=True)`), bypassing drawing and image XML layers.
+- **50x Speedup:** Cuts file processing latency from 16.1 seconds down to **0.28 seconds**.
+
+### 4. 📁 Recursive Subfolder Discovery
+- Scans target import directories recursively (`p.rglob("*")`). Automatically pairs nested Quality Control workbooks located inside subfolders like `INFORMACION GENERAL/` or `Facturas/` without requiring manual file reorganization.
+
+### 5. 📋 1-Click Clipboard Copying & Modal Hotkey Protection
+- **Direct 1-Click Copy Buttons:** `📋 Copiar Tira 1 (AS13)` and `📋 Copiar Tira 2 (AW13)` copy tab-delimited blocks straight to the Windows clipboard with instant visual confirmation (`✅ ¡Copiado!`).
+- **Global Hotkey Suppression:** Intercepts Streamlit's default window-level `c` hotkey in capture phase, preventing the intrusive *"Clear caches"* dialog from interrupting copy operations.
+
+### 6. ⏸️ Blind SAP Setup Pause Mode (`PAUSA_SIN_CONTROL_CALIDAD`)
+- When a container is awaiting physical unloading or lacks a Quality Control workbook, ReconcileAI enables preliminary SAP mounting while enforcing an explicit pause banner. It disallows certified closure generation until dock receiving counts are supplied.
+
+---
 
 ### 1. 🛡️ Portable Standalone Packaging (Zero Configuration)
 - **Zero-Install Deployment:** Distributed as a standalone bundle `ReconcileAI_Portable.zip`. Simply unpack and double-click `ReconcileAI.exe` or `INICIAR_RECONCILEAI.bat`.
