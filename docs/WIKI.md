@@ -86,15 +86,19 @@ Antes de pegar cualquier tabla de SAP en la plantilla de Excel:
 
 ---
 
-### Paso 4: Auditoría Visual y Detección de Discrepancias
+### Paso 4: Auditoría de Bultos y Conciliación Visual
 1. **Barra Superior de Métricas:**
    - Verifica que el total de unidades facturadas coincida con las recibidas.
    - Si el contenedor viene dividido (como `IMP-182` que tiene Parte A y Parte B), el sistema te indica cuántos materiales corresponden a cada lote.
-2. **🚦 Tabla Semáforo:**
+2. **📦 Pestaña Cuadre & Desglose de Bultos:**
+   - **Tarjetas de Balance:** Bultos Teóricos vs Bultos de Muelle vs Packing List de Proveedor.
+   - **Calculadora de Empaque:** Introduce cualquier desglose (ej. `39*60 1*78`) para calcular al instante total de bultos y prendas sin errores manuales.
+   - **Réplica Oficial de Hoja 'Bultos':** Visualiza la matriz exacta de bultos por material y contenedor para validar la documentación de transporte.
+3. **🚦 Tabla Semáforo:**
    - 🟢 **Verde suave:** Ítems completamente cuadrados (cero diferencias).
    - 🔵 **Azul suave:** Ítems de la Parte B (en tránsito o descargados en segundo lote).
    - 🔴 **Rojo:** Materiales con faltante o avería física.
-3. **🔍 Ficha 360° del Material:**
+4. **🔍 Ficha 360° del Material:**
    - Escribe cualquier código SAP o estilo de proveedor. En una sola tarjeta visual verás compras, factura, físico, bultos y el desglose de tallas hijas con su curva individual.
 
 ---
@@ -151,25 +155,35 @@ Auditoría y Gerencia revisan las filas 5 y 6 de `CIERRE RECEP` antes de mirar l
 - ReconcileAI compara los **Bultos Teóricos del Packing List** contra los **Bultos Recibidos en Muelle**.
 - Si un contenedor de 767 bultos se consolidó en 713 bultos físicos (diferencia de -54 bultos por empaque), el sistema lo refleja con claridad para justificar la diferencia de volumen sin inconsistencias de prendas.
 
+### ¿Cómo se conectan los Cierres de Recepción con los Cierres de Despacho?
+El libro oficial de cierre es un sistema dual de dos fases (ver [**Arquitectura de Despacho**](AUDITORIA_DESPACHO_MACRO.md)):
+1. **Fase 1 (Recepción - `CIERRE RECEP`):** Se concilia aduana e ingreso a bodega.
+2. **Fase 2 (Despacho - `CIERRE DESP`):** Se audita la distribución a tiendas vía movimiento ERP `641`.
+- **Ventaja de ReconcileAI:** Al completar el cierre de recepción, el 80% de la hoja de despacho queda pre-cableada y sincronizada automáticamente mediante fórmulas nativas de Excel vinculadas a `CIERRE RECEP`.
+
 ---
 ---
 
 # 📖 English Operational Wiki & Tutorial
 
-## 1. Demo Edition v1.0.0 (Standalone Portable)
+## 1. Standalone Portable Edition (v1.1.0)
 - **Zero Python Installation:** Runs standalone from `ReconcileAI_Portable.zip` on any Windows 10/11 system.
 - **USB & Offline Friendly:** Unpack anywhere, double-click `ReconcileAI.exe`, and audit containers immediately.
 - **Bilingual & Localized Tables:** Starts in Spanish by default; toggle to English anytime in the sidebar. Table toolbars and hover tooltips (`Fullscreen`, `Download as CSV`, `Search`) dynamically adapt to the chosen language.
-- **Enterprise Privacy:** Zero sensitive data baked in. Runs 100% in local memory.
+- **Dedicated Carton & Packaging Tab (`📦 Cuadre & Desglose de Bultos`):** Top 5 carton KPI summary, interactive packaging calculator, and exact replica of the official `'Bultos'` sheet.
+- **Dual-Phase Readiness (Reception & Dispatch):** Pre-wires and reconciles both import goods receipts (`CIERRE RECEP`, `Mov 101`) and retail store transfers (`CIERRE DESP`, `Mov 641`).
+- **Enterprise Privacy:** Zero sensitive corporate data. Operates 100% in local workstation memory.
 
 ## 2. 5-Minute Evaluation Walkthrough for Leadership
 1. **Show the Legacy Pain:** Point out the artificial `-51,926 UN` negative difference in standard Excel closure sheets.
 2. **Select Container:** Load Quality Control and Closure files with drag-and-drop or local folder browser.
 3. **Inspect KPIs:** Immediate 6-metric summary of Cartons/Bultos, Invoiced Units, and Physical Dock Counts.
-4. **Drill Down 360°:** Instant size-curve breakdown without manual VLOOKUP formulas.
-5. **Square Closure:** Click 1-Click `.xlsm` Export or copy pre-formatted TSV strips (`Cols AS:AT` & `Cols AW:AY`) to square differences to `0`.
+4. **Audit Cartons & Packaging:** Review the **`📦 Cuadre & Desglose de Bultos`** tab to verify physical cartons vs packing list cartons.
+5. **Drill Down 360°:** Instant size-curve breakdown without manual VLOOKUP formulas.
+6. **Square Closure:** Click 1-Click `.xlsm` Export or copy pre-formatted TSV strips (`Cols AS:AT` & `Cols AW:AY`) to square differences to `0`.
 
 ## 3. Case Study: Solving Difficult Shipments (IMP-174)
 - **Column Shift Immunity:** Dynamically maps headers even when operators insert custom columns (e.g. Pallet/Tarima IDs).
 - **Multi-Warehouse Allocation:** Accurately consolidates multi-destination shipments (Central A001 + Replenishment A004).
+- **Compound Packaging Strings:** Automatically decomposes odd packaging formats (e.g. `'39*60 1*78'`).
 - **Self-Healing Formulas:** Automatically restores deleted or overwritten formulas in official macro templates.
