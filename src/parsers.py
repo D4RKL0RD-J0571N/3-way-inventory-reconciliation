@@ -399,6 +399,14 @@ def parse_cierre_recepcion(
             col_map['rec_u'] = c
         elif 'mov-101' in h_low and c < 20:
             col_map['mov101'] = c
+        elif 'faltante' in h_low and c < 20:
+            col_map['falt'] = c
+        elif any(k in h_low for k in ['dañado', 'danado']) and c < 20:
+            col_map['dan'] = c
+        elif 'sobrante' in h_low and c < 20:
+            col_map['sob'] = c
+        elif any(k in h_low for k in ['partes', 'b-c-d', 'enviada a partes']) and c < 30:
+            col_map['partes_bcd'] = c
         elif 'total bultos' in h_low and 'descarga' in h_low:
             col_map['as_bultos'] = c
         elif 'unidades en bultos' in h_low:
@@ -527,10 +535,14 @@ def parse_cierre_recepcion(
 
         # Check observations or action columns in CIERRE RECEP if unassigned
         if not assigned_part:
-            obs_text = f"{clean_string(ws.cell(r, col_map.get('desc', 30)).value)} {clean_string(ws.cell(r, 20).value)} {clean_string(ws.cell(r, 29).value)}"
-            p_match = re.search(r'PARTE\s+([A-Z0-9]+)', obs_text, re.IGNORECASE)
-            if p_match:
-                assigned_part = p_match.group(1).upper()
+            partes_bcd_val = clean_number(ws.cell(r, col_map['partes_bcd']).value) if col_map.get('partes_bcd') else 0.0
+            if partes_bcd_val > 0:
+                assigned_part = "B"
+            else:
+                obs_text = f"{clean_string(ws.cell(r, col_map.get('desc', 30)).value)} {clean_string(ws.cell(r, 20).value)} {clean_string(ws.cell(r, 29).value)}"
+                p_match = re.search(r'PARTE\s+([A-Z0-9]+)', obs_text, re.IGNORECASE)
+                if p_match:
+                    assigned_part = p_match.group(1).upper()
 
         if not assigned_part:
             if is_in_qc or (mat_code in boms):
