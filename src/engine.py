@@ -42,6 +42,20 @@ def compute_summary(
     total_sob = sum(i.sobrante for i in items)
     total_ncr = sum(i.ncr_amount for i in items)
     
+    total_bultos_desc = sum(i.bultos_descarga for i in items)
+    total_bultos_pl = sum(i.bultos_packing_list for i in items)
+    dif_total_b = total_bultos_desc - total_bultos_pl
+    total_prk_41 = sum(i.quantity_inv_41_prk for i in items)
+    total_prk_43 = sum(i.quantity_po_43_prk for i in items)
+
+    # Reconcile header packages with item-level totals if missing
+    if theor_pkg == 0.0 and total_bultos_pl > 0:
+        theor_pkg = total_bultos_pl
+    if rec_pkg == 0.0 and total_bultos_desc > 0:
+        rec_pkg = total_bultos_desc
+    if dif_pkg == 0.0 and (rec_pkg != 0 or theor_pkg != 0):
+        dif_pkg = rec_pkg - theor_pkg
+    
     status = "LIMPIO" if (total_falt == 0 and total_dan == 0) else "CON_DISCREPANCIAS"
     
     return ReconciliationSummary(
@@ -62,7 +76,12 @@ def compute_summary(
         theor_packages=theor_pkg,
         received_packages=rec_pkg,
         difference_packages=dif_pkg,
-        container_parts_breakdown=container_parts_breakdown
+        container_parts_breakdown=container_parts_breakdown,
+        total_bultos_descarga=total_bultos_desc,
+        total_bultos_pl=total_bultos_pl,
+        dif_total_bultos=dif_total_b,
+        total_prk_41=total_prk_41,
+        total_prk_43=total_prk_43
     )
 
 def filter_items(

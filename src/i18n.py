@@ -178,6 +178,10 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
     },
 
     # Navigation Tabs
+    "tab_bultos": {
+        "es": "📦 Cuadre & Desglose de Bultos",
+        "en": "📦 Carton Reconciliation & Packaging"
+    },
     "tab_inspector": {
         "es": "🔍 Ficha 360° Material",
         "en": "🔍 360° Material Inspector"
@@ -205,6 +209,80 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
     "tab_wiki": {
         "es": "📖 Wiki y Guía de Uso (ES/EN)",
         "en": "📖 User Wiki & Guide (ES/EN)"
+    },
+
+    # Tab: Bultos & Packaging Reconciliation
+    "bultos_title": {
+        "es": "📦 Auditoría y Cuadre de Bultos Físicos (Muelle vs Packing List)",
+        "en": "📦 Physical Carton Reconciliation & Audit (Dock vs Packing List)"
+    },
+    "bultos_desc": {
+        "es": "Conciliación exacta de cajas físicas recibidas en muelle contra el packing list del proveedor. Previene confusiones entre bultos, prepacks (PRK) y unidades totales.",
+        "en": "Exact reconciliation of physical cartons received at the dock against vendor packing list. Prevents discrepancies between cartons, prepacks (PRK), and total units."
+    },
+    "kpi_bultos_descarga": {
+        "es": "Bultos Muelle (Z-Carga)",
+        "en": "Dock Cartons (Discharge)"
+    },
+    "kpi_bultos_pl": {
+        "es": "Bultos Packing List",
+        "en": "Packing List Cartons"
+    },
+    "kpi_dif_bultos": {
+        "es": "Diferencia Bultos Físicos",
+        "en": "Physical Carton Difference"
+    },
+    "kpi_total_prk": {
+        "es": "Total Prepacks (PRK)",
+        "en": "Total Prepacks (PRK)"
+    },
+    "kpi_total_units_bultos": {
+        "es": "Total Unidades Físicas",
+        "en": "Total Physical Units"
+    },
+    "calc_bultos_title": {
+        "es": "🧮 Calculadora de Bultos, Curvas y Empaque Oficial",
+        "en": "🧮 Carton, Curve & Official Packaging Calculator"
+    },
+    "calc_bultos_caption": {
+        "es": "Calcula el número de bultos completos y complementos (picos), valida la curva y genera la cadena oficial de empaque (ej. '39*60 1*78' o '50*12').",
+        "en": "Calculates complete cartons and complement cartons (odds), validates curve, and generates official packaging string (e.g. '39*60 1*78' or '50*12')."
+    },
+    "calc_lbl_total_units": {
+        "es": "Total Unidades a Empacar:",
+        "en": "Total Units to Pack:"
+    },
+    "calc_lbl_curve": {
+        "es": "Curva (Unidades por Prepack):",
+        "en": "Curve (Units per Prepack):"
+    },
+    "calc_lbl_units_per_box": {
+        "es": "Unidades por Caja Estándar:",
+        "en": "Units per Standard Carton:"
+    },
+    "calc_lbl_odds": {
+        "es": "¿Tiene bulto pico / complemento irregular?:",
+        "en": "Has irregular complement / odd carton?:"
+    },
+    "calc_lbl_odds_units": {
+        "es": "Unidades en el Bulto Complemento:",
+        "en": "Units in Complement Carton:"
+    },
+    "calc_res_total_boxes": {
+        "es": "Bultos Físicos Totales:",
+        "en": "Total Physical Cartons:"
+    },
+    "calc_res_packaging_str": {
+        "es": "Cadena Oficial de Empaque (Col AS / AY):",
+        "en": "Official Packaging String (Col AS / AY):"
+    },
+    "bultos_sheet_title": {
+        "es": "📋 Vista Oficial de Hoja 'Bultos' (Plantilla Corporativa)",
+        "en": "📋 Official 'Bultos' Sheet View (Corporate Template)"
+    },
+    "bultos_sheet_caption": {
+        "es": "Estructura idéntica a la pestaña 'Bultos' del libro de cierre oficial, con enlaces 1-a-1 a CIERRE RECEP.",
+        "en": "Identical structure to the official closure workbook 'Bultos' tab, linked 1-to-1 with CIERRE RECEP."
     },
 
     # Tab 0: Ficha 360 Material Inspector

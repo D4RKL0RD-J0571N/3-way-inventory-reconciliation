@@ -5,6 +5,17 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Dict
 
 @dataclass
+class PackagingBreakdown:
+    total_boxes: float = 0.0
+    total_units: float = 0.0
+    boxes_full: float = 0.0
+    units_per_box_full: float = 0.0
+    boxes_comp: float = 0.0
+    units_per_box_comp: float = 0.0
+    raw_str: str = ""
+    is_compound: bool = False
+
+@dataclass
 class ChildSKU:
     material_code: str
     description: str
@@ -39,6 +50,20 @@ class PrepackItem:
     status: str = "LIMPIO" # "LIMPIO", "FALTANTE", "SOBRANTE", "DAÑADO", "REVUELTO", "PENDIENTE_PARTE_B"
     ncr_amount: float = 0.0
     observations: str = ""
+    # Explicit Bultos & Packaging Fields (Muelle vs Packing List)
+    bultos_descarga: float = 0.0
+    unidades_descarga: float = 0.0
+    bultos_packing_list: float = 0.0
+    unidades_packing_list: float = 0.0
+    empaque_str: str = ""
+    bultos_str: str = ""
+    um: str = "PRK"
+    bultos_enteros: float = 0.0
+    unidades_por_bulto_entero: float = 0.0
+    bultos_complementos: float = 0.0
+    unidades_por_bulto_comp: float = 0.0
+    unidades_por_bulto: float = 0.0
+    dif_bultos: float = 0.0
 
 @dataclass
 class ReconciliationSummary:
@@ -60,3 +85,8 @@ class ReconciliationSummary:
     received_packages: float = 0.0
     difference_packages: float = 0.0
     container_parts_breakdown: Dict[str, int] = field(default_factory=dict)
+    total_bultos_descarga: float = 0.0
+    total_bultos_pl: float = 0.0
+    dif_total_bultos: float = 0.0
+    total_prk_41: float = 0.0
+    total_prk_43: float = 0.0

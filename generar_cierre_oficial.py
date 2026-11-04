@@ -44,18 +44,34 @@ def main():
     ws = wb["CIERRE RECEP"]
 
     print(f"3. Escribiendo {len(items)} materiales en columnas ZDESCARGA (AS:AT) y PACKING LIST (AW:AY)...")
+    ws_bultos = wb["Bultos"] if "Bultos" in wb.sheetnames else None
     start_row = 13
     for idx, item in enumerate(items):
         r = start_row + idx
         
-        # Bultos y unidades verificados desde QC y cierre
+        # Bultos y unidades verificados desde QC, empaque real y cierre
         qc_item = qc_details.get(item.material_code, {})
-        bultos_desc = int(item.quantity_inv_41_prk) if item.quantity_inv_41_prk > 0 else int(qc_item.get('bultos', 0))
-        unidades_desc = int(qc_item.get('unidades', 0)) if qc_item.get('unidades', 0) > 0 else int(item.received_real_units)
         
-        bultos_pl = bultos_desc
-        unidades_pl = int(item.quantity_inv_41_units)
-        empaque = item.curve_total if item.curve_total > 0 else int(qc_item.get('curve', 1))
+        # Bultos físicos de descarga
+        if item.bultos_descarga > 0:
+            bultos_desc = item.bultos_descarga
+        elif qc_item.get('bultos', 0) > 0:
+            bultos_desc = qc_item['bultos']
+        else:
+            bultos_desc = item.quantity_inv_41_prk if item.quantity_inv_41_prk > 0 else 1.0
+
+        # Unidades físicas de descarga
+        if item.unidades_descarga > 0:
+            unidades_desc = item.unidades_descarga
+        elif qc_item.get('unidades', 0) > 0:
+            unidades_desc = qc_item['unidades']
+        else:
+            unidades_desc = item.received_real_units
+
+        # Bultos y unidades de Packing List
+        bultos_pl = item.bultos_packing_list if item.bultos_packing_list > 0 else bultos_desc
+        unidades_pl = item.unidades_packing_list if item.unidades_packing_list > 0 else item.quantity_inv_41_units
+        empaque_val = item.empaque_str or (str(item.curve_total) if item.curve_total > 0 else "12")
 
         # Reparar fórmula de Col H si fue borrada o sobreescrita manualmente
         val_h = ws.cell(row=r, column=8).value
@@ -63,7 +79,8 @@ def main():
             ws.cell(row=r, column=8, value=f"=+G{r}-J{r}-N{r}-O{r}+L{r}+P{r}+Q{r}")
 
         # Columna AS (45): TOTAL BULTOS DESCARGA
-        ws.cell(row=r, column=45, value=bultos_desc)
+        # Escribir string si es compuesto ('39*60 1*78') o número limpio
+        ws.cell(row=r, column=45, value=item.bultos_str if item.bultos_str and "*" in item.bultos_str else bultos_desc)
         # Columna AT (46): CANTIDAD DE UNIDADES EN BULTOS
         ws.cell(row=r, column=46, value=unidades_desc)
         # Columna AU (47): Diferencia Físico vs Pedido Nac
@@ -75,12 +92,25 @@ def main():
         ws.cell(row=r, column=49, value=bultos_pl)
         # Columna AX (50): CANTIDAD UNIDADES
         ws.cell(row=r, column=50, value=unidades_pl)
-        # Columna AY (51): Empaque (Curva)
-        ws.cell(row=r, column=51, value=empaque)
+        # Columna AY (51): Empaque (Curva / Ratio)
+        ws.cell(row=r, column=51, value=empaque_val)
         # Columna AZ (52): Diferencia Facturadas vs Solicitadas
         val_az = ws.cell(row=r, column=52).value
         if val_az is None or not str(val_az).startswith("="):
             ws.cell(row=r, column=52, value=f"=+AX{r}-H{r}")
+
+        # Sincronizar hoja 'Bultos' si existe en la plantilla
+        if ws_bultos:
+            r_b = 3 + idx
+            ws_bultos.cell(row=r_b, column=2, value=f"='CIERRE RECEP'!C{r}")
+            ws_bultos.cell(row=r_b, column=3, value=f"='CIERRE RECEP'!AS{r}")
+            ws_bultos.cell(row=r_b, column=4, value=f"='CIERRE RECEP'!AT{r}")
+            ws_bultos.cell(row=r_b, column=5, value=f"='CIERRE RECEP'!E{r}")
+            ws_bultos.cell(row=r_b, column=6, value=f"='CIERRE RECEP'!H{r}")
+            ws_bultos.cell(row=r_b, column=7, value=f"='CIERRE RECEP'!BB{r}")
+            ws_bultos.cell(row=r_b, column=8, value=f"='CIERRE RECEP'!BC{r}")
+            ws_bultos.cell(row=r_b, column=9, value=f"='CIERRE RECEP'!AD{r}")
+            ws_bultos.cell(row=r_b, column=10, value=f"='CIERRE RECEP'!AY{r}")
 
     print(f"4. Guardando libro final 100% cuadrado y fórmulas reparadas en:\n   {output_path.name}")
     wb.save(str(output_path))

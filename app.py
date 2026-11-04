@@ -548,7 +548,8 @@ with k6:
 st.divider()
 
 # Navigation Tabs (Short, punchy, full width - zero cut-offs)
-tab_inspector, tab_reconcile, tab_curves, tab_clipboard, tab_excel_export, tab_checklist, tab_wiki = st.tabs([
+tab_bultos, tab_inspector, tab_reconcile, tab_curves, tab_clipboard, tab_excel_export, tab_checklist, tab_wiki = st.tabs([
+    t("tab_bultos"),
     t("tab_inspector"),
     t("tab_reconcile"),
     t("tab_curves"),
@@ -558,7 +559,181 @@ tab_inspector, tab_reconcile, tab_curves, tab_clipboard, tab_excel_export, tab_c
     t("tab_wiki")
 ])
 
-# ----------------- TAB 0: FICHA 360 FLUIDA -----------------
+# ----------------- TAB 0: CUADRE & DESGLOSE DE BULTOS -----------------
+with tab_bultos:
+    st.markdown(f"### {t('bultos_title')}")
+    st.caption(t("bultos_desc"))
+
+    # Top KPI Cards for Cartons & Units
+    cb1, cb2, cb3, cb4, cb5 = st.columns(5)
+    total_b_desc = summary.total_bultos_descarga if summary.total_bultos_descarga > 0 else summary.received_packages
+    total_b_pl = summary.total_bultos_pl if summary.total_bultos_pl > 0 else summary.theor_packages
+    dif_b = total_b_desc - total_b_pl
+
+    with cb1:
+        st.metric(
+            t("kpi_bultos_descarga"),
+            f"{total_b_desc:,.0f} Bultos" if current_lang == "es" else f"{total_b_desc:,.0f} Cartons",
+            delta="Descarga Muelle" if current_lang == "es" else "Dock Discharge"
+        )
+    with cb2:
+        st.metric(
+            t("kpi_bultos_pl"),
+            f"{total_b_pl:,.0f} Bultos" if current_lang == "es" else f"{total_b_pl:,.0f} Cartons",
+            delta="Packing List (Proveedor)" if current_lang == "es" else "Vendor Packing List"
+        )
+    with cb3:
+        st.metric(
+            t("kpi_dif_bultos"),
+            f"{dif_b:,.0f} Bultos" if current_lang == "es" else f"{dif_b:,.0f} Cartons",
+            delta="Cuadrado Exacto (0 Dif)" if dif_b == 0 else f"Descuadre: {dif_b:,.0f}",
+            delta_color="normal" if dif_b == 0 else "inverse"
+        )
+    with cb4:
+        st.metric(
+            t("kpi_total_prk"),
+            f"{summary.total_prk_41:,.0f} PRK",
+            delta=f"Curva Promedio: {summary.total_received_units / max(summary.total_prk_41, 1):.1f} UN/PRK"
+        )
+    with cb5:
+        st.metric(
+            t("kpi_total_units_bultos"),
+            f"{summary.total_received_units:,.0f} UN",
+            delta=f"Promedio: {summary.total_received_units / max(total_b_desc, 1):.1f} UN/Bulto"
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Interactive Carton & Packaging Calculator (Calculadora de Bultos y Empaque)
+    with st.expander(t("calc_bultos_title"), expanded=False):
+        st.caption(t("calc_bultos_caption"))
+        cal_c1, cal_c2, cal_c3, cal_c4 = st.columns(4)
+        with cal_c1:
+            cal_units = st.number_input(t("calc_lbl_total_units"), min_value=1, value=2418, step=12, key="calc_u")
+        with cal_c2:
+            cal_curve = st.number_input(t("calc_lbl_curve"), min_value=1, value=6, step=1, key="calc_c")
+        with cal_c3:
+            cal_std_box = st.number_input(t("calc_lbl_units_per_box"), min_value=1, value=60, step=6, key="calc_sb")
+        with cal_c4:
+            has_odds = st.checkbox(t("calc_lbl_odds"), value=True, key="calc_has_odds")
+            odd_units = st.number_input(t("calc_lbl_odds_units"), min_value=0, value=78 if has_odds else 0, step=6, key="calc_ou") if has_odds else 0
+
+        # Calculations
+        if has_odds and odd_units > 0 and cal_units > odd_units:
+            full_box_units = cal_units - odd_units
+            boxes_full = full_box_units // cal_std_box
+            rem = full_box_units % cal_std_box
+            if rem > 0:
+                odd_units += rem
+            boxes_comp = 1
+            total_calc_boxes = boxes_full + boxes_comp
+            pkg_str_calc = f"{int(boxes_full)}*{int(cal_std_box)} 1*{int(odd_units)}"
+        else:
+            boxes_full = cal_units // cal_std_box
+            rem = cal_units % cal_std_box
+            boxes_comp = 1 if rem > 0 else 0
+            total_calc_boxes = boxes_full + boxes_comp
+            if boxes_comp > 0:
+                pkg_str_calc = f"{int(boxes_full)}*{int(cal_std_box)} 1*{int(rem)}"
+            else:
+                pkg_str_calc = f"{int(boxes_full)}*{int(cal_std_box)}" if boxes_full > 1 else str(cal_std_box)
+
+        res_prk = cal_units / max(cal_curve, 1)
+        curve_ok = (cal_units % cal_curve == 0)
+
+        r_c1, r_c2, r_c3, r_c4 = st.columns(4)
+        with r_c1:
+            st.metric(t("calc_res_total_boxes"), f"{total_calc_boxes:,.0f} Bultos")
+        with r_c2:
+            st.metric("Bultos Enteros / Complementos", f"{boxes_full:,.0f} Enteros + {boxes_comp:,.0f} Pico")
+        with r_c3:
+            st.metric("Prepacks Calculados", f"{res_prk:,.0f} PRK", delta="Curva Exacta" if curve_ok else "Alerta: No múltiplo de curva", delta_color="normal" if curve_ok else "inverse")
+        with r_c4:
+            st.markdown(f"**{t('calc_res_packaging_str')}**")
+            st.code(pkg_str_calc, language="text")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Official 'Bultos' Sheet Replication Table
+    st.markdown(f"#### {t('bultos_sheet_title')}")
+    st.caption(t("bultos_sheet_caption"))
+
+    bultos_rows = []
+    for it in items:
+        # Determine display bultos discharge (string or number)
+        b_disp = it.bultos_str if (it.bultos_str and "*" in it.bultos_str) else (int(it.bultos_descarga) if it.bultos_descarga > 0 else int(it.quantity_inv_41_prk))
+        bultos_rows.append({
+            "CATEGORIA": it.category or "TEXTIL",
+            "CANTIDAD DE BULTOS Z-Carga": b_disp,
+            "CANTIDAD DE UNIDADES Z-Carga": int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units),
+            "MATERIAL": it.material_code,
+            "RECIBIDO REAL & FISICO": int(it.received_real_units),
+            "Curva": it.curve_total,
+            "UM": it.um or "PRK",
+            "DESCRIPCION": it.description,
+            "EMPAQUE UNIDADES Z-Carga": it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12"),
+            "Bultos Packing List": int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga),
+            "Diferencia Bultos": int(it.dif_bultos),
+            "_status": it.status
+        })
+
+    df_bultos_all = pd.DataFrame(bultos_rows)
+
+    # Filter & Search for Bultos table
+    fb_c1, fb_c2 = st.columns([1, 3])
+    with fb_c1:
+        filter_b_cat = st.selectbox(
+            "Filtrar Categoría:" if current_lang == "es" else "Filter Category:",
+            options=["Todas" if current_lang == "es" else "All"] + sorted(list(set(r["CATEGORIA"] for r in bultos_rows))),
+            key="fb_cat"
+        )
+    with fb_c2:
+        search_b = st.text_input(
+            "Buscar en Hoja Bultos:" if current_lang == "es" else "Search Bultos Sheet:",
+            placeholder="Buscar por material, descripción, empaque o bultos..." if current_lang == "es" else "Search by material, description, packaging or cartons...",
+            key="fb_search"
+        )
+
+    df_bultos_filtered = df_bultos_all
+    if filter_b_cat not in ["Todas", "All"]:
+        df_bultos_filtered = df_bultos_filtered[df_bultos_filtered["CATEGORIA"] == filter_b_cat]
+    if search_b:
+        sb_low = search_b.lower().strip()
+        df_bultos_filtered = df_bultos_filtered[
+            df_bultos_filtered["MATERIAL"].astype(str).str.lower().str.contains(sb_low) |
+            df_bultos_filtered["DESCRIPCION"].astype(str).str.lower().str.contains(sb_low) |
+            df_bultos_filtered["CANTIDAD DE BULTOS Z-Carga"].astype(str).str.lower().str.contains(sb_low) |
+            df_bultos_filtered["EMPAQUE UNIDADES Z-Carga"].astype(str).str.lower().str.contains(sb_low)
+        ]
+
+    # Virtual Pagination for Bultos table
+    df_bultos_display = paginate_dataframe(
+        df_bultos_filtered.drop(columns=["_status"]),
+        key_prefix="bultos_table",
+        page_size_options=[25, 50, 100, 200]
+    )
+
+    st.dataframe(
+        df_bultos_display,
+        use_container_width=True,
+        height=380
+    )
+
+    # Download / Export Actions for Bultos Sheet
+    buf_bultos = io.BytesIO()
+    with pd.ExcelWriter(buf_bultos, engine='openpyxl') as writer:
+        df_bultos_all.drop(columns=["_status"]).to_excel(writer, index=False, sheet_name="Bultos")
+    buf_bultos.seek(0)
+
+    st.download_button(
+        label="📥 Descargar Hoja 'Bultos' Completa (.xlsx)" if current_lang == "es" else "📥 Download Complete 'Bultos' Sheet (.xlsx)",
+        data=buf_bultos,
+        file_name=f"{summary.import_id}_Hoja_Bultos_Oficial.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        help="Descarga la tabla de bultos formateada exactamente según el libro corporativo."
+    )
+
+# ----------------- TAB 1: FICHA 360 FLUIDA -----------------
 with tab_inspector:
     st.markdown(f"### {t('inspector_title')}")
     st.caption("Inspecciona cualquier material padre, sus curvas de compra y su balance físico sin desplazarte entre hojas:" if current_lang == "es" else "Inspect any parent style, purchase curves, and dock physical receipts on a single screen:")
@@ -655,9 +830,10 @@ with tab_inspector:
                 <div class="detail-title">{"2. Compras (PO 43)" if current_lang == "es" else "2. Purchasing (PO 43)"}</div>
                 <div class="detail-row"><span class="detail-label">{"Orden Compra:" if current_lang == "es" else "Purchase Order:"}</span><span class="detail-value">{selected_item.order_po_43}</span></div>
                 <div class="detail-row"><span class="detail-label">Prepacks (PRK):</span><span class="detail-value">{selected_item.quantity_po_43_prk:,.0f} PRK</span></div>
+                <div class="detail-row"><span class="detail-label">{"Bultos Físicos:" if current_lang == "es" else "Physical Cartons:"}</span><span class="detail-value">{selected_item.bultos_descarga:,.0f} Bultos</span></div>
                 <div class="detail-row"><span class="detail-label">{"Total Unidades:" if current_lang == "es" else "Total Units:"}</span><span class="detail-value">{selected_item.quantity_po_43_units:,.0f} UN</span></div>
-                <div class="detail-row"><span class="detail-label">{"Curva por Bulto:" if current_lang == "es" else "Units / Carton:"}</span><span class="detail-value">{selected_item.curve_total} UN/PRK</span></div>
-                <div class="detail-row"><span class="detail-label">{"Unidad Medida:" if current_lang == "es" else "UoM:"}</span><span class="detail-value">PRK / UN</span></div>
+                <div class="detail-row"><span class="detail-label">{"Curva Prepack:" if current_lang == "es" else "Prepack Curve:"}</span><span class="detail-value">{selected_item.curve_total} UN/PRK</span></div>
+                <div class="detail-row"><span class="detail-label">{"Empaque Cierre:" if current_lang == "es" else "Packaging:"}</span><span class="detail-value">{selected_item.empaque_str or str(selected_item.curve_total)}</span></div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -821,7 +997,7 @@ with tab_curves:
         if curv_item:
             k1, k2, k3, k4 = st.columns(4)
             k1.metric("PREPACKS FACTURADOS" if current_lang == "es" else "INVOICED PREPACKS", f"{curv_item.quantity_inv_41_prk:.0f} PRK")
-            k2.metric("CURVA POR BULTO" if current_lang == "es" else "CURVE PER CARTON", f"{curv_item.curve_total} UN/PRK")
+            k2.metric("CURVA PREPACK (UN/PRK)" if current_lang == "es" else "PREPACK CURVE (UN/PRK)", f"{curv_item.curve_total} UN/PRK")
             k3.metric("TOTAL PIEZAS ESPERADAS" if current_lang == "es" else "TOTAL EXPECTED UNITS", f"{curv_item.quantity_inv_41_units:,.0f} UN")
             k4.metric("ESTADO LÍNEA" if current_lang == "es" else "LINE STATUS", curv_item.status)
             
@@ -958,11 +1134,17 @@ with tab_excel_export:
         
         for i in items:
             qc_item = qc_details.get(i.material_code, {})
-            bultos_desc = int(i.quantity_inv_41_prk) if i.quantity_inv_41_prk > 0 else int(qc_item.get('bultos', 0))
-            unidades_desc = int(qc_item.get('unidades', 0)) if qc_item.get('unidades', 0) > 0 else int(i.received_real_units)
-            bultos_pl = bultos_desc
-            unidades_pl = int(i.quantity_inv_41_units)
-            curva_empaque = i.curve_total if i.curve_total > 0 else int(qc_item.get('curve', 1))
+            if i.bultos_descarga > 0:
+                bultos_desc = i.bultos_str if (i.bultos_str and "*" in i.bultos_str) else i.bultos_descarga
+            elif qc_item.get('bultos', 0) > 0:
+                bultos_desc = qc_item['bultos']
+            else:
+                bultos_desc = i.quantity_inv_41_prk if i.quantity_inv_41_prk > 0 else 1.0
+
+            unidades_desc = i.unidades_descarga if i.unidades_descarga > 0 else (qc_item.get('unidades', 0) if qc_item.get('unidades', 0) > 0 else i.received_real_units)
+            bultos_pl = i.bultos_packing_list if i.bultos_packing_list > 0 else bultos_desc
+            unidades_pl = i.unidades_packing_list if i.unidades_packing_list > 0 else i.quantity_inv_41_units
+            curva_empaque = i.empaque_str or (str(i.curve_total) if i.curve_total > 0 else "12")
             
             descarga_rows.append({
                 "Fila Excel": len(descarga_rows) + 13,
@@ -1021,22 +1203,30 @@ with tab_excel_export:
             )
 
         with col_dl2:
-            # 1-Click .xlsm Generator with preserved VBA and repaired formulas
+            # 1-Click .xlsm Generator with preserved VBA, synchronized 'Bultos' sheet and repaired formulas
             in_cierre_bytes = audit_res.get("cierre_raw_bytes")
             if in_cierre_bytes:
                 try:
                     in_wb_buf = io.BytesIO(in_cierre_bytes)
                     wb_closure = openpyxl.load_workbook(in_wb_buf, keep_vba=True)
                     ws_closure = wb_closure["CIERRE RECEP"]
+                    ws_bultos_closure = wb_closure["Bultos"] if "Bultos" in wb_closure.sheetnames else None
                     
                     for idx_c, it_c in enumerate(items):
                         row_c = 13 + idx_c
                         qc_i = qc_details.get(it_c.material_code, {})
-                        b_desc = int(it_c.quantity_inv_41_prk) if it_c.quantity_inv_41_prk > 0 else int(qc_i.get('bultos', 0))
-                        u_desc = int(qc_i.get('unidades', 0)) if qc_i.get('unidades', 0) > 0 else int(it_c.received_real_units)
-                        b_pl = b_desc
-                        u_pl = int(it_c.quantity_inv_41_units)
-                        emp = it_c.curve_total if it_c.curve_total > 0 else int(qc_i.get('curve', 1))
+                        
+                        if it_c.bultos_descarga > 0:
+                            b_desc = it_c.bultos_str if (it_c.bultos_str and "*" in it_c.bultos_str) else it_c.bultos_descarga
+                        elif qc_i.get('bultos', 0) > 0:
+                            b_desc = qc_i['bultos']
+                        else:
+                            b_desc = it_c.quantity_inv_41_prk if it_c.quantity_inv_41_prk > 0 else 1.0
+
+                        u_desc = it_c.unidades_descarga if it_c.unidades_descarga > 0 else (qc_i.get('unidades', 0) if qc_i.get('unidades', 0) > 0 else it_c.received_real_units)
+                        b_pl = it_c.bultos_packing_list if it_c.bultos_packing_list > 0 else b_desc
+                        u_pl = it_c.unidades_packing_list if it_c.unidades_packing_list > 0 else it_c.quantity_inv_41_units
+                        emp = it_c.empaque_str or (str(it_c.curve_total) if it_c.curve_total > 0 else "12")
 
                         # Reparar fórmula de Col H si fue borrada o sobreescrita manualmente
                         val_h = ws_closure.cell(row=row_c, column=8).value
@@ -1057,6 +1247,19 @@ with tab_excel_export:
                         val_az = ws_closure.cell(row=row_c, column=52).value
                         if val_az is None or not str(val_az).startswith("="):
                             ws_closure.cell(row=row_c, column=52, value=f"=+AX{row_c}-H{row_c}")
+
+                        # Sincronizar hoja 'Bultos' si existe en la plantilla
+                        if ws_bultos_closure:
+                            r_b = 3 + idx_c
+                            ws_bultos_closure.cell(row=r_b, column=2, value=f"='CIERRE RECEP'!C{row_c}")
+                            ws_bultos_closure.cell(row=r_b, column=3, value=f"='CIERRE RECEP'!AS{row_c}")
+                            ws_bultos_closure.cell(row=r_b, column=4, value=f"='CIERRE RECEP'!AT{row_c}")
+                            ws_bultos_closure.cell(row=r_b, column=5, value=f"='CIERRE RECEP'!E{row_c}")
+                            ws_bultos_closure.cell(row=r_b, column=6, value=f"='CIERRE RECEP'!H{row_c}")
+                            ws_bultos_closure.cell(row=r_b, column=7, value=f"='CIERRE RECEP'!BB{row_c}")
+                            ws_bultos_closure.cell(row=r_b, column=8, value=f"='CIERRE RECEP'!BC{row_c}")
+                            ws_bultos_closure.cell(row=r_b, column=9, value=f"='CIERRE RECEP'!AD{row_c}")
+                            ws_bultos_closure.cell(row=r_b, column=10, value=f"='CIERRE RECEP'!AY{row_c}")
 
                     out_xlsm_buf = io.BytesIO()
                     wb_closure.save(out_xlsm_buf)

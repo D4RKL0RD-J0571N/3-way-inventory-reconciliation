@@ -3,15 +3,73 @@ Robust parsers for Excel files (Cierre Recepción, Control de Calidad, Packing L
 Equipped with dynamic header detection to resist column insertions (e.g. Tarima),
 corrupted formulas, and dirty strings.
 """
+import re
 import openpyxl
 from typing import Dict, List, Tuple, Any, Optional, Union
-from src.models import PrepackItem, ChildSKU
+from src.models import PrepackItem, ChildSKU, PackagingBreakdown
 from src.sanitizer import (
     clean_string,
     clean_material_code,
     clean_number,
     clean_int
 )
+
+def parse_packaging_string(val: Any) -> PackagingBreakdown:
+    """
+    Parses carton counts, packaging strings, and compound breakdowns (e.g. '39*60 1*78', '50*12', 42).
+    """
+    if val is None:
+        return PackagingBreakdown()
+    s = str(val).strip()
+    if not s or s.lower() in ["none", "nan", "null"]:
+        return PackagingBreakdown()
+
+    # Try direct numeric
+    try:
+        f = float(s)
+        return PackagingBreakdown(
+            total_boxes=f,
+            total_units=0.0,
+            boxes_full=f,
+            raw_str=s,
+            is_compound=False
+        )
+    except ValueError:
+        pass
+
+    # Find patterns like '39*60 1*78' or '39 * 60 + 1 * 48' or '10x12'
+    parts = re.findall(r'(\d+(?:\.\d+)?)\s*[*xX]\s*(\d+(?:\.\d+)?)', s)
+    if parts:
+        total_boxes = sum(float(b) for b, u in parts)
+        total_units = sum(float(b) * float(u) for b, u in parts)
+        boxes_full = float(parts[0][0])
+        units_full = float(parts[0][1])
+        boxes_comp = float(parts[1][0]) if len(parts) > 1 else 0.0
+        units_comp = float(parts[1][1]) if len(parts) > 1 else 0.0
+        
+        return PackagingBreakdown(
+            total_boxes=total_boxes,
+            total_units=total_units,
+            boxes_full=boxes_full,
+            units_per_box_full=units_full,
+            boxes_comp=boxes_comp,
+            units_per_box_comp=units_comp,
+            raw_str=s,
+            is_compound=len(parts) > 1 or total_boxes != boxes_full
+        )
+
+    # Fallback: extract first number
+    m = re.search(r'\d+(?:\.\d+)?', s)
+    if m:
+        f = float(m.group(0))
+        return PackagingBreakdown(
+            total_boxes=f,
+            boxes_full=f,
+            raw_str=s,
+            is_compound=False
+        )
+
+    return PackagingBreakdown(raw_str=s)
 
 def extract_cierre_metadata(wb_or_path: Union[str, openpyxl.Workbook]) -> Dict[str, Any]:
     """
@@ -87,6 +145,25 @@ def extract_cierre_metadata(wb_or_path: Union[str, openpyxl.Workbook]) -> Dict[s
             elif 'dif bultos' in lbl_lower and meta['difference_packages'] == 0:
                 meta['difference_packages'] = clean_number(val)
 
+        # Fallback: compute package sums directly from rows if still zero
+        if meta['received_packages'] == 0.0 or meta['theor_packages'] == 0.0:
+            rec_sum = 0.0
+            theo_sum = 0.0
+            for r in range(13, min(ws_cr.max_row + 1, 500)):
+                mat_v = clean_material_code(ws_cr.cell(r, 5).value)
+                if not mat_v:
+                    continue
+                v_as = ws_cr.cell(r, 45).value
+                v_aw = ws_cr.cell(r, 49).value
+                rec_sum += parse_packaging_string(v_as).total_boxes
+                theo_sum += parse_packaging_string(v_aw).total_boxes
+            if meta['received_packages'] == 0.0 and rec_sum > 0:
+                meta['received_packages'] = rec_sum
+            if meta['theor_packages'] == 0.0 and theo_sum > 0:
+                meta['theor_packages'] = theo_sum
+            if meta['difference_packages'] == 0.0:
+                meta['difference_packages'] = meta['received_packages'] - meta['theor_packages']
+
     return meta
 
 def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], Dict[str, Dict]]:
@@ -140,6 +217,11 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
     col_curva = None
     col_bultos = None
     col_unidades = None
+    col_bultos_enteros = None
+    col_unid_enteros = None
+    col_bultos_comp = None
+    col_unid_comp = None
+    col_total_prk = None
 
     # Scan row 6 headers
     for c in range(1, ws_qc.max_column + 1):
@@ -153,10 +235,20 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
             col_desc = c
         elif v_low == 'um':
             col_um = c
+        elif 'bultos enteros' in v_low:
+            col_bultos_enteros = c
+        elif 'unidades por bulto' in v_low or 'unidades por bultos' in v_low:
+            col_unid_enteros = c
+        elif 'bultos complemento' in v_low:
+            col_bultos_comp = c
+        elif 'unidades bultos complemento' in v_low or 'unidades complemento' in v_low:
+            col_unid_comp = c
         elif 'total de bultos' in v_low or v_low == 'total bultos':
             col_bultos = c
         elif 'total de unidades' in v_low or v_low == 'total unidades':
             col_unidades = c
+        elif 'total prk' in v_low:
+            col_total_prk = c
         elif 'curva' in v_low and c > 20 and not col_curva:
             col_curva = c
         elif 'cantidad de unidades' in v_low and not col_qty:
@@ -167,15 +259,20 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
     col_desc = col_desc or 12
     col_um = col_um or 11
     col_qty = col_qty or 5
+    col_bultos_enteros = col_bultos_enteros or 28
+    col_unid_enteros = col_unid_enteros or 29
+    col_bultos_comp = col_bultos_comp or 30
+    col_unid_comp = col_unid_comp or 31
     col_bultos = col_bultos or 32
     col_unidades = col_unidades or 33
+    col_total_prk = col_total_prk or 34
     col_curva = col_curva or 35
 
     qc_details: Dict[str, Dict] = {}
     for r in range(7, ws_qc.max_row + 1):
         m_clean = clean_material_code(ws_qc.cell(r, col_mat).value)
         if m_clean:
-            # We record total_unidades, bultos, and curve for complete dock audit
+            # We record total_unidades, bultos, curve, and packaging breakdown for complete dock audit
             qc_details[m_clean] = {
                 'desc': clean_string(ws_qc.cell(r, col_desc).value),
                 'um': clean_string(ws_qc.cell(r, col_um).value).upper(),
@@ -183,6 +280,11 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
                 'curve': clean_int(ws_qc.cell(r, col_curva).value),
                 'bultos': clean_number(ws_qc.cell(r, col_bultos).value),
                 'unidades': clean_number(ws_qc.cell(r, col_unidades).value),
+                'bultos_enteros': clean_number(ws_qc.cell(r, col_bultos_enteros).value) if col_bultos_enteros else 0.0,
+                'unidades_por_bulto_entero': clean_number(ws_qc.cell(r, col_unid_enteros).value) if col_unid_enteros else 0.0,
+                'bultos_complementos': clean_number(ws_qc.cell(r, col_bultos_comp).value) if col_bultos_comp else 0.0,
+                'unidades_por_bulto_comp': clean_number(ws_qc.cell(r, col_unid_comp).value) if col_unid_comp else 0.0,
+                'total_prk': clean_number(ws_qc.cell(r, col_total_prk).value) if col_total_prk else 0.0,
             }
 
     return boms_by_parent, qc_details
@@ -204,6 +306,7 @@ def parse_cierre_recepcion(
     """
     Parses sheet CIERRE RECEP into structured PrepackItem objects using defensive data sanitization.
     Recovers from missing or corrupted Col H formulas by cross-referencing discharge and QC.
+    Accurately segregates physical cartons, prepacks (PRK), and total units.
     """
     wb = openpyxl.load_workbook(cierre_source, data_only=True)
     meta = extract_cierre_metadata(wb)
@@ -229,7 +332,9 @@ def parse_cierre_recepcion(
         'at_unidades': 46,
         'aw_bultos': 49,
         'ax_unidades': 50,
+        'ay_empaque': 51,
         'curve': 54,
+        'um': 55,
         'ped43_prk': 56,
         'ped41_prk': 57,
     }
@@ -258,6 +363,20 @@ def parse_cierre_recepcion(
             col_map['as_bultos'] = c
         elif 'unidades en bultos' in h_low:
             col_map['at_unidades'] = c
+        elif 'bultos' in h_low and 'packing' in h_low:
+            col_map['aw_bultos'] = c
+        elif 'cantidad unidades' in h_low and c > 40:
+            col_map['ax_unidades'] = c
+        elif 'empaque' in h_low and c > 40:
+            col_map['ay_empaque'] = c
+        elif 'curva' in h_low and c > 40:
+            col_map['curve'] = c
+        elif 'um' == h_low and c > 40:
+            col_map['um'] = c
+        elif 'cantidad pedido 43' in h_low and c > 40:
+            col_map['ped43_prk'] = c
+        elif 'cantidad pedido 41' in h_low and c > 40:
+            col_map['ped41_prk'] = c
 
     items: List[PrepackItem] = []
 
@@ -287,7 +406,62 @@ def parse_cierre_recepcion(
         ped43_prk = clean_number(ws.cell(r, col_map['ped43_prk']).value)
         ped41_prk = clean_number(ws.cell(r, col_map['ped41_prk']).value)
 
-        at_unidades = clean_number(ws.cell(r, col_map['at_unidades']).value)
+        # Parse packaging and cartons
+        raw_as = ws.cell(r, col_map['as_bultos']).value
+        raw_at = ws.cell(r, col_map['at_unidades']).value
+        raw_aw = ws.cell(r, col_map['aw_bultos']).value
+        raw_ax = ws.cell(r, col_map['ax_unidades']).value
+        raw_ay = ws.cell(r, col_map['ay_empaque']).value
+        raw_um = ws.cell(r, col_map['um']).value
+
+        pkg_as = parse_packaging_string(raw_as)
+        pkg_aw = parse_packaging_string(raw_aw)
+        empaque_str = clean_string(raw_ay)
+        um_str = clean_string(raw_um).upper() or "PRK"
+
+        # Bultos Descarga (Muelle)
+        bultos_desc = pkg_as.total_boxes
+        unidades_desc = clean_number(raw_at)
+        if bultos_desc == 0.0 and mat_code in qc_details and qc_details[mat_code].get('bultos', 0) > 0:
+            bultos_desc = qc_details[mat_code]['bultos']
+        if unidades_desc == 0.0 and mat_code in qc_details and qc_details[mat_code].get('unidades', 0) > 0:
+            unidades_desc = qc_details[mat_code]['unidades']
+        elif unidades_desc == 0.0 and pkg_as.total_units > 0:
+            unidades_desc = pkg_as.total_units
+
+        # Bultos Packing List
+        bultos_pl = pkg_aw.total_boxes
+        unidades_pl = clean_number(raw_ax)
+        if bultos_pl == 0.0 and bultos_desc > 0:
+            bultos_pl = bultos_desc
+        if unidades_pl == 0.0 and unidades_desc > 0:
+            unidades_pl = unidades_desc
+        elif unidades_pl == 0.0 and ped41_u > 0:
+            unidades_pl = ped41_u
+
+        # Cartons Breakdown (Full cartons & Complement cartons)
+        b_enteros = pkg_as.boxes_full
+        u_enteros = pkg_as.units_per_box_full
+        b_comp = pkg_as.boxes_comp
+        u_comp = pkg_as.units_per_box_comp
+
+        if b_enteros == 0.0 and mat_code in qc_details:
+            b_enteros = qc_details[mat_code].get('bultos_enteros', 0.0)
+            u_enteros = qc_details[mat_code].get('unidades_por_bulto_entero', 0.0)
+            b_comp = qc_details[mat_code].get('bultos_complementos', 0.0)
+            u_comp = qc_details[mat_code].get('unidades_por_bulto_comp', 0.0)
+
+        # Average units per carton
+        if bultos_desc > 0 and unidades_desc > 0:
+            u_per_b = round(unidades_desc / bultos_desc, 2)
+        elif bultos_pl > 0 and unidades_pl > 0:
+            u_per_b = round(unidades_pl / bultos_pl, 2)
+        elif empaque_str and empaque_str.replace('.', '', 1).isdigit():
+            u_per_b = float(empaque_str)
+        else:
+            u_per_b = float(curve)
+
+        dif_bultos = bultos_desc - bultos_pl
 
         # Physical receipt resolution:
         # 1. If Col H (RECIBIDO REAL) has a non-zero value, respect it.
@@ -295,8 +469,8 @@ def parse_cierre_recepcion(
         # 3. If still empty, fallback to QC CONTROL DATA 'TOTAL DE UNIDADES'.
         if raw_rec_u is not None and str(raw_rec_u).strip() not in ["", "0", "None"]:
             rec_u = clean_number(raw_rec_u)
-        elif at_unidades > 0:
-            rec_u = at_unidades
+        elif unidades_desc > 0:
+            rec_u = unidades_desc
         elif mat_code in qc_details and qc_details[mat_code].get('unidades', 0) > 0:
             rec_u = qc_details[mat_code]['unidades']
         else:
@@ -384,7 +558,20 @@ def parse_cierre_recepcion(
             sobrante=sob,
             status=status,
             ncr_amount=ncr_amount,
-            observations=obs
+            observations=obs,
+            bultos_descarga=bultos_desc,
+            unidades_descarga=unidades_desc,
+            bultos_packing_list=bultos_pl,
+            unidades_packing_list=unidades_pl,
+            empaque_str=empaque_str,
+            bultos_str=pkg_as.raw_str or str(bultos_desc),
+            um=um_str,
+            bultos_enteros=b_enteros,
+            unidades_por_bulto_entero=u_enteros,
+            bultos_complementos=b_comp,
+            unidades_por_bulto_comp=u_comp,
+            unidades_por_bulto=u_per_b,
+            dif_bultos=dif_bultos,
         )
         items.append(item)
 
