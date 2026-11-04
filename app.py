@@ -382,15 +382,23 @@ if st.session_state.audit_data is None:
 
             p = Path(folder_input)
             if p.exists() and p.is_dir():
-                all_excel_files = sorted([
-                    f.name for f in p.iterdir()
-                    if f.is_file() and f.suffix.lower() in [".xlsm", ".xlsx", ".xls"] and not f.name.startswith("~$")
-                ])
+                excel_files_map = {}
+                try:
+                    # Recursive discovery: finds files in root or subdirectories like Informacion General/
+                    for f in p.rglob("*"):
+                        if f.is_file() and f.suffix.lower() in [".xlsm", ".xlsx", ".xls"] and not f.name.startswith("~$"):
+                            rel_lbl = str(f.relative_to(p)).replace("\\", "/")
+                            excel_files_map[rel_lbl] = f
+                except Exception:
+                    pass
+                all_excel_files = sorted(list(excel_files_map.keys()))
                 if all_excel_files:
                     st.caption(t("files_found_in", folder=folder_input, count=len(all_excel_files)))
                     
                     qc_candidates_idx = [i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["calidad", "qc", "conteo"])]
-                    cierre_candidates_idx = [i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["cierre", "plantilla", "inprogress", "recep"]) and "final" not in f.lower()]
+                    cierre_candidates_idx = [i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["cierre", "plantilla", "inprogress", "in progress", "recep"]) and "final" not in f.lower()]
+                    if not cierre_candidates_idx:
+                        cierre_candidates_idx = [i for i, f in enumerate(all_excel_files) if "imp-" in f.lower() and not any(k in f.lower() for k in ["calidad", "qc", "conteo", "portada"])]
                     
                     qc_default_idx = qc_candidates_idx[0] if qc_candidates_idx else 0
                     cierre_default_idx = cierre_candidates_idx[0] if cierre_candidates_idx else min(1, len(all_excel_files)-1)
@@ -419,7 +427,7 @@ if st.session_state.audit_data is None:
                         col_btn1, col_btn2 = st.columns(2)
                         with col_btn1:
                             if st.button("🟡 " + ("Montar a Ciegas desde SAP (Modo Pausa)" if current_lang == "es" else "Blind Setup from SAP (Pause Mode)"), type="primary", use_container_width=True, key="btn_blind_local"):
-                                cierre_full_path = p / sel_cierre_file
+                                cierre_full_path = excel_files_map[sel_cierre_file]
                                 placeholder = st.empty()
                                 with placeholder.container():
                                     with st.status(
@@ -441,8 +449,8 @@ if st.session_state.audit_data is None:
                                             st.error(f"Error: {e_run}")
                         with col_btn2:
                             if st.button(t("start_audit_btn"), type="secondary", use_container_width=True, key="btn_local_forced"):
-                                qc_full_path = p / sel_qc_file
-                                cierre_full_path = p / sel_cierre_file
+                                qc_full_path = excel_files_map[sel_qc_file]
+                                cierre_full_path = excel_files_map[sel_cierre_file]
                                 placeholder = st.empty()
                                 with placeholder.container():
                                     with st.status(
@@ -466,8 +474,8 @@ if st.session_state.audit_data is None:
                                             st.error(f"Error: {e_run}")
                     else:
                         if st.button(t("start_audit_btn"), type="primary", use_container_width=True):
-                            qc_full_path = p / sel_qc_file
-                            cierre_full_path = p / sel_cierre_file
+                            qc_full_path = excel_files_map[sel_qc_file]
+                            cierre_full_path = excel_files_map[sel_cierre_file]
                             placeholder = st.empty()
                             with placeholder.container():
                                 with st.status(
