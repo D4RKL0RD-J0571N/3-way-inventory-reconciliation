@@ -23,13 +23,7 @@ from src.validator import validate_all_items
 from src.sanitizer import clean_material_code, clean_number, clean_string
 from src.models import PrepackItem
 from src.i18n import t, get_current_language, render_language_selector, get_table_toolbar_js
-from src.ui_helpers import (
-    inject_skeleton_css,
-    render_skeleton_dashboard,
-    render_skeleton_table,
-    paginate_dataframe,
-    render_clipboard_copy_button
-)
+from src.ui_helpers import inject_skeleton_css, render_skeleton_dashboard, render_skeleton_table, paginate_dataframe
 
 # High-Resolution Widescreen Layout
 st.set_page_config(
@@ -327,13 +321,6 @@ else:
 if st.session_state.audit_data is not None:
     current_summary = st.session_state.audit_data["summary"]
     elapsed_time = st.session_state.audit_data.get("elapsed_seconds", 0.0)
-    st.sidebar.markdown(f"""
-    <div style="background:#0F172A; border:1px solid #10B981; border-radius:6px; padding:8px 12px; margin-bottom:12px;">
-        <span style="color:#10B981; font-weight:600; font-size:12px;">⚡ Velocidad de Carga:</span>
-        <span style="color:#F8FAFC; font-weight:700; font-size:13px; float:right;">{elapsed_time:.2f}s</span>
-        <div style="color:#94A3B8; font-size:11px; margin-top:2px;">Lectura selectiva streaming activa</div>
-    </div>
-    """, unsafe_allow_html=True)
     st.sidebar.success(f"📦 **{t('field_status')}:** {current_summary.import_id}")
     st.sidebar.caption(f"Proveedor / Vendor: {current_summary.vendor_name[:25]}")
     st.sidebar.caption(f"Materiales / Styles: {current_summary.total_materials}")
@@ -725,9 +712,9 @@ with tab_bultos:
 
     with col_b_info:
         if is_strict_customs:
-            st.info("⚖️ **Modo Aduanero Activo:** Descompone con rigor matemático los bultos enteros estándar y los complementos/picos según la curva comercial. Ideal para fiscalización aduanera y DUA.")
+            st.caption("⚖️ Desglose matemático: bultos enteros estándar y complementos según curva comercial.")
         else:
-            st.success("📦 **Modo Conteo de Muelle Activo:** Agrupa las cajas según el conteo físico consolidado del patio de descarga. Coincide 100% con las anotaciones de muelle.")
+            st.caption("📦 Conteo físico consolidado del patio de descarga.")
 
     # Top KPI Cards for Cartons & Units
     cb1, cb2, cb3, cb4, cb5 = st.columns(5)
@@ -1557,35 +1544,23 @@ with tab_excel_export:
         with col_tira1:
             st.markdown("##### 📌 Tira 1: ZDESCARGA (Columnas AS y AT)")
             st.caption("2 columnas contiguas: `[TOTAL BULTOS DESCARGA | CANTIDAD UNIDADES EN BULTOS]`")
-            render_clipboard_copy_button(
-                button_id="copy_tira1",
-                label="📋 Copiar Tira 1 (AS13)",
-                text_to_copy="\n".join(tsv_as_at_lines),
-                success_label="¡Tira 1 copiada! Lista para pegar en celda AS13"
-            )
             st.text_area(
-                "Vista previa / Copia manual:",
+                "Copiar con Ctrl+A -> Ctrl+C y pegar en celda AS13 de Excel:",
                 value="\n".join(tsv_as_at_lines),
                 height=180,
                 key="tsv_as_at_area",
-                help="Haz clic en el botón de copiar arriba o selecciona este texto para pegarlo en la celda AS13."
+                help="Selecciona todo este texto, cópialo y pégalo directamente en la celda AS13 de la hoja CIERRE RECEP."
             )
             
         with col_tira2:
             st.markdown("##### 📌 Tira 2: PACKING LIST (Columnas AW, AX y AY)")
             st.caption("3 columnas contiguas: `[Bultos según Packing List | CANTIDAD UNIDADES | Empaque]`")
-            render_clipboard_copy_button(
-                button_id="copy_tira2",
-                label="📋 Copiar Tira 2 (AW13)",
-                text_to_copy="\n".join(tsv_aw_ay_lines),
-                success_label="¡Tira 2 copiada! Lista para pegar en celda AW13"
-            )
             st.text_area(
-                "Vista previa / Copia manual:",
+                "Copiar con Ctrl+A -> Ctrl+C y pegar en celda AW13 de Excel:",
                 value="\n".join(tsv_aw_ay_lines),
                 height=180,
                 key="tsv_aw_ay_area",
-                help="Haz clic en el botón de copiar arriba o selecciona este texto para pegarlo en la celda AW13."
+                help="Selecciona todo este texto, cópialo y pégalo directamente en la celda AW13 de la hoja CIERRE RECEP."
             )
             
         col_dl1, col_dl2 = st.columns(2)
