@@ -128,3 +128,51 @@ def test_compute_summary_bultos():
     assert summary.dif_total_bultos == 1.0
     assert summary.total_prk_41 == 30.0
     assert summary.total_received_units == 180.0
+
+
+def test_dual_carton_modes_dock_vs_strict_customs():
+    """
+    Verifies that ReconcileAI correctly handles both carton views:
+    1. Dock Count Mode: Direct physical cartons counted on the patio (e.g. 40 cartons).
+    2. Strict Customs Mode: Mathematical decomposition into full standard boxes and odds (e.g. 39 Full + 1 Odd).
+    """
+    item = PrepackItem(
+        material_code="1001",
+        vendor_material="VM-01",
+        description="Pantalon Denim",
+        category="CABALLEROS",
+        order_po_43="PO-100",
+        quantity_po_43_prk=40.0,
+        quantity_po_43_units=240.0,
+        quantity_inv_41_prk=40.0,
+        quantity_inv_41_units=240.0,
+        received_real_units=240.0,
+        curve_total=6,
+        unit_cost=10.0,
+        bultos_descarga=5.0, # 5 physical cartons reported by dock
+        unidades_descarga=240.0,
+        bultos_packing_list=5.0,
+        unidades_packing_list=240.0,
+        empaque_str="50",
+        bultos_str="4*50 1*40",
+        um="PRK",
+        bultos_enteros=4.0, # 4 full cartons of 50
+        unidades_por_bulto_entero=50.0,
+        bultos_complementos=1.0, # 1 odd carton of 40
+        unidades_por_bulto_comp=40.0,
+        unidades_por_bulto=48.0,
+        dif_bultos=0.0
+    )
+
+    # 1. Dock View Mode
+    dock_cartons = item.bultos_descarga
+    assert dock_cartons == 5.0
+
+    # 2. Strict Customs Mode
+    customs_full = item.bultos_enteros
+    customs_odds = item.bultos_complementos
+    assert customs_full == 4.0
+    assert customs_odds == 1.0
+    assert customs_full + customs_odds == 5.0
+    assert (customs_full * item.unidades_por_bulto_entero) + (customs_odds * item.unidades_por_bulto_comp) == item.received_real_units
+

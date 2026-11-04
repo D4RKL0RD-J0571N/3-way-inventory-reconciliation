@@ -10,6 +10,8 @@ import pandas as pd
 import openpyxl
 import os
 import io
+import time
+import hashlib
 import collections
 from pathlib import Path
 import streamlit.components.v1 as components
@@ -258,6 +260,7 @@ if "audit_data" not in st.session_state:
 
 @st.cache_data(show_spinner="Procesando y auditando libros de Excel...")
 def run_audit(qc_content, cierre_content, is_blind_setup: bool = False):
+    t_start = time.time()
     if is_blind_setup or qc_content is None:
         boms = {}
         qc_details = {}
@@ -287,6 +290,7 @@ def run_audit(qc_content, cierre_content, is_blind_setup: bool = False):
     )
     summary = compute_summary(items, metadata=meta)
     validation = validate_all_items(items)
+    t_elapsed = time.time() - t_start
     return {
         "items": items,
         "summary": summary,
@@ -295,7 +299,8 @@ def run_audit(qc_content, cierre_content, is_blind_setup: bool = False):
         "validation": validation,
         "cierre_raw_bytes": cierre_raw,
         "qc_raw_bytes": qc_raw,
-        "is_blind_setup": is_blind_setup
+        "is_blind_setup": is_blind_setup,
+        "elapsed_seconds": t_elapsed
     }
 
 # Sidebar Navigation & Management
@@ -315,6 +320,14 @@ else:
 
 if st.session_state.audit_data is not None:
     current_summary = st.session_state.audit_data["summary"]
+    elapsed_time = st.session_state.audit_data.get("elapsed_seconds", 0.0)
+    st.sidebar.markdown(f"""
+    <div style="background:#0F172A; border:1px solid #10B981; border-radius:6px; padding:8px 12px; margin-bottom:12px;">
+        <span style="color:#10B981; font-weight:600; font-size:12px;">⚡ Velocidad de Carga:</span>
+        <span style="color:#F8FAFC; font-weight:700; font-size:13px; float:right;">{elapsed_time:.2f}s</span>
+        <div style="color:#94A3B8; font-size:11px; margin-top:2px;">Lectura selectiva streaming activa</div>
+    </div>
+    """, unsafe_allow_html=True)
     st.sidebar.success(f"📦 **{t('field_status')}:** {current_summary.import_id}")
     st.sidebar.caption(f"Proveedor / Vendor: {current_summary.vendor_name[:25]}")
     st.sidebar.caption(f"Materiales / Styles: {current_summary.total_materials}")
@@ -681,18 +694,48 @@ with tab_bultos:
     st.markdown(f"### {t('bultos_title')}")
     st.caption(t("bultos_desc"))
 
+    # Selector de Modo de Bultos: Estricto Aduanero vs Consolidado de Muelle
+    col_b_toggle, col_b_info = st.columns([2.5, 3.5])
+    with col_b_toggle:
+        bultos_mode = st.radio(
+            "Modo de Visualización de Bultos:" if current_lang == "es" else "Carton View Mode:",
+            options=[
+                "📦 Conteo de Muelle (Consolidado Humano)" if current_lang == "es" else "📦 Dock Count (Consolidated Human)",
+                "⚖️ Estricto Aduanero (Enteros + Picos)" if current_lang == "es" else "⚖️ Strict Customs (Full + Odds)"
+            ],
+            index=0,
+            horizontal=True,
+            key="bultos_mode_selector"
+        )
+    is_strict_customs = "Estricto" in bultos_mode or "Strict" in bultos_mode
+
+    with col_b_info:
+        if is_strict_customs:
+            st.info("⚖️ **Modo Aduanero Activo:** Descompone con rigor matemático los bultos enteros estándar y los complementos/picos según la curva comercial. Ideal para fiscalización aduanera y DUA.")
+        else:
+            st.success("📦 **Modo Conteo de Muelle Activo:** Agrupa las cajas según el conteo físico consolidado del patio de descarga. Coincide 100% con las anotaciones de muelle.")
+
     # Top KPI Cards for Cartons & Units
     cb1, cb2, cb3, cb4, cb5 = st.columns(5)
     total_b_desc = summary.total_bultos_descarga if summary.total_bultos_descarga > 0 else summary.received_packages
     total_b_pl = summary.total_bultos_pl if summary.total_bultos_pl > 0 else summary.theor_packages
     dif_b = total_b_desc - total_b_pl
+    total_b_enteros = sum(it.bultos_enteros for it in items)
+    total_b_comp = sum(it.bultos_complementos for it in items)
 
     with cb1:
-        st.metric(
-            t("kpi_bultos_descarga"),
-            f"{total_b_desc:,.0f} Bultos" if current_lang == "es" else f"{total_b_desc:,.0f} Cartons",
-            delta="Descarga Muelle" if current_lang == "es" else "Dock Discharge"
-        )
+        if is_strict_customs:
+            st.metric(
+                "BULTOS ADUANEROS" if current_lang == "es" else "CUSTOMS CARTONS",
+                f"{total_b_enteros + total_b_comp:,.0f} Bultos" if current_lang == "es" else f"{total_b_enteros + total_b_comp:,.0f} Cartons",
+                delta=f"{total_b_enteros:,.0f} Enteros + {total_b_comp:,.0f} Pico" if current_lang == "es" else f"{total_b_enteros:,.0f} Full + {total_b_comp:,.0f} Odds"
+            )
+        else:
+            st.metric(
+                t("kpi_bultos_descarga"),
+                f"{total_b_desc:,.0f} Bultos" if current_lang == "es" else f"{total_b_desc:,.0f} Cartons",
+                delta="Descarga Muelle" if current_lang == "es" else "Dock Discharge"
+            )
     with cb2:
         st.metric(
             t("kpi_bultos_pl"),
@@ -777,22 +820,40 @@ with tab_bultos:
 
     bultos_rows = []
     for it in items:
-        # Determine display bultos discharge (string or number)
-        b_disp = it.bultos_str if (it.bultos_str and "*" in it.bultos_str) else (int(it.bultos_descarga) if it.bultos_descarga > 0 else int(it.quantity_inv_41_prk))
-        bultos_rows.append({
-            "CATEGORIA": it.category or "TEXTIL",
-            "CANTIDAD DE BULTOS Z-Carga": b_disp,
-            "CANTIDAD DE UNIDADES Z-Carga": int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units),
-            "MATERIAL": it.material_code,
-            "RECIBIDO REAL & FISICO": int(it.received_real_units),
-            "Curva": it.curve_total,
-            "UM": it.um or "PRK",
-            "DESCRIPCION": it.description,
-            "EMPAQUE UNIDADES Z-Carga": it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12"),
-            "Bultos Packing List": int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga),
-            "Diferencia Bultos": int(it.dif_bultos),
-            "_status": it.status
-        })
+        if is_strict_customs:
+            b_disp = f"{int(it.bultos_enteros)} E + {int(it.bultos_complementos)} P" if it.bultos_complementos > 0 else f"{int(it.bultos_enteros)} Enteros"
+            bultos_rows.append({
+                "CATEGORIA": it.category or "TEXTIL",
+                "CANTIDAD DE BULTOS Z-Carga": b_disp,
+                "Bultos Enteros": int(it.bultos_enteros),
+                "Bultos Pico": int(it.bultos_complementos),
+                "CANTIDAD DE UNIDADES Z-Carga": int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units),
+                "MATERIAL": it.material_code,
+                "RECIBIDO REAL & FISICO": int(it.received_real_units),
+                "Curva": it.curve_total,
+                "UM": it.um or "PRK",
+                "DESCRIPCION": it.description,
+                "EMPAQUE UNIDADES Z-Carga": it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12"),
+                "Bultos Packing List": int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga),
+                "Diferencia Bultos": int(it.dif_bultos),
+                "_status": it.status
+            })
+        else:
+            b_disp = it.bultos_str if (it.bultos_str and "*" in it.bultos_str) else (int(it.bultos_descarga) if it.bultos_descarga > 0 else int(it.quantity_inv_41_prk))
+            bultos_rows.append({
+                "CATEGORIA": it.category or "TEXTIL",
+                "CANTIDAD DE BULTOS Z-Carga": b_disp,
+                "CANTIDAD DE UNIDADES Z-Carga": int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units),
+                "MATERIAL": it.material_code,
+                "RECIBIDO REAL & FISICO": int(it.received_real_units),
+                "Curva": it.curve_total,
+                "UM": it.um or "PRK",
+                "DESCRIPCION": it.description,
+                "EMPAQUE UNIDADES Z-Carga": it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12"),
+                "Bultos Packing List": int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga),
+                "Diferencia Bultos": int(it.dif_bultos),
+                "_status": it.status
+            })
 
     df_bultos_all = pd.DataFrame(bultos_rows)
 
