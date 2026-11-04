@@ -295,8 +295,8 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "en": "Enter SAP material code or vendor style to inspect:"
     },
     "inspector_search_placeholder": {
-        "es": "Ej. 1455100001, 1456051 o nombre de producto...",
-        "en": "e.g. 1455100001, 1456051 or product name..."
+        "es": "Ej. 1001001, SKU-501 o nombre de producto...",
+        "en": "e.g. 1001001, SKU-501 or product name..."
     },
     "inspector_filter_label": {
         "es": "Selecciona el material de la lista ({count} encontrados):",

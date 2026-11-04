@@ -15,7 +15,7 @@ Para facilitar la evaluación de la herramienta en cualquier computadora de ofic
    - Descomprime el archivo `.zip` en tu equipo o memoria extraíble.
    - Haz doble clic en **`ReconcileAI.exe`** (o en **`INICIAR_RECONCILEAI.bat`**).
    - Se abrirá automáticamente tu navegador web en `http://localhost:8501`.
-   - Coloca tus carpetas de importaciones (ej. `IMP-182` o `IMP-174`) dentro de la carpeta `data/` o búscalas con el explorador integrado.
+   - Coloca tus carpetas de importaciones (ej. `CONT-001` o `CONT-002`) dentro de la carpeta `data/` o búscalas con el explorador integrado.
 5. **Soporte Bilingüe & Tooltips Traducidos:**
    - Por defecto, la aplicación inicia en **Español**.
    - Los botones y tooltips de las tablas de datos (`Pantalla completa`, `Descargar como CSV`, `Buscar`) se traducen en tiempo real.
@@ -43,7 +43,7 @@ Si deseas presentar ReconcileAI a tu jefatura, supervisores o compañeros de equ
 
 | Minuto | Acción en Pantalla | Qué Explicar al Evaluador / Jefatura |
 | :---: | :--- | :--- |
-| **01** | Mostrar el Excel oficial con diferencias en rojo (`-51,926 UN`). | *"Nuestra macro oficial deja vacías las columnas de muelle y packing list, obligando a digitar cientos de números a mano celda por celda y arriesgando errores humanos."* |
+| **01** | Mostrar el Excel oficial con diferencias artificiales en rojo. | *"Nuestra macro oficial deja vacías las columnas de muelle y packing list, obligando a digitar cientos de números a mano celda por celda y arriesgando errores humanos."* |
 | **02** | Abrir ReconcileAI y seleccionar la carpeta del contenedor. | *"Con ReconcileAI, simplemente seleccionamos la carpeta de la importación o arrastramos los archivos. El sistema lee en 1 segundo ambos libros sin modificar el disco."* |
 | **03** | Mostrar la **Barra de 6 KPIs** y la **Tabla Semáforo**. | *"El sistema identifica inmediatamente los bultos teóricos vs físicos, clasifica los materiales cuadrados en verde y detecta si hay entregas diferidas (Parte B) o faltantes reales."* |
 | **04** | Abrir la **Ficha 360° del Material** y buscar un estilo. | *"En una sola tarjeta vemos compras, factura, físico, costos y la explosión matemática de tallas hijas sin tener que armar fórmulas de BUSCARV."* |
@@ -73,14 +73,14 @@ Antes de pegar cualquier tabla de SAP en la plantilla de Excel:
 3. Haz clic en **`⚡ Auditar y Limpiar Portapapeles`**.
 4. **¿Qué hace el sistema?**
    - Detecta si las columnas vienen separadas por tabulación, comas o barras.
-   - Desactiva cualquier notación científica que Excel suele interpretar como fecha o fórmula (ej. `1.4551E+06` vuelve a `1455100`).
+   - Desactiva cualquier notación científica que Excel suele interpretar como fecha o fórmula (ej. `1.0010E+06` vuelve a `1001000`).
    - Elimina saltos de línea huérfanos que puedan desfasar las filas en la macro.
 
 ---
 
 ### Paso 3: Carga y Explorador de Archivos (Sin Suposiciones)
 1. Al abrir la app, verás la pantalla limpia de carga con dos modalidades:
-   - **📁 Explorador de Disco (Carpetas Locales):** Escribe la ruta de la carpeta (ej. `data/IMP-182` o `D:/Descargas`) y verás dos desplegables con todos los archivos Excel encontrados. Eliges cuál es Calidad y cuál es Cierre.
+   - **📁 Explorador de Disco (Carpetas Locales):** Escribe la ruta de la carpeta (ej. `data/CONT-001` o `D:/Descargas`) y verás dos desplegables con todos los archivos Excel encontrados. Eliges cuál es Calidad y cuál es Cierre.
    - **📤 Subir Archivos (Arrastrar y Soltar):** Puedes hacer clic en *"Browse files"* para que se abra el Explorador nativo de Windows y selecciones los archivos directamente.
 2. Haz clic en **`🚀 Iniciar Auditoría`**.
 
@@ -89,7 +89,7 @@ Antes de pegar cualquier tabla de SAP en la plantilla de Excel:
 ### Paso 4: Auditoría de Bultos y Conciliación Visual
 1. **Barra Superior de Métricas:**
    - Verifica que el total de unidades facturadas coincida con las recibidas.
-   - Si el contenedor viene dividido (como `IMP-182` que tiene Parte A y Parte B), el sistema te indica cuántos materiales corresponden a cada lote.
+   - Si el contenedor viene dividido (como cuando tiene Parte A y Parte B), el sistema te indica cuántos materiales corresponden a cada lote.
 2. **📦 Pestaña Cuadre & Desglose de Bultos:**
    - **Tarjetas de Balance:** Bultos Teóricos vs Bultos de Muelle vs Packing List de Proveedor.
    - **Calculadora de Empaque:** Introduce cualquier desglose (ej. `39*60 1*78`) para calcular al instante total de bultos y prendas sin errores manuales.
@@ -103,7 +103,7 @@ Antes de pegar cualquier tabla de SAP en la plantilla de Excel:
 
 ---
 
-### Paso 5: El Cuadre de Muelle en Excel (Solución a los `-51,926` y a Cierres sin SAP)
+### Paso 5: El Cuadre de Muelle en Excel (Solución a las Diferencias Negativas y a Cierres sin SAP)
 En la plantilla oficial de Cierre Administrativo (`CIERRE RECEP`), la macro inicial deja vacías las columnas de muelle y packing list, provocando que las fórmulas de diferencia calculen `0 - 888 = -888`, acumulando miles de prendas negativas.
 
 **¿Cómo terminar de llenar la plantilla sin volver a usar SAP?**
@@ -129,17 +129,17 @@ Para armar la carpeta física en el orden reglamentario exigido por auditoría:
 
 ---
 
-## 🔎 5. Caso de Estudio: ¿Por qué era tan difícil cerrar IMP-174?
-El contenedor **`IMP-174`** (61,607 unidades) representaba uno de los casos más frustrantes para los supervisores en bodega por una combinación de 4 trampas humanas:
-1. **La Trampa de las Columnas Desplazadas:** En `Control Calidad.xlsm`, un operador insertó una columna `"Tarima"` en la columna B de `CONTROL DATA`. Esto desplazó todas las columnas una posición a la derecha. Cualquier fórmula manual de `BUSCARV` en Excel apuntó a la columna equivocada (`Material Proveedor` en vez de `Material SAP`), causando que el 100% de los códigos dieran `#N/A`.
-2. **ID de Material Duplicado en `BASE DE DATOS`:** En la hoja de curvas, la columna F tenía duplicado el ID de lista (`24987`) en lugar del material SAP (`1456051`), el cual estaba en la columna I.
-3. **Fórmulas Borradas en Columna H:** En `CIERRE RECEP`, alguien borró las fórmulas oficiales (`=+G - J - N - O + L + P + Q`) y tipeó cantidades parciales o en bultos (como ingresar `81` en vez de `1,728`).
-4. **La Trampa del Alisto Multi-Almacén (A001 vs A004):** En materiales como el `1455686002`, 444 prendas iban para `A001` (Almacén Central) y 372 para `A004` (Resurtido), totalizando 816 UN. El operador sólo copió la columna de A001, dejando 372 unidades aparentemente "desaparecidas" cuando en realidad estaban en resurtido.
+## 🔎 5. Caso de Estudio: Trampas Operativas Frecuentes en Muelle
+En los cierres logísticos se presentan habitualmente trampas típicas del trabajo manual en bodega:
+1. **La Trampa de las Columnas Desplazadas:** En el archivo de Control de Calidad, si un operador inserta una columna `"Tarima"` o `"Ubicación"` en `CONTROL DATA`, esto desplaza todas las columnas una posición a la derecha. Cualquier fórmula manual de `BUSCARV` en Excel apunta a la columna equivocada, causando que el 100% de los códigos den `#N/A`.
+2. **ID de Material Duplicado en `BASE DE DATOS`:** En la hoja de curvas, si una columna duplica un ID de catálogo o lista en lugar del código de material principal.
+3. **Fórmulas Borradas en Columna H:** En `CIERRE RECEP`, si alguien borra las fórmulas oficiales de sumatoria y tipea cantidades parciales o en bultos (como ingresar `81` en vez de `1,728`).
+4. **La Trampa del Alisto Multi-Almacén (Almacén Central vs Resurtido):** Cuando un cargamento se divide entre Almacén Central y Almacén de Resurtido, si el operador sólo copia la columna de Almacén Central, quedan cientos de unidades aparentemente "desaparecidas" cuando en realidad están en reserva.
 
-**Cómo lo resolvió el motor:**
+**Cómo lo resuelve el motor:**
 - **Mapeo Heurístico:** Detecta los encabezados dinámicamente sin importar si se insertan columnas de tarimas o ubicaciones.
-- **Detección Universal:** Lee la columna I en `BASE DE DATOS` para asociar los 44 Prepacks con sus curvas reales (ej. 1-2-2-1).
-- **Consolidación Total:** Suma todos los destinos (`A001 + A004 + Especial`) para cuadrar exactamente las 61,607 unidades con 0 faltantes.
+- **Detección Universal:** Lee las listas y matrices de curvas para asociar los Prepacks con sus curvas reales (ej. 1-2-2-1).
+- **Consolidación Total:** Suma todos los destinos (Central + Resurtido + Especial) para cuadrar exactamente el 100% de las prendas con 0 faltantes artificiales.
 
 ---
 
@@ -153,7 +153,7 @@ En importaciones con múltiples contenedores o entregas diferidas, la factura co
 ### ¿Cómo se concilian los Bultos y Cartones para Auditoría y Gerencia?
 Auditoría y Gerencia revisan las filas 5 y 6 de `CIERRE RECEP` antes de mirar las unidades.
 - ReconcileAI compara los **Bultos Teóricos del Packing List** contra los **Bultos Recibidos en Muelle**.
-- Si un contenedor de 767 bultos se consolidó en 713 bultos físicos (diferencia de -54 bultos por empaque), el sistema lo refleja con claridad para justificar la diferencia de volumen sin inconsistencias de prendas.
+- Si un contenedor de 750 bultos se consolidó en 700 bultos físicos (diferencia justificada por capacidad de empaque), el sistema lo refleja con claridad para justificar la diferencia de volumen sin inconsistencias de prendas.
 
 ### ¿Cómo se conectan los Cierres de Recepción con los Cierres de Despacho?
 El libro oficial de cierre es un sistema dual de dos fases (ver [**Arquitectura de Despacho**](AUDITORIA_DESPACHO_MACRO.md)):
@@ -175,15 +175,15 @@ El libro oficial de cierre es un sistema dual de dos fases (ver [**Arquitectura 
 - **Enterprise Privacy:** Zero sensitive corporate data. Operates 100% in local workstation memory.
 
 ## 2. 5-Minute Evaluation Walkthrough for Leadership
-1. **Show the Legacy Pain:** Point out the artificial `-51,926 UN` negative difference in standard Excel closure sheets.
+1. **Show the Legacy Pain:** Point out the artificial negative difference in standard Excel closure sheets.
 2. **Select Container:** Load Quality Control and Closure files with drag-and-drop or local folder browser.
 3. **Inspect KPIs:** Immediate 6-metric summary of Cartons/Bultos, Invoiced Units, and Physical Dock Counts.
 4. **Audit Cartons & Packaging:** Review the **`📦 Cuadre & Desglose de Bultos`** tab to verify physical cartons vs packing list cartons.
 5. **Drill Down 360°:** Instant size-curve breakdown without manual VLOOKUP formulas.
 6. **Square Closure:** Click 1-Click `.xlsm` Export or copy pre-formatted TSV strips (`Cols AS:AT` & `Cols AW:AY`) to square differences to `0`.
 
-## 3. Case Study: Solving Difficult Shipments (IMP-174)
+## 3. Case Study: Solving Difficult Shipments
 - **Column Shift Immunity:** Dynamically maps headers even when operators insert custom columns (e.g. Pallet/Tarima IDs).
-- **Multi-Warehouse Allocation:** Accurately consolidates multi-destination shipments (Central A001 + Replenishment A004).
+- **Multi-Warehouse Allocation:** Accurately consolidates multi-destination shipments (Central Warehouse + Replenishment Warehouse).
 - **Compound Packaging Strings:** Automatically decomposes odd packaging formats (e.g. `'39*60 1*78'`).
 - **Self-Healing Formulas:** Automatically restores deleted or overwritten formulas in official macro templates.

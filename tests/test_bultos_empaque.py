@@ -30,7 +30,7 @@ def test_parse_packaging_single_pattern():
     assert res_x.total_units == 240.0
 
 def test_parse_packaging_compound():
-    # Real case from IMP-98 (Row 14, Mat 1459288: 39 boxes of 60 + 1 box of 78)
+    # Compound packaging breakdown (e.g. 39 boxes of 60 + 1 box of 78)
     res = parse_packaging_string("39*60 1*78")
     assert res.total_boxes == 40.0
     assert res.total_units == 2418.0
@@ -40,7 +40,7 @@ def test_parse_packaging_compound():
     assert res.units_per_box_comp == 78.0
     assert res.is_compound
 
-    # Real case with plus sign
+    # Compound packaging with plus sign
     res_plus = parse_packaging_string("40 * 60 + 1 * 72")
     assert res_plus.total_boxes == 41.0
     assert res_plus.total_units == 2472.0
@@ -54,7 +54,7 @@ def test_parse_packaging_empty_or_none():
 
 def test_bultos_math_in_prepack_item():
     item = PrepackItem(
-        material_code="1459288",
+        material_code="1001001",
         vendor_material="VM-01",
         description="DM CAMISETA MC",
         category="DAMAS REGULAR",

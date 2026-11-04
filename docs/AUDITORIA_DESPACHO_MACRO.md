@@ -82,7 +82,7 @@ La hoja `'CIERRE DESP'` contiene 72 columnas divididas en dos zonas funcionales:
   $$Z_{13} = +Q_{13} + S_{13} + U_{13} + V_{13} + W_{13}$$
 * **Cols AE a AG (31-33): Conciliación de Saldos:**
   * `AE`: Cantidad enviada a contenedores posteriores (Partes B, C, D).
-  * `AF`: Stock en almacén de resurtido A004.
+  * `AF`: Stock en almacén de reserva/resurtido.
   * `AG`: Unidades en proceso de facturación (Movimiento SAP 643).
 * **Col AH (34):** `UNIDADES PARA NOTA DE CRÉDITO POR DESPACHO`:
   $$AH_{13} = +U_{13} + V_{13} \quad (\text{Faltante} + \text{Dañado en despacho})$$
@@ -94,7 +94,7 @@ La hoja `'CIERRE DESP'` contiene 72 columnas divididas en dos zonas funcionales:
 ## 4. Control de Inventarios y Hojas de Soporte
 
 1. **`STOCK CONTROL DE INVENTARIO`:**
-   * Valida la concordancia entre los almacenes de libre utilización (A001 Alisto, A002 Muelle, A004 Resurtido).
+   * Valida la concordancia entre las ubicaciones y almacenes de libre utilización (Alisto Principal, Muelle de Descarga y Racks de Resurtido).
    * Monitorea:
      * Unidades que aplican para Nota de Crédito por faltante: `=+'CIERRE RECEP'!N1012`.
      * Unidades pendientes de contabilizar en facturación: `=+'CIERRE RECEP'!Z1012`.

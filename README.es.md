@@ -80,9 +80,9 @@ iniciar_asistente.bat
 ### Opción C: Auditoría Ultrarrápida por Consola (CLI)
 *Para auditorías directas en 1 segundo por terminal.*
 ```bash
-python cli.py -i IMP-182
+python cli.py -i CONT-001
 # o especificando archivos directos:
-python cli.py --qc ruta/a/QC.xlsm --cierre ruta/a/Cierre.xlsm
+python cli.py --qc ruta/a/Control_Calidad_Muelle.xlsm --cierre ruta/a/Libro_Cierre_Oficial.xlsm
 ```
 
 ---
@@ -90,9 +90,9 @@ python cli.py --qc ruta/a/QC.xlsm --cierre ruta/a/Cierre.xlsm
 ## 📋 Guía de Demostración en 2 Minutos
 
 1. **Abrir la Aplicación:** Abre `http://localhost:8501`.
-2. **Seleccionar Contenedor:** En el explorador de archivos, elige una carpeta local (ej. `data/IMP-182` o tu carpeta de importación) o arrastra tus dos libros de Excel:
-   - Archivo 1: Control de Calidad / Recepción de Muelle (`Control Calidad.xlsm`)
-   - Archivo 2: Plantilla Oficial de Cierre (`IMP-XXX.xlsm`)
+2. **Seleccionar Contenedor:** En el explorador de archivos, elige una carpeta local (ej. `data/CONT-001` o tu carpeta de importación) o arrastra tus dos libros de Excel:
+   - Archivo 1: Control de Calidad / Recepción de Muelle (`Control_Calidad_Muelle.xlsm`)
+   - Archivo 2: Plantilla Oficial de Cierre (`Libro_Cierre_Oficial.xlsm`)
 3. **Ejecutar Auditoría:** Haz clic en **`🚀 Iniciar Auditoría de estos Archivos`**.
 4. **Auditoría de Bultos y Empaque:**
    - Dirígete a **`📦 Cuadre & Desglose de Bultos`** para comparar bultos de muelle vs packing list, usar la calculadora interactiva de empaque y verificar la réplica de la hoja `'Bultos'`.

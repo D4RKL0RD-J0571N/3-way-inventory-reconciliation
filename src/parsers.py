@@ -176,9 +176,9 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
     wb = openpyxl.load_workbook(qc_source, data_only=True)
 
     # 1. Parse BOM from BASE DE DATOS
-    # In both IMP-182 and IMP-174:
+    # Standard column mapping:
     # Col 5 (E): LISTA / BOM ID
-    # Col 9 (I): SAP Material Code (fallback to Col 6 (F))
+    # Col 9 (I): Material Code (fallback to Col 6 (F))
     # Col 10 (J): Ratio/Curva (fallback to Col 7 (G))
     # Col 11 (K): UM ('PRK' for parent, 'UN' for child)
     ws_bd = wb['BASE DE DATOS']

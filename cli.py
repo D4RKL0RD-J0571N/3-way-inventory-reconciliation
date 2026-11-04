@@ -19,7 +19,7 @@ from src.engine import compute_summary
 
 def main():
     parser = argparse.ArgumentParser(description="3-Way Inventory Reconciliation & Audit Engine (CLI)")
-    parser.add_argument("--import-id", "-i", type=str, help="ID of local import folder inside data/ (e.g. IMP-182)")
+    parser.add_argument("--import-id", "-i", type=str, help="ID of local import folder inside data/ (e.g. CONT-001)")
     parser.add_argument("--qc", type=str, help="Direct path to Quality Control spreadsheet (.xlsm / .xlsx)")
     parser.add_argument("--cierre", type=str, help="Direct path to Closure spreadsheet (.xlsm / .xlsx)")
     args = parser.parse_args()
@@ -52,7 +52,7 @@ def main():
         else:
             print("No se encontraron carpetas de importación en el directorio data/.")
             print("\nUso manual:")
-            print("  python cli.py -i IMP-182")
+            print("  python cli.py -i CONT-001")
             print("  python cli.py --qc <ruta_qc.xlsm> --cierre <ruta_cierre.xlsm>")
             sys.exit(0)
 

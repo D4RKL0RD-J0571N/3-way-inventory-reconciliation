@@ -80,7 +80,7 @@ def build():
     
     readme_data = target_data_dir / "LEEME.txt"
     readme_data.write_text(
-        "Coloca aqui las carpetas de tus importaciones o contenedores (por ejemplo IMP-182, IMP-174).\n"
+        "Coloca aqui las carpetas de tus importaciones o contenedores (por ejemplo CONT-001, CONT-002).\n"
         "La aplicacion detectara automaticamente los archivos de Control de Calidad y Plantilla de Cierre.\n"
         "Tambien puedes explorar cualquier carpeta de tu disco duro desde la aplicacion web.",
         encoding="utf-8"
@@ -109,7 +109,7 @@ def build():
         "4. Tu navegador web se abrira inmediatamente con la aplicacion lista.\n\n"
         "DONDE COLOCAR TUS ARCHIVOS EXCEL:\n"
         "- Puedes arrastrarlos directamente en la pestana 'Subir Archivos'.\n"
-        "- O copiar tu carpeta (ej. IMP-182) dentro de la carpeta 'data/'.\n"
+        "- O copiar tu carpeta (ej. CONT-001) dentro de la carpeta 'data/'.\n"
         "- O escribir la ruta completa en el explorador de carpetas locales.\n",
         encoding="utf-8"
     )

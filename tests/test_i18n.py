@@ -35,8 +35,8 @@ def test_translation_fallback():
 
 def test_translation_interpolation():
     """Tests variable interpolation in localized strings."""
-    res = t("files_found_in", folder="data/IMP-182", count=4)
-    assert "data/IMP-182" in res
+    res = t("files_found_in", folder="data/CONT-001", count=4)
+    assert "data/CONT-001" in res
     assert "4" in res
 
 def test_toolbar_js_generation():

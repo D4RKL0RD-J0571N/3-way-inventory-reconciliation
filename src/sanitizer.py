@@ -24,10 +24,10 @@ def clean_string(val: Any) -> str:
 
 def clean_material_code(val: Any) -> str:
     """
-    Sanitizes SAP material codes:
-    - Converts scientific notation (e.g. 1.4551E+09) into integer string.
+    Sanitizes material and SKU codes:
+    - Converts scientific notation (e.g. 1.0010E+09) into integer string.
     - Strips trailing '.0' produced when Excel reads integers as floats.
-    - Strips leading SAP zero padding (e.g. '0000000001455103' -> '1455103').
+    - Strips leading zero padding (e.g. '0000000001001001' -> '1001001').
     - Removes internal spaces, hyphens or special formatting characters.
     """
     if val is None:

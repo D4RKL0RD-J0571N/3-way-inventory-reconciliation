@@ -30,7 +30,7 @@ if not DOCS_DIR.exists() and (INTERNAL_DIR / "docs").exists():
 
 def list_available_local_imports() -> List[str]:
     """
-    Scans the local data/ directory for import subfolders (e.g., IMP-182, IMP-183).
+    Scans the local data/ directory for import subfolders (e.g., CONT-001, CONT-002).
     Returns a sorted list of folder names found on disk.
     """
     if not DATA_DIR.exists():

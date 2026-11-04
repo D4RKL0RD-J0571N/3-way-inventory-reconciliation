@@ -16,7 +16,7 @@ flowchart TD
 
     subgraph S2["2. DESCARGA FÍSICA & CONTROL DE CALIDAD"]
         D["Descarga en Muelle"] --> E["Conteo Físico: Bultos Enteros + Complementos"]
-        E --> F["Distribución: A001 (Central) + A004 (Resurtido)"]
+        E --> F["Distribución: Almacén Central + Almacén Reserva"]
         F --> G["Hoja Control de Calidad (ZDescarga)"]
     end
 
@@ -63,7 +63,7 @@ flowchart TD
 * **¿Qué significa `UMP`?**  
   **`UMP` = Unidad de Medida de Pedido**. En retail textil representa si el ítem se compra por **`PRK`** (Prepack/Bolsa surtida) o por **`UN`** (Unidad individual suelta).
 * **Tip Pro de Copiado:**  
-  Copia desde la grilla ALV seleccionando las columnas hasta `UMP`. Luego pásala por la pestaña **`⚡ Validador SAP`** de ReconcileAI para desactivar la notación científica (`1.45E+06`) antes de pegarla en la macro.
+  Copia desde la grilla ALV seleccionando las columnas hasta `UMP`. Luego pásala por la pestaña **`⚡ Validador SAP`** de ReconcileAI para desactivar la notación científica (`1.00E+06`) antes de pegarla en la macro.
 
 ### 2.2. Tablas `EINA` y `STPO` en `SE16N`: Cruce de Curvas y Prepacks
 * **Tabla `EINA` (Registro Info de Compras):**  
@@ -87,14 +87,14 @@ flowchart TD
 3. **El Cuadre de Bultos en Auditoría:**  
    Se compara:
    $$\text{Diferencia de Bultos} = \text{Bultos Recibidos en Muelle} - \text{Bultos Teóricos del Packing List}$$
-   *Una diferencia de bultos negativa (ej. -54) suele explicarse por consolidación de cajas en fábrica, siempre que las unidades coincidan al 100%.*
+   *Una diferencia de bultos negativa suele explicarse por consolidación de cajas en fábrica, siempre que las unidades coincidan al 100%.*
 
-### 3.2. La Trampa del Alisto Multi-Almacén (`A001` vs `A004`)
+### 3.2. La Trampa del Alisto Multi-Almacén (Almacén Central vs Resurtido)
 * En bodega, las prendas recibidas se reparten físicamente:
-  * **`A001` (Almacén Central):** Stock destinado a distribución inmediata.
-  * **`A004` (Resurtido):** Stock de reserva en racks altos.
+  * **Almacén Central:** Stock destinado a distribución inmediata.
+  * **Almacén de Resurtido:** Stock de reserva en racks altos.
   * **Especiales:** Prendas separadas para eventos, tiendas insignia o promociones.
-* **Regla de Oro:** Para cuadrar la importación, **siempre se debe tomar la columna `TOTAL DE UNIDADES`** (suma de A001 + A004 + Especial), nunca un alisto parcial.
+* **Regla de Oro:** Para cuadrar la importación, **siempre se debe tomar la columna `TOTAL DE UNIDADES`** (suma de Central + Resurtido + Especial), nunca un alisto parcial.
 
 ---
 
@@ -105,7 +105,7 @@ flowchart TD
 | **Columnas Desplazadas** | El operador inserta columnas como `Tarima` en la hoja de calidad. | **Mapeo Heurístico:** Busca los encabezados por nombre (`Material`, `UM`, `Total Unidades`), inmune a desplazamientos. |
 | **Fórmulas Borradas** | Un supervisor borra la fórmula de la columna H o AU en el macro oficial. | **Auto-Sanación:** Regenera `=+G-J-N-O+L+P+Q` y `=+AT-H` automáticamente al guardar el `.xlsm`. |
 | **Prepacks vs Unidades** | Se digitan bultos o PRKs en la columna de piezas sueltas (ej. 81 en vez de 1,728). | **Validación de Curva:** Multiplica los PRKs por la curva teórica y alerta sobre discrepancias de orden de magnitud. |
-| **Notación Científica** | Excel convierte códigos de 10 dígitos en `1.45562E+09`. | **Sanitizador String:** Convierte floats científicos de vuelta a enteros limpios en memoria. |
+| **Notación Científica** | Excel convierte códigos numéricos largos en notación científica como `1.0010E+09`. | **Sanitizador String:** Convierte floats científicos de vuelta a enteros limpios en memoria. |
 
 ---
 

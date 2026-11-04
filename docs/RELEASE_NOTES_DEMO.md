@@ -38,7 +38,7 @@ This release delivers a **100% portable standalone executable** packaged for zer
 
 ### 5. 🩹 Self-Healing Spreadsheet Recovery
 - **Restoration of Corrupted Formulas:** Automatically restores deleted or overwritten formulas in official closure sheets (e.g. Column H `G-J-N-O+L+P+Q`, Column AU `AT-H`, Column AZ `AX-H`).
-- **Elimination of the "Negative Formula Trap":** Default ERP templates leave receiving counts empty, displaying artificial shortages (e.g. `-51,926 UN`). ReconcileAI immediately calculates true receiving values to bring discrepancies to zero.
+- **Elimination of the "Negative Formula Trap":** Default ERP templates leave receiving counts empty, displaying artificial shortages (e.g. massive negative differences). ReconcileAI immediately calculates true receiving values to bring discrepancies to zero.
 - **1-Click Official `.xlsm` Export:** Generates an official, fully-squared closure workbook in memory while strictly preserving all VBA macros and original formatting.
 
 ### 6. 📋 Dual-Strip Fast Copy-Pasting (10-Second Manual Closure)
@@ -70,7 +70,7 @@ This release delivers a **100% portable standalone executable** packaged for zer
 | **Standalone Folder** | `dist/ReconcileAI/` | Unzipped portable application ready to run on any PC |
 | **Main Executable** | `dist/ReconcileAI/ReconcileAI.exe` | Compiled standalone Windows binary |
 | **Quick Launcher** | `dist/ReconcileAI/INICIAR_RECONCILEAI.bat` | Friendly Windows batch launcher |
-| **Data Directory** | `dist/ReconcileAI/data/` | Drop folder for container folders (e.g. `IMP-182`) |
+| **Data Directory** | `dist/ReconcileAI/data/` | Drop folder for container folders (e.g. `CONT-001`) |
 | **Quickstart Guide** | `dist/ReconcileAI/LEEME_PORTABLE.txt` | On-disk instructions for end-users |
 
 ---

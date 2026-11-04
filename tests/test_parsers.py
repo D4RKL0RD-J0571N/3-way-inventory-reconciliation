@@ -74,7 +74,7 @@ def test_metadata_extractor(tmp_path):
     ws_dg.title = "DATOS GENERALES"
     
     ws_dg.cell(7, 2, "Importación")
-    ws_dg.cell(7, 3, "IMP-999")
+    ws_dg.cell(7, 3, "CONT-TEST-001")
     ws_dg.cell(9, 2, "Pedido de Nacionalización :")
     ws_dg.cell(9, 3, "4100099999")
     ws_dg.cell(10, 2, "Proveedor")
@@ -87,44 +87,77 @@ def test_metadata_extractor(tmp_path):
     ws_dg.cell(15, 3, 0)
     
     meta = extract_cierre_metadata(wb)
-    assert meta["import_id"] == "IMP-999"
+    assert meta["import_id"] == "CONT-TEST-001"
     assert meta["invoice_number"] == "4100099999"
     assert meta["vendor_name"] == "GLOBAL TEXTILES CORP"
     assert meta["theor_packages"] == 500
     assert meta["received_packages"] == 500
     assert meta["difference_packages"] == 0
 
-def test_local_imp182_regression():
+def test_synthetic_full_reconciliation_clean(tmp_path):
     """
-    Regression test against local IMP-182 files if present on machine.
+    End-to-end reconciliation test using synthetic mock spreadsheets.
     """
-    qc_path, cierre_path = resolve_local_import_files("IMP-182")
-    if not qc_path or not cierre_path:
-        return
-    
-    boms, qc_details = parse_quality_control_boms(str(qc_path))
-    items, meta = parse_cierre_recepcion(str(cierre_path), boms, qc_details, return_meta=True)
-    summary = compute_summary(items, metadata=meta)
-    
-    assert summary.import_id == "IMP-182"
-    assert summary.total_materials == 136
-    assert round(summary.total_ped_41_units) == 51926
-    assert round(summary.total_received_units) == 51926
-    assert summary.status == "LIMPIO"
+    # 1. Create mock QC workbook
+    qc_wb = openpyxl.Workbook()
+    ws_cd = qc_wb.active
+    ws_cd.title = "CONTROL DATA"
+    ws_cd.append(["Material", "Descripción", "Bultos", "Total Unidades"])
+    ws_cd.append(["1001001", "Mock Item 1", 20, 240])
+    ws_cd.append(["1001002", "Mock Item 2", 30, 360])
 
-def test_local_imp174_integration():
-    """
-    Integration test against local IMP-174 files if present on machine.
-    """
-    qc_path, cierre_path = resolve_local_import_files("IMP-174")
-    if not qc_path or not cierre_path:
-        return
+    ws_bd = qc_wb.create_sheet(title="BASE DE DATOS")
+    for _ in range(4):
+        ws_bd.append([])
+    # BOM definition
+    ws_bd.append(["", "", "", "", "BOM-01", "1001001", 12, "PRK", "1001001", 12, "PRK"])
+    ws_bd.append(["", "", "", "", "BOM-01", "1001001001", 6, "UN", "1001001001", 6, "UN"])
+    ws_bd.append(["", "", "", "", "BOM-01", "1001001002", 6, "UN", "1001001002", 6, "UN"])
     
-    boms, qc_details = parse_quality_control_boms(str(qc_path))
-    items, meta = parse_cierre_recepcion(str(cierre_path), boms, qc_details, return_meta=True)
+    qc_file = tmp_path / "QC_Mock.xlsx"
+    qc_wb.save(qc_file)
+
+    # 2. Create mock Cierre workbook
+    cierre_wb = openpyxl.Workbook()
+    ws_cr = cierre_wb.active
+    ws_cr.title = "CIERRE RECEP"
+    ws_cr.cell(1, 1, "CIERRE RECEPCION")
+    
+    headers = [
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U",
+        "V", "W", "X", "Y", "Z", "AA", "AB", "AC", "AD", "AE", "AF", "AG", "AH", "AI", "AJ", "AK", "AL", "AM", "AN",
+        "AO", "AP", "AQ", "AR", "AS", "AT", "AU", "AV", "AW", "AX", "AY", "AZ", "BA", "BB", "BC", "BD", "BE", "BF"
+    ]
+    # Place headers at row 12
+    for col_idx, h in enumerate(headers, 1):
+        ws_cr.cell(12, col_idx, h)
+        
+    # Row 13: Item 1001001
+    ws_cr.cell(12, 5, "Material")
+    ws_cr.cell(13, 1, "4300001")     # A: PO
+    ws_cr.cell(13, 5, "1001001")     # E: Material
+    ws_cr.cell(13, 4, "Mock Item 1") # D: Desc
+    ws_cr.cell(13, 6, 240)           # F: Ped 43 UN
+    ws_cr.cell(13, 7, 240)           # G: Ped 41 UN
+    ws_cr.cell(13, 8, 240)           # H: Rec UN
+    ws_cr.cell(13, 11, 5.0)          # K: Unit cost
+    ws_cr.cell(13, 54, 12)           # BB: Curva
+    ws_cr.cell(13, 55, "PRK")        # BC: UM
+    ws_cr.cell(13, 57, 20)           # BE: Ped 41 PRK
+    
+    # DG sheet
+    ws_dg = cierre_wb.create_sheet(title="DATOS GENERALES")
+    ws_dg.cell(7, 2, "Importación")
+    ws_dg.cell(7, 3, "CONT-SYNTHETIC-01")
+    
+    cierre_file = tmp_path / "Cierre_Mock.xlsx"
+    cierre_wb.save(cierre_file)
+
+    boms, qc_details = parse_quality_control_boms(str(qc_file))
+    items, meta = parse_cierre_recepcion(str(cierre_file), boms, qc_details, return_meta=True)
     summary = compute_summary(items, metadata=meta)
     
-    assert summary.import_id == "IMP-174"
-    assert summary.total_materials == 100
-    assert summary.total_ped_41_units == 61607
-    assert len(boms) == 44 # 44 Prepacks
+    assert summary.import_id == "CONT-SYNTHETIC-01"
+    assert summary.total_materials == 1
+    assert summary.total_received_units == 240
+    assert summary.status == "LIMPIO"

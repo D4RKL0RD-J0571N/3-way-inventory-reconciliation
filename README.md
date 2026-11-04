@@ -81,9 +81,9 @@ iniciar_asistente.bat
 ### Option C: 1-Second Terminal Audit (CLI Mode)
 *For headless batch verification and terminal lovers.*
 ```bash
-python cli.py -i IMP-182
+python cli.py -i CONT-001
 # or specify direct paths:
-python cli.py --qc path/to/QC.xlsm --cierre path/to/Cierre.xlsm
+python cli.py --qc path/to/QC_Receiving.xlsm --cierre path/to/Official_Closure.xlsm
 ```
 
 ---
@@ -91,9 +91,9 @@ python cli.py --qc path/to/QC.xlsm --cierre path/to/Cierre.xlsm
 ## 📋 2-Minute Demo Walkthrough
 
 1. **Launch the App:** Open `http://localhost:8501`.
-2. **Select Container:** In the file explorer, choose a local folder (e.g. `data/IMP-182` or your own container folder) or drag and drop your two Excel files:
-   - File 1: Quality Control / Dock Receiving (`Control Calidad.xlsm`)
-   - File 2: Official Closure Template (`IMP-XXX.xlsm`)
+2. **Select Container:** In the file explorer, choose a local folder (e.g. `data/CONT-001` or your own container folder) or drag and drop your two Excel files:
+   - File 1: Quality Control / Dock Receiving (`Dock_QC_Receiving.xlsm`)
+   - File 2: Official Closure Template (`Official_Closure.xlsm`)
 3. **Run Audit:** Click **`🚀 Iniciar Auditoría de estos Archivos`**.
 4. **Audit Cartons & Packaging:**
    - Go to **`📦 Cuadre & Desglose de Bultos`** to compare dock cartons vs vendor packing list cartons, use the packaging calculator, and verify the `'Bultos'` sheet.

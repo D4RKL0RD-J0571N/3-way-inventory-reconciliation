@@ -13,14 +13,14 @@ if sys.stdout.encoding.lower() != 'utf-8':
     except Exception:
         pass
 
-from src.config import DATA_DIR, resolve_local_import_files
+from src.config import DATA_DIR, list_available_local_imports, resolve_local_import_files
 from src.parsers import parse_quality_control_boms, parse_cierre_recepcion
 from src.engine import compute_summary
 
 def main():
-    import_id = "IMP-182"
-    if len(sys.argv) > 1:
-        import_id = sys.argv[1]
+    available = list_available_local_imports()
+    default_id = available[0] if available else "CONT-001"
+    import_id = sys.argv[1] if len(sys.argv) > 1 else default_id
 
     qc_path, cierre_path = resolve_local_import_files(import_id)
 

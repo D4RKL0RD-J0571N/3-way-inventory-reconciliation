@@ -1,12 +1,12 @@
 # 📘 Base de Conocimiento Empírico: Auditoría de Bultos, Empaque y Macros VBA
 
-Este documento recopila la verdad operativa y matemática extraída directamente del análisis forense de 71 importaciones reales (`IMP-98` a `IMP-244`), la descompresión binaria de macros VBA (`vbaProject.bin`), las fórmulas nativas de hojas de cierre (`CIERRE RECEP`, `Bultos`, `DATOS GENERALES`) y las hojas de muelle (`Control Calidad`).
+Este documento recopila la verdad operativa y matemática extraída directamente del análisis forense de plantillas operativas de cierre en centros de distribución, la descompresión binaria de macros VBA (`vbaProject.bin`), las fórmulas nativas de hojas de cierre (`CIERRE RECEP`, `Bultos`, `DATOS GENERALES`) y las hojas de muelle (`Control Calidad`).
 
 ---
 
 ## 1. La Arquitectura de Tres Niveles Numéricos
 
-El análisis forense de las importaciones reales reveló que en la cadena de suministro existen **3 niveles numéricos independientes** que jamás deben confundirse:
+El análisis forense de expedientes de importación reveló que en la cadena de suministro existen **3 niveles numéricos independientes** que jamás deben confundirse:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -42,7 +42,7 @@ El análisis forense de las importaciones reales reveló que en la cadena de sum
 
 > [!CAUTION]
 > **El Error Histórico de la Versión Anterior:**
-> En importaciones como `IMP-98`, un material con 420 Prepacks (`BE=420`) y curva 6 contiene 2,520 unidades (`G=2520`). Los bultos físicos reales son **42 cajas** (cada caja contiene 10 prepacks = 60 unidades por caja). La versión anterior asignaba `bultos = 420`, multiplicando por 10 los bultos reales y desfasando el inventario de muelle.
+> En cargamentos típicos, un material con 420 Prepacks (`BE=420`) y curva 6 contiene 2,520 unidades (`G=2520`). Los bultos físicos reales son **42 cajas** (cada caja contiene 10 prepacks = 60 unidades por caja). La versión anterior asignaba `bultos = 420`, multiplicando por 10 los bultos reales y desfasando el inventario de muelle.
 
 ---
 
@@ -50,7 +50,7 @@ El análisis forense de las importaciones reales reveló que en la cadena de sum
 
 Del muestreo empírico de las columnas `AS` (Bultos Muelle), `AW` (Bultos PL) y `AY` (Empaque) se catalogaron 4 patrones exactos:
 
-### Patrón A: Caja Master con Multi-Prepacks (Ej. `IMP-98`)
+### Patrón A: Caja Master con Multi-Prepacks
 * **Col 45 (`AS`):** `42`
 * **Col 51 (`AY` - Empaque):** `60`
 * **Col 54 (`BB` - Curva):** `6`
@@ -58,7 +58,7 @@ Del muestreo empírico de las columnas `AS` (Bultos Muelle), `AW` (Bultos PL) y 
 * **Col 7 (`G` - Unidades):** `2,520`
 * **Interpretación:** 42 cajas * 60 unidades/caja = 2,520 unidades. Cada caja contiene 10 prepacks de curva 6.
 
-### Patrón B: Cajas Maestras con Bulto Complemento / Pico (Ej. `IMP-98` Mat 1459288)
+### Patrón B: Cajas Maestras con Bulto Complemento / Pico
 * **Col 45 (`AS`):** `'39*60 1*78'`
 * **Col 46 (`AT`):** `2,418`
 * **Col 51 (`AY`):** `60`
@@ -71,7 +71,7 @@ Del muestreo empírico de las columnas `AS` (Bultos Muelle), `AW` (Bultos PL) y 
   * **Total Unidades:** 2,340 + 78 = **2,418 unidades**.
   * Coincide exactamente con `403 PRK * 6 = 2,418 unidades`.
 
-### Patrón C: Prepack Directo (1 Bulto = 1 Prepack, Ej. `IMP-196` Calzado / Prendas Voluminosas)
+### Patrón C: Prepack Directo (1 Bulto = 1 Prepack, Calzado / Prendas Voluminosas)
 * **Col 45 (`AS`):** `50`
 * **Col 51 (`AY`):** `'50*12'` o `12`
 * **Col 54 (`BB`):** `12`
@@ -79,7 +79,7 @@ Del muestreo empírico de las columnas `AS` (Bultos Muelle), `AW` (Bultos PL) y 
 * **Col 7 (`G`):** `600`
 * **Interpretación:** Cada bulto físico contiene exactamente 1 prepack de 12 pares/unidades.
 
-### Patrón D: Unitario / No Textil (Ej. `IMP-100` Juguetes / Bicicletas, `IMP-224`)
+### Patrón D: Unitario / No Asortado (Juguetes / Artículos Unitarios)
 * **Col 45 (`AS`):** `65`
 * **Col 51 (`AY`):** `1`
 * **Col 54 (`BB`):** `1`
@@ -114,7 +114,7 @@ Donde:
 
 ## 4. Hallazgos Forenses en Macros VBA (`vbaProject.bin`)
 
-Al descomprimir el archivo binario `xl/vbaProject.bin` en `IMP-182` e `IMP-100`, se auditaron las siguientes macros:
+Al descomprimir el archivo binario `xl/vbaProject.bin` en plantillas maestras corporativas, se auditaron las siguientes macros:
 
 * **`Format43` / `Mueve43`:** Formatea la extracción SAP ME80FN y copia columnas básicas de compras.
 * **`Mueve41`:** Copia el pedido nacionalizado a columnas A hasta AC.

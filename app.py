@@ -743,7 +743,7 @@ with tab_inspector:
         query_search = st.text_input(
             "Buscar por código SAP, estilo de proveedor o descripción:" if current_lang == "es" else "Search by SAP code, vendor style or description:",
             value="",
-            placeholder="Escribe código (ej: 1455103), estilo (ej: 25B03), o prenda..." if current_lang == "es" else "Enter code (e.g. 1455103), style (e.g. 25B03), or product...",
+            placeholder="Escribe código (ej: 1001001), estilo (ej: ST-2024), o prenda..." if current_lang == "es" else "Enter code (e.g. 1001001), style (e.g. ST-2024), or product...",
             help="Filtra en tiempo real por cualquier dato del material padre o de sus tallas hijas." if current_lang == "es" else "Real-time search across parent or child SKU codes.",
             key="f360_search"
         )
@@ -1328,15 +1328,15 @@ with tab_wiki:
           - **Opción A (1 Clic):** Ve a la pestaña **`📋 Copiar a Excel Oficial`** y haz clic en **`⚡ Descargar Libro Oficial Cuadrado (.xlsm)`**. Te descarga el archivo oficial con macros intactas y diferencias en 0.
           - **Opción B (Manual Controlado):** Copia la **Tira 1 (ZDESCARGA)** en la celda `AS13` y la **Tira 2 (PACKING LIST)** en la celda `AW13` de tu Excel.
         
-        #### 2. Caso de Estudio: ¿Por qué era tan difícil cerrar IMP-174?
-        El contenedor **`IMP-174`** presentó trampas típicas del trabajo manual en bodega:
-        1. **Desplazamiento de Columnas:** Un operador insertó una columna extra `"Tarima"` en la columna B de `CONTROL DATA`, desplazando todos los códigos SAP una posición a la derecha. Un `BUSCARV` tradicional de Excel falló al 100%.
-        2. **Código de Material Duplicado:** En la hoja `BASE DE DATOS`, la columna F duplicó el ID de lista (`24987`) en lugar del material SAP (`1456051`), el cual estaba en la columna I.
-        3. **Fórmulas Borradas en Columna H:** En `CIERRE RECEP`, las fórmulas de `=+G - J - N - O + L + P + Q` fueron borradas, y se ingresaron a mano cantidades en PRKs (como 81 o 37) en lugar de unidades (1,728 o 444), o se ingresó únicamente el alisto de A001 ignorando A004 (Resurtido).
+        #### 2. Caso de Estudio: Trampas Frecuentes en el Trabajo Manual en Bodega
+        En los cierres logísticos se presentan habitualmente trampas típicas del trabajo manual en bodega:
+        1. **Desplazamiento de Columnas:** Cuando un operador inserta una columna extra (ej. `"Tarima"` o `"Ubicación"`) en `CONTROL DATA`, desplazando todos los códigos una posición a la derecha. Un `BUSCARV` tradicional de Excel falla al 100%.
+        2. **Código de Material Duplicado:** En la hoja `BASE DE DATOS`, cuando se duplica un ID de lista o catálogo en lugar del código de material principal.
+        3. **Fórmulas Borradas en Columna H:** En `CIERRE RECEP`, cuando las fórmulas oficiales de sumatoria son borradas accidentalmente y se digitan cantidades en cajas/PRKs en lugar de unidades sueltas, o se anota únicamente el alisto de un almacén parcial ignorando resurtido.
         
         **Cómo lo resuelve el motor de ReconcileAI:**
         - **Mapeo dinámico por nombres de encabezado:** Detecta automáticamente dónde está `Material`, `Descripción`, `Total Unidades` y `Bultos`, sin importar cuántas columnas inserte el operador.
-        - **Detección de código de material universal:** Extrae el código SAP desde la columna I de `BASE DE DATOS`.
+        - **Detección de código de material universal:** Extrae el código principal de forma heurística y resiliente desde `BASE DE DATOS`.
         - **Reconstrucción y reparación automática:** Restaura las fórmulas de diferencia y recibido físico en el libro oficial.
         
         #### 3. Privacidad & Confidencialidad

@@ -22,13 +22,13 @@ def test_clean_string():
 
 def test_clean_material_code():
     # Scientific notation from Excel
-    assert clean_material_code("1.455102001E+09") == "1455102001"
+    assert clean_material_code("1.001002001E+09") == "1001002001"
     # Float from Excel reading integer
-    assert clean_material_code("1455103.0") == "1455103"
-    # SAP leading zeroes (18 characters)
-    assert clean_material_code("0000000001455103") == "1455103"
+    assert clean_material_code("1001003.0") == "1001003"
+    # Leading zeroes
+    assert clean_material_code("0000000001001003") == "1001003"
     # Clean whitespace and non-breaking space
-    assert clean_material_code(" \xa01455103 \n") == "1455103"
+    assert clean_material_code(" \xa01001003 \n") == "1001003"
     # None or NaN
     assert clean_material_code(None) == ""
     assert clean_material_code("NaN") == ""
@@ -63,8 +63,8 @@ def test_parse_multi_po():
 def test_validator_curve_mismatch():
     # Curve says 12, but children sum to 10
     item = PrepackItem(
-        material_code="1455103",
-        vendor_material="25B03-03-00122",
+        material_code="1001003",
+        vendor_material="STYLE-TEST-01",
         description="Falda",
         category="DAMA",
         order_po_43="4300007063",
@@ -76,10 +76,10 @@ def test_validator_curve_mismatch():
         curve_total=12,
         unit_cost=10.0,
         children=[
-            ChildSKU("1455102001", "S", 2, 20, 20),
-            ChildSKU("1455102002", "M", 2, 20, 20),
-            ChildSKU("1455102003", "L", 3, 30, 30),
-            ChildSKU("1455102004", "XL", 3, 30, 30), # Sum = 2+2+3+3 = 10 != 12!
+            ChildSKU("1001002001", "S", 2, 20, 20),
+            ChildSKU("1001002002", "M", 2, 20, 20),
+            ChildSKU("1001002003", "L", 3, 30, 30),
+            ChildSKU("1001002004", "XL", 3, 30, 30), # Sum = 2+2+3+3 = 10 != 12!
         ]
     )
     issues = validate_item_integrity(item)
@@ -89,7 +89,7 @@ def test_validator_curve_mismatch():
 def test_validator_uom_confusion():
     # Invoiced 100 units, but received 500 units (someone entered pieces instead of boxes)
     item = PrepackItem(
-        material_code="1455103",
+        material_code="1001003",
         vendor_material="STYLE-1",
         description="Falda",
         category="DAMA",
@@ -109,7 +109,7 @@ def test_validator_uom_confusion():
 def test_validator_missing_price_on_claim():
     # Has a shortage of 20 units, but price is $0.00
     item = PrepackItem(
-        material_code="1455103",
+        material_code="1001003",
         vendor_material="STYLE-1",
         description="Falda",
         category="DAMA",
