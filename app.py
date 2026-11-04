@@ -257,13 +257,19 @@ if "audit_data" not in st.session_state:
     st.session_state.audit_data = None
 
 @st.cache_data(show_spinner="Procesando y auditando libros de Excel...")
-def run_audit(qc_content, cierre_content):
-    if isinstance(qc_content, bytes):
-        qc_file = io.BytesIO(qc_content)
-        qc_raw = qc_content
+def run_audit(qc_content, cierre_content, is_blind_setup: bool = False):
+    if is_blind_setup or qc_content is None:
+        boms = {}
+        qc_details = {}
+        qc_raw = b""
     else:
-        qc_file = qc_content
-        qc_raw = Path(qc_content).read_bytes()
+        if isinstance(qc_content, bytes):
+            qc_file = io.BytesIO(qc_content)
+            qc_raw = qc_content
+        else:
+            qc_file = qc_content
+            qc_raw = Path(qc_content).read_bytes()
+        boms, qc_details = parse_quality_control_boms(qc_file)
 
     if isinstance(cierre_content, bytes):
         cierre_file = io.BytesIO(cierre_content)
@@ -272,8 +278,13 @@ def run_audit(qc_content, cierre_content):
         cierre_file = cierre_content
         cierre_raw = Path(cierre_content).read_bytes()
 
-    boms, qc_details = parse_quality_control_boms(qc_file)
-    items, meta = parse_cierre_recepcion(cierre_file, boms, qc_details, return_meta=True)
+    items, meta = parse_cierre_recepcion(
+        cierre_file,
+        boms=boms,
+        qc_details=qc_details,
+        return_meta=True,
+        is_blind_setup=is_blind_setup
+    )
     summary = compute_summary(items, metadata=meta)
     validation = validate_all_items(items)
     return {
@@ -283,7 +294,8 @@ def run_audit(qc_content, cierre_content):
         "qc_details": qc_details,
         "validation": validation,
         "cierre_raw_bytes": cierre_raw,
-        "qc_raw_bytes": qc_raw
+        "qc_raw_bytes": qc_raw,
+        "is_blind_setup": is_blind_setup
     }
 
 # Sidebar Navigation & Management
@@ -387,30 +399,83 @@ if st.session_state.audit_data is None:
                         )
                         
                     st.markdown("<br>", unsafe_allow_html=True)
-                    if st.button(t("start_audit_btn"), type="primary", use_container_width=True):
-                        qc_full_path = p / sel_qc_file
-                        cierre_full_path = p / sel_cierre_file
-                        placeholder = st.empty()
-                        with placeholder.container():
-                            with st.status(
-                                "⚡ " + ("Auditando libros y cuadrando diferencias..." if current_lang == "es" else "Auditing workbooks and calculating reconciliation..."),
-                                expanded=True
-                            ) as status_box:
-                                st.write("📐 " + ("Extrayendo curvas de muelle y listas de materiales (BOMs)..." if current_lang == "es" else "Extracting dock curves and Bills of Materials (BOMs)..."))
-                                try:
-                                    res = run_audit(str(qc_full_path), str(cierre_full_path))
-                                    st.write("🔍 " + ("Cruzando compras (PO 43), facturación (41) y muelle..." if current_lang == "es" else "Cross-referencing POs, invoice and dock counts..."))
-                                    st.write("🛡️ " + ("Verificando notas de crédito y balances contables..." if current_lang == "es" else "Validating credit notes and accounting balances..."))
-                                    status_box.update(
-                                        label="✅ " + ("¡Auditoría 3-Way completada con éxito!" if current_lang == "es" else "3-Way audit completed successfully!"),
-                                        state="complete",
-                                        expanded=False
-                                    )
-                                    st.session_state.audit_data = res
-                                    st.rerun()
-                                except Exception as e_run:
-                                    status_box.update(label="❌ Error", state="error")
-                                    st.error(f"Error: {e_run}")
+                    has_qc_candidate = len(qc_candidates_idx) > 0
+
+                    if not has_qc_candidate:
+                        st.warning("⚠️ " + ("No se detectó archivo de Control de Calidad en esta importación.\n\n**Regla de Negocio:** Sin control de calidad no se puede hacer el cierre definitivo. Solo se puede montar a ciegas la macro utilizando SAP y dejándola en pausa." if current_lang == "es" else "No Quality Control file was detected in this import folder.\n\n**Business Rule:** Without quality control, official closure cannot be performed. You can only blindly set up the macro using SAP and leave it on pause."))
+                        col_btn1, col_btn2 = st.columns(2)
+                        with col_btn1:
+                            if st.button("🟡 " + ("Montar a Ciegas desde SAP (Modo Pausa)" if current_lang == "es" else "Blind Setup from SAP (Pause Mode)"), type="primary", use_container_width=True, key="btn_blind_local"):
+                                cierre_full_path = p / sel_cierre_file
+                                placeholder = st.empty()
+                                with placeholder.container():
+                                    with st.status(
+                                        "⚡ " + ("Montando macro a ciegas desde SAP..." if current_lang == "es" else "Mounting SAP macro blindly..."),
+                                        expanded=True
+                                    ) as status_box:
+                                        st.write("📦 " + ("Cargando órdenes de compra (PO 43) y facturación (41) sin reporte de muelle..." if current_lang == "es" else "Loading SAP orders without dock report..."))
+                                        try:
+                                            res = run_audit(None, str(cierre_full_path), is_blind_setup=True)
+                                            status_box.update(
+                                                label="⏸️ " + ("Montaje a ciegas completado — En pausa a la espera de Control de Calidad" if current_lang == "es" else "Blind setup completed — Paused awaiting Quality Control"),
+                                                state="complete",
+                                                expanded=False
+                                            )
+                                            st.session_state.audit_data = res
+                                            st.rerun()
+                                        except Exception as e_run:
+                                            status_box.update(label="❌ Error", state="error")
+                                            st.error(f"Error: {e_run}")
+                        with col_btn2:
+                            if st.button(t("start_audit_btn"), type="secondary", use_container_width=True, key="btn_local_forced"):
+                                qc_full_path = p / sel_qc_file
+                                cierre_full_path = p / sel_cierre_file
+                                placeholder = st.empty()
+                                with placeholder.container():
+                                    with st.status(
+                                        "⚡ " + ("Auditando libros y cuadrando diferencias..." if current_lang == "es" else "Auditing workbooks and calculating reconciliation..."),
+                                        expanded=True
+                                    ) as status_box:
+                                        st.write("📐 " + ("Extrayendo curvas de muelle y listas de materiales (BOMs)..." if current_lang == "es" else "Extracting dock curves and Bills of Materials (BOMs)..."))
+                                        try:
+                                            res = run_audit(str(qc_full_path), str(cierre_full_path))
+                                            st.write("🔍 " + ("Cruzando compras (PO 43), facturación (41) y muelle..." if current_lang == "es" else "Cross-referencing POs, invoice and dock counts..."))
+                                            st.write("🛡️ " + ("Verificando notas de crédito y balances contables..." if current_lang == "es" else "Validating credit notes and accounting balances..."))
+                                            status_box.update(
+                                                label="✅ " + ("¡Auditoría 3-Way completada con éxito!" if current_lang == "es" else "3-Way audit completed successfully!"),
+                                                state="complete",
+                                                expanded=False
+                                            )
+                                            st.session_state.audit_data = res
+                                            st.rerun()
+                                        except Exception as e_run:
+                                            status_box.update(label="❌ Error", state="error")
+                                            st.error(f"Error: {e_run}")
+                    else:
+                        if st.button(t("start_audit_btn"), type="primary", use_container_width=True):
+                            qc_full_path = p / sel_qc_file
+                            cierre_full_path = p / sel_cierre_file
+                            placeholder = st.empty()
+                            with placeholder.container():
+                                with st.status(
+                                    "⚡ " + ("Auditando libros y cuadrando diferencias..." if current_lang == "es" else "Auditing workbooks and calculating reconciliation..."),
+                                    expanded=True
+                                ) as status_box:
+                                    st.write("📐 " + ("Extrayendo curvas de muelle y listas de materiales (BOMs)..." if current_lang == "es" else "Extracting dock curves and Bills of Materials (BOMs)..."))
+                                    try:
+                                        res = run_audit(str(qc_full_path), str(cierre_full_path))
+                                        st.write("🔍 " + ("Cruzando compras (PO 43), facturación (41) y muelle..." if current_lang == "es" else "Cross-referencing POs, invoice and dock counts..."))
+                                        st.write("🛡️ " + ("Verificando notas de crédito y balances contables..." if current_lang == "es" else "Validating credit notes and accounting balances..."))
+                                        status_box.update(
+                                            label="✅ " + ("¡Auditoría 3-Way completada con éxito!" if current_lang == "es" else "3-Way audit completed successfully!"),
+                                            state="complete",
+                                            expanded=False
+                                        )
+                                        st.session_state.audit_data = res
+                                        st.rerun()
+                                    except Exception as e_run:
+                                        status_box.update(label="❌ Error", state="error")
+                                        st.error(f"Error: {e_run}")
                 else:
                     st.warning(f"No se encontraron libros de Excel (.xlsm, .xlsx, .xls) dentro de '{folder_input}'.")
             else:
@@ -449,6 +514,15 @@ if st.session_state.audit_data is None:
                             except Exception as e_up:
                                 status_box.update(label="❌ Error", state="error")
                                 st.error(f"Error al procesar archivos: {e_up}")
+            elif uploaded_cierre and not uploaded_qc:
+                st.info("ℹ️ " + ("¿No cuenta con Control de Calidad de muelle aún?\n\n**Regla de Negocio:** No se puede emitir el cierre oficial sin conteo físico de muelle. Puede montar a ciegas la macro utilizando SAP y dejarla en pausa." if current_lang == "es" else "No dock Quality Control file provided yet.\n\n**Business Rule:** Official closure cannot be issued without physical dock count. You can set up the macro blindly using SAP and leave it on pause."))
+                if st.button("🟡 " + ("Montar a Ciegas desde SAP (Modo Pausa)" if current_lang == "es" else "Blind Setup from SAP (Pause Mode)"), type="secondary", use_container_width=True, key="btn_upload_blind"):
+                    try:
+                        res = run_audit(None, uploaded_cierre.getvalue(), is_blind_setup=True)
+                        st.session_state.audit_data = res
+                        st.rerun()
+                    except Exception as e_up:
+                        st.error(f"Error al montar a ciegas: {e_up}")
 
     with col_welcome_right:
         st.markdown(f"### {t('sidebar_guide_title')}")
@@ -475,12 +549,24 @@ qc_details = audit_res["qc_details"]
 validation = audit_res["validation"]
 
 # Header Banner (Agnostic & Corporate-Independent)
-st.markdown(f"""
-<div class="app-header">
-    <h1>{t("app_badge")}</h1>
-    <p>{t("app_subtitle")} | {summary.import_id} ({summary.vendor_name})</p>
-</div>
-""", unsafe_allow_html=True)
+if summary.is_blind_setup or summary.status == "PAUSA_SIN_CONTROL_CALIDAD":
+    st.markdown(f"""
+    <div style="background: linear-gradient(90deg, #78350f 0%, #451a03 100%); border-left: 5px solid #f59e0b; border-radius: 6px; padding: 14px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+        <h3 style="margin:0 0 6px 0; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+            ⚠️ MODO MONTAJE CIEGO DESDE SAP (EN PAUSA)
+        </h3>
+        <p style="margin:0; font-size:13.5px; color:#fef3c7; line-height:1.5;">
+            <strong>Regla Operativa:</strong> No se cuenta con archivo de Control de Calidad de muelle. Los pedidos de SAP (PO 43 / Doc. 41) han sido montados pero la importación permanece en <strong>PAUSA / BORRADOR</strong>. El cierre oficial se encuentra bloqueado y no se emiten reclamos de faltante (NCR) hasta que muelle remita el conteo físico.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown(f"""
+    <div class="app-header">
+        <h1>{t("app_badge")}</h1>
+        <p>{t("app_subtitle")} | {summary.import_id} ({summary.vendor_name})</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Top KPIs Row (Expanded across full widescreen - 6 cards)
 k1, k2, k3, k4, k5, k6 = st.columns(6)
@@ -513,41 +599,68 @@ with k3:
         help=t("kpi_invoiced_units_sub")
     )
 with k4:
-    is_squared = (summary.total_ped_41_units == summary.total_received_units)
-    dif_units = summary.total_received_units - summary.total_ped_41_units
-    delta_txt = (t("kpi_net_diff_squared") if is_squared else f"Dif: {dif_units:,.0f} UN")
-    st.metric(
-        label=t("kpi_received_units"),
-        value=f"{summary.total_received_units:,.0f} UN",
-        delta=delta_txt,
-        delta_color="normal" if is_squared else "inverse",
-        help=t("kpi_received_units_sub")
-    )
-with k5:
-    pkg_rec = summary.received_packages
-    pkg_theor = summary.theor_packages
-    pkg_dif = summary.difference_packages
-    if pkg_rec > 0 or pkg_theor > 0:
-        pkg_val = f"{pkg_rec:,.0f} {'Cartons' if current_lang == 'en' else 'Bultos'}"
-        pkg_delta = f"{'Theor' if current_lang == 'en' else 'Teóricos'}: {pkg_theor:,.0f} (Dif: {pkg_dif:,.0f})"
+    if summary.is_blind_setup or summary.status == "PAUSA_SIN_CONTROL_CALIDAD":
+        st.metric(
+            label=t("kpi_received_units"),
+            value="0 UN (Pendiente QC)" if current_lang == "es" else "0 UN (Pending QC)",
+            delta="En Pausa / No Certificado" if current_lang == "es" else "On Pause / Uncertified",
+            delta_color="off",
+            help="Sin conteo físico de muelle / Dock count pending"
+        )
     else:
-        pkg_val = f"0 {'Cartons' if current_lang == 'en' else 'Bultos'}"
-        pkg_delta = "Verificado en muelle" if current_lang == "es" else "Dock verified"
-    st.metric(
-        label=t("kpi_dock_bultos"),
-        value=pkg_val,
-        delta=pkg_delta,
-        delta_color="normal" if pkg_dif == 0 else "off",
-        help="Bultos muelle vs packing list"
-    )
+        is_squared = (summary.total_ped_41_units == summary.total_received_units)
+        dif_units = summary.total_received_units - summary.total_ped_41_units
+        delta_txt = (t("kpi_net_diff_squared") if is_squared else f"Dif: {dif_units:,.0f} UN")
+        st.metric(
+            label=t("kpi_received_units"),
+            value=f"{summary.total_received_units:,.0f} UN",
+            delta=delta_txt,
+            delta_color="normal" if is_squared else "inverse",
+            help=t("kpi_received_units_sub")
+        )
+with k5:
+    if summary.is_blind_setup or summary.status == "PAUSA_SIN_CONTROL_CALIDAD":
+        st.metric(
+            label=t("kpi_dock_bultos"),
+            value="0 Bultos (Pendiente QC)" if current_lang == "es" else "0 Cartons (Pending QC)",
+            delta="Sin Conteo Físico" if current_lang == "es" else "No Dock Count",
+            delta_color="off",
+            help="Bultos de muelle pendientes / Dock count pending"
+        )
+    else:
+        pkg_rec = summary.received_packages
+        pkg_theor = summary.theor_packages
+        pkg_dif = summary.difference_packages
+        if pkg_rec > 0 or pkg_theor > 0:
+            pkg_val = f"{pkg_rec:,.0f} {'Cartons' if current_lang == 'en' else 'Bultos'}"
+            pkg_delta = f"{'Theor' if current_lang == 'en' else 'Teóricos'}: {pkg_theor:,.0f} (Dif: {pkg_dif:,.0f})"
+        else:
+            pkg_val = f"0 {'Cartons' if current_lang == 'en' else 'Bultos'}"
+            pkg_delta = "Verificado en muelle" if current_lang == "es" else "Dock verified"
+        st.metric(
+            label=t("kpi_dock_bultos"),
+            value=pkg_val,
+            delta=pkg_delta,
+            delta_color="normal" if pkg_dif == 0 else "off",
+            help="Bultos muelle vs packing list"
+        )
 with k6:
-    st.metric(
-        label="CREDIT NOTE (NCR)" if current_lang == "en" else "NOTA DE CRÉDITO (NCR)",
-        value=f"${summary.total_ncr_amount:,.2f} USD",
-        delta=("CLEAN (0 Diff)" if current_lang == "en" else "LIMPIO (0 Discrepancias)") if summary.status == "LIMPIO" else ("Active Claim" if current_lang == "en" else "Con Reclamo Activo"),
-        delta_color="normal" if summary.status == "LIMPIO" else "inverse",
-        help="Reclamo NCR / Claim amount"
-    )
+    if summary.is_blind_setup or summary.status == "PAUSA_SIN_CONTROL_CALIDAD":
+        st.metric(
+            label="CREDIT NOTE (NCR)" if current_lang == "en" else "NOTA DE CRÉDITO (NCR)",
+            value="$0.00 USD",
+            delta="BLOQUEADO (Sin QC)" if current_lang == "es" else "LOCKED (No QC)",
+            delta_color="off",
+            help="Bloqueado: no se emite reclamo sin conteo físico de muelle"
+        )
+    else:
+        st.metric(
+            label="CREDIT NOTE (NCR)" if current_lang == "en" else "NOTA DE CRÉDITO (NCR)",
+            value=f"${summary.total_ncr_amount:,.2f} USD",
+            delta=("CLEAN (0 Diff)" if current_lang == "en" else "LIMPIO (0 Discrepancias)") if summary.status == "LIMPIO" else ("Active Claim" if current_lang == "en" else "Con Reclamo Activo"),
+            delta_color="normal" if summary.status == "LIMPIO" else "inverse",
+            help="Reclamo NCR / Claim amount"
+        )
 
 st.divider()
 
@@ -1260,17 +1373,20 @@ with tab_excel_export:
             df_exp.to_excel(writer, index=False, sheet_name="CIERRE_RECEP_VALORES")
         excel_buf.seek(0)
         
+        exp_filename = f"{summary.import_id}_Montaje_Ciego_Pausa.xlsx" if summary.is_blind_setup else f"{summary.import_id}_Valores_Cierre_Recep_Limpio.xlsx"
         st.download_button(
             label="📥 Descargar Columnas Principales (.xlsx)",
             data=excel_buf,
-            file_name=f"{summary.import_id}_Valores_Cierre_Recep_Limpio.xlsx",
+            file_name=exp_filename,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary",
-            help="Descarga las 17 columnas verificadas ordenadas según la plantilla oficial para alimentar el libro de cierre."
+            help="Descarga las columnas verificadas ordenadas según la plantilla oficial para alimentar el libro de cierre."
         )
 
     with subtab_descarga:
         st.markdown("#### ⚡ Cuadre Rápido de Muelle y Packing List (Columnas AS a AZ)")
+        if summary.is_blind_setup:
+            st.warning("⚠️ **Aviso de Modo Pausa (Sin Control de Calidad):** Esta importación carece de reporte de muelle. Los valores de descarga no pueden ser certificados hasta que se reciba el reporte de Control de Calidad. La macro de SAP permanece montada en modo preliminar/borrador.")
         st.info("""
         💡 **¿Por qué la plantilla oficial muestra diferencias negativas al inicio?**  
         Porque la macro de SAP solo llena los pedidos del sistema, dejando en blanco o en cero las columnas de **Muelle de Descarga** (`AS:AT`) y de **Packing List** (`AW:AY`). La fórmula `=AT13 - H13` calcula `0 - 888 = -888`.

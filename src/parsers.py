@@ -339,15 +339,19 @@ class ItemList(list):
 
 def parse_cierre_recepcion(
     cierre_source: Any,
-    boms: Dict[str, List[Dict]],
-    qc_details: Dict[str, Dict],
-    return_meta: bool = False
+    boms: Optional[Dict[str, List[Dict]]] = None,
+    qc_details: Optional[Dict[str, Dict]] = None,
+    return_meta: bool = False,
+    is_blind_setup: bool = False
 ) -> Union[ItemList, Tuple[ItemList, Dict[str, Any]]]:
     """
     Parses sheet CIERRE RECEP into structured PrepackItem objects using defensive data sanitization.
+    Supports blind setup mode (montaje a ciegas desde SAP en pausa sin Control de Calidad).
     Recovers from missing or corrupted Col H formulas by cross-referencing discharge and QC.
     Accurately segregates physical cartons, prepacks (PRK), and total units.
     """
+    boms_map = boms or {}
+    qc_map = qc_details or {}
     wb = openpyxl.load_workbook(cierre_source, data_only=True)
     meta = extract_cierre_metadata(wb)
     ws = wb['CIERRE RECEP']
@@ -470,10 +474,10 @@ def parse_cierre_recepcion(
         # Bultos Descarga (Muelle)
         bultos_desc = pkg_as.total_boxes
         unidades_desc = clean_number(raw_at)
-        if bultos_desc == 0.0 and mat_code in qc_details and qc_details[mat_code].get('bultos', 0) > 0:
-            bultos_desc = qc_details[mat_code]['bultos']
-        if unidades_desc == 0.0 and mat_code in qc_details and qc_details[mat_code].get('unidades', 0) > 0:
-            unidades_desc = qc_details[mat_code]['unidades']
+        if bultos_desc == 0.0 and mat_code in qc_map and qc_map[mat_code].get('bultos', 0) > 0:
+            bultos_desc = qc_map[mat_code]['bultos']
+        if unidades_desc == 0.0 and mat_code in qc_map and qc_map[mat_code].get('unidades', 0) > 0:
+            unidades_desc = qc_map[mat_code]['unidades']
         elif unidades_desc == 0.0 and pkg_as.total_units > 0:
             unidades_desc = pkg_as.total_units
 
@@ -493,11 +497,11 @@ def parse_cierre_recepcion(
         b_comp = pkg_as.boxes_comp
         u_comp = pkg_as.units_per_box_comp
 
-        if b_enteros == 0.0 and mat_code in qc_details:
-            b_enteros = qc_details[mat_code].get('bultos_enteros', 0.0)
-            u_enteros = qc_details[mat_code].get('unidades_por_bulto_entero', 0.0)
-            b_comp = qc_details[mat_code].get('bultos_complementos', 0.0)
-            u_comp = qc_details[mat_code].get('unidades_por_bulto_comp', 0.0)
+        if b_enteros == 0.0 and mat_code in qc_map:
+            b_enteros = qc_map[mat_code].get('bultos_enteros', 0.0)
+            u_enteros = qc_map[mat_code].get('unidades_por_bulto_entero', 0.0)
+            b_comp = qc_map[mat_code].get('bultos_complementos', 0.0)
+            u_comp = qc_map[mat_code].get('unidades_por_bulto_comp', 0.0)
 
         # Average units per carton
         if bultos_desc > 0 and unidades_desc > 0:
@@ -519,19 +523,19 @@ def parse_cierre_recepcion(
             rec_u = clean_number(raw_rec_u)
         elif unidades_desc > 0:
             rec_u = unidades_desc
-        elif mat_code in qc_details and qc_details[mat_code].get('unidades', 0) > 0:
-            rec_u = qc_details[mat_code]['unidades']
+        elif mat_code in qc_map and qc_map[mat_code].get('unidades', 0) > 0:
+            rec_u = qc_map[mat_code]['unidades']
         else:
             rec_u = 0.0
 
         # If description is missing in closure sheet, fill from QC
-        if not desc and mat_code in qc_details:
-            desc = qc_details[mat_code].get('desc', '')
+        if not desc and mat_code in qc_map:
+            desc = qc_map[mat_code].get('desc', '')
 
         # Determine container part dynamically
-        is_in_qc = mat_code in qc_details and qc_details[mat_code].get('unidades', 0) > 0
-        detected_parts = qc_details.get('_detected_parts', [])
-        assigned_part = qc_details.get(mat_code, {}).get('part', '')
+        is_in_qc = mat_code in qc_map and qc_map[mat_code].get('unidades', 0) > 0
+        detected_parts = qc_map.get('_detected_parts', [])
+        assigned_part = qc_map.get(mat_code, {}).get('part', '')
 
         # Check observations or action columns in CIERRE RECEP if unassigned
         if not assigned_part:
@@ -545,7 +549,7 @@ def parse_cierre_recepcion(
                     assigned_part = p_match.group(1).upper()
 
         if not assigned_part:
-            if is_in_qc or (mat_code in boms):
+            if is_in_qc or (mat_code in boms_map):
                 assigned_part = "A" if detected_parts else ""
             elif detected_parts:
                 other_parts = [p for p in detected_parts if p != "A"]
@@ -556,38 +560,47 @@ def parse_cierre_recepcion(
         container_part = assigned_part
 
         # Determine status dynamically based on physical count vs commercial invoice
-        diff = rec_u - ped41_u
-        if container_part and container_part != "A" and rec_u == 0:
-            status = f"PENDIENTE_PARTE_{container_part}"
-            obs = f"Mercadería en Contenedor Parte {container_part} o pendiente de descarga."
-        elif not container_part and rec_u == 0 and ped41_u > 0:
-            status = "FALTANTE"
-            obs = f"No recibido en muelle (faltante de {ped41_u:,.0f} unidades)."
-        elif falt > 0:
-            status = "FALTANTE"
-            obs = f"Faltante registrado de {falt:,.0f} unidades."
-        elif dan > 0:
-            status = "DAÑADO"
-            obs = f"Prendas dañadas registradas: {dan:,.0f} unidades."
-        elif sob > 0:
-            status = "SOBRANTE"
-            obs = f"Sobrante registrado de {sob:,.0f} unidades."
-        elif diff < 0:
-            status = "FALTANTE"
-            obs = f"Diferencia negativa de {abs(diff):,.0f} unidades."
-        elif diff > 0:
-            status = "SOBRANTE"
-            obs = f"Diferencia positiva de {diff:,.0f} unidades."
+        if is_blind_setup or (not qc_map and not boms_map and raw_rec_u is None and unidades_desc == 0):
+            status = "PENDIENTE_CONTROL_CALIDAD"
+            obs = "Montaje a ciegas desde SAP. En pausa: no se puede emitir cierre sin Control de Calidad."
+            rec_u = 0.0
+            falt = 0.0
+            dan = 0.0
+            sob = 0.0
+            diff = 0.0
         else:
-            status = "LIMPIO"
-            obs = "Conciliación exacta sin discrepancias."
+            diff = rec_u - ped41_u
+            if container_part and container_part != "A" and rec_u == 0:
+                status = f"PENDIENTE_PARTE_{container_part}"
+                obs = f"Mercadería en Contenedor Parte {container_part} o pendiente de descarga."
+            elif not container_part and rec_u == 0 and ped41_u > 0:
+                status = "FALTANTE"
+                obs = f"No recibido en muelle (faltante de {ped41_u:,.0f} unidades)."
+            elif falt > 0:
+                status = "FALTANTE"
+                obs = f"Faltante registrado de {falt:,.0f} unidades."
+            elif dan > 0:
+                status = "DAÑADO"
+                obs = f"Prendas dañadas registradas: {dan:,.0f} unidades."
+            elif sob > 0:
+                status = "SOBRANTE"
+                obs = f"Sobrante registrado de {sob:,.0f} unidades."
+            elif diff < 0:
+                status = "FALTANTE"
+                obs = f"Diferencia negativa de {abs(diff):,.0f} unidades."
+            elif diff > 0:
+                status = "SOBRANTE"
+                obs = f"Diferencia positiva de {diff:,.0f} unidades."
+            else:
+                status = "LIMPIO"
+                obs = "Conciliación exacta sin discrepancias."
 
         ncr_amount = (falt + dan) * unit_cost
 
         # Build children list if BOM exists
         children: List[ChildSKU] = []
-        if mat_code in boms:
-            for b in boms[mat_code]:
+        if mat_code in boms_map:
+            for b in boms_map[mat_code]:
                 c_code = b['child']
                 c_ratio = b['ratio']
                 if ped41_prk > 0:
@@ -597,7 +610,7 @@ def parse_cierre_recepcion(
                 else:
                     c_theo = 0
 
-                c_desc = qc_details.get(c_code, {}).get('desc', f"{desc} (Talla {c_ratio})")
+                c_desc = qc_map.get(c_code, {}).get('desc', f"{desc} (Talla {c_ratio})")
                 c_rec = int(c_theo) if status == "LIMPIO" else 0
                 children.append(ChildSKU(
                     material_code=c_code,
@@ -645,6 +658,7 @@ def parse_cierre_recepcion(
             unidades_por_bulto_comp=u_comp,
             unidades_por_bulto=u_per_b,
             dif_bultos=dif_bultos,
+            is_blind_setup=is_blind_setup,
         )
         items.append(item)
 

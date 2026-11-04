@@ -57,7 +57,11 @@ def compute_summary(
     if dif_pkg == 0.0 and (rec_pkg != 0 or theor_pkg != 0):
         dif_pkg = rec_pkg - theor_pkg
     
-    status = "LIMPIO" if (total_falt == 0 and total_dan == 0) else "CON_DISCREPANCIAS"
+    is_blind = any(getattr(i, 'is_blind_setup', False) or i.status == "PENDIENTE_CONTROL_CALIDAD" for i in items)
+    if is_blind:
+        status = "PAUSA_SIN_CONTROL_CALIDAD"
+    else:
+        status = "LIMPIO" if (total_falt == 0 and total_dan == 0) else "CON_DISCREPANCIAS"
     
     return ReconciliationSummary(
         import_id=final_import_id,
@@ -82,7 +86,8 @@ def compute_summary(
         total_bultos_pl=total_bultos_pl,
         dif_total_bultos=dif_total_b,
         total_prk_41=total_prk_41,
-        total_prk_43=total_prk_43
+        total_prk_43=total_prk_43,
+        is_blind_setup=is_blind
     )
 
 def filter_items(

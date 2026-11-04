@@ -64,6 +64,7 @@ class PrepackItem:
     unidades_por_bulto_comp: float = 0.0
     unidades_por_bulto: float = 0.0
     dif_bultos: float = 0.0
+    is_blind_setup: bool = False
 
 @dataclass
 class ReconciliationSummary:
@@ -90,3 +91,4 @@ class ReconciliationSummary:
     dif_total_bultos: float = 0.0
     total_prk_41: float = 0.0
     total_prk_43: float = 0.0
+    is_blind_setup: bool = False

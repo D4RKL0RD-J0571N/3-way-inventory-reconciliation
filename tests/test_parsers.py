@@ -333,3 +333,65 @@ def test_dynamic_filter_items_arbitrary_parts_and_statuses():
     res_q_part = filter_items(items, search_query="Parte C")
     assert len(res_q_part) == 1
     assert res_q_part[0].material_code == "1002"
+
+
+def test_blind_setup_mode_without_qc(tmp_path):
+    """
+    Verifies the operational business rule:
+    When an import has no Quality Control report, official closure cannot be performed.
+    The system allows mounting the SAP macro blindly and leaving it in PAUSE mode.
+    - All items are marked PENDIENTE_CONTROL_CALIDAD
+    - No fake shortages or fake NCR claims are fabricated
+    - Summary status is PAUSA_SIN_CONTROL_CALIDAD with is_blind_setup=True
+    """
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "CIERRE RECEP"
+    for c in range(1, 60):
+        ws.cell(12, c, f"Col_{c}")
+
+    ws.cell(12, 4, "Material")
+    ws.cell(12, 5, "Estilo Prov")
+    ws.cell(12, 11, "Texto breve")
+    ws.cell(12, 13, "Cantidad facturada (UN)")
+    ws.cell(12, 14, "Costo Unitario")
+    ws.cell(12, 19, "Total Pedido 41 (PRK)")
+    ws.cell(12, 23, "Curva")
+
+    # Row 13: 100 units from SAP
+    ws.cell(13, 4, "9990001")
+    ws.cell(13, 5, "STYLE-BLIND-01")
+    ws.cell(13, 11, "Camiseta Básica")
+    ws.cell(13, 13, 100)
+    ws.cell(13, 14, 15.5)
+    ws.cell(13, 19, 10)
+    ws.cell(13, 23, 10)
+
+    # DATOS GENERALES sheet
+    ws_dg = wb.create_sheet(title="DATOS GENERALES")
+    ws_dg.cell(7, 2, "Importación")
+    ws_dg.cell(7, 3, "IMP-BLIND-TEST")
+
+    cierre_path = tmp_path / "Cierre_Blind.xlsx"
+    wb.save(cierre_path)
+
+    # Parse in blind setup mode
+    items, meta = parse_cierre_recepcion(str(cierre_path), boms=None, qc_details=None, return_meta=True, is_blind_setup=True)
+    summary = compute_summary(items, metadata=meta)
+
+    assert len(items) == 1
+    item = items[0]
+    assert item.material_code == "9990001"
+    assert item.status == "PENDIENTE_CONTROL_CALIDAD"
+    assert item.is_blind_setup is True
+    assert item.received_real_units == 0.0
+    assert item.faltante == 0.0
+    assert item.danado == 0.0
+    assert item.ncr_amount == 0.0
+    assert "En pausa: no se puede emitir cierre sin Control de Calidad" in item.observations
+
+    assert summary.is_blind_setup is True
+    assert summary.status == "PAUSA_SIN_CONTROL_CALIDAD"
+    assert summary.total_received_units == 0.0
+    assert summary.total_ncr_amount == 0.0
+
