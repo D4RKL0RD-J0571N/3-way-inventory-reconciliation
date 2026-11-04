@@ -175,41 +175,44 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
     """
     wb = openpyxl.load_workbook(qc_source, data_only=True)
 
-    # 1. Parse BOM from BASE DE DATOS
+    # 1. Parse BOM from BASE DE DATOS (if present)
     # Standard column mapping:
     # Col 5 (E): LISTA / BOM ID
     # Col 9 (I): Material Code (fallback to Col 6 (F))
     # Col 10 (J): Ratio/Curva (fallback to Col 7 (G))
     # Col 11 (K): UM ('PRK' for parent, 'UN' for child)
-    ws_bd = wb['BASE DE DATOS']
+    bd_sheet_name = next((s for s in wb.sheetnames if any(k in s.upper() for k in ['BASE DE DATOS', 'BASE_DATOS', 'BOM', 'CURVAS'])), None)
     boms_by_parent: Dict[str, List[Dict]] = {}
-    current_bom_id = None
-    current_parent = None
+    if bd_sheet_name:
+        ws_bd = wb[bd_sheet_name]
+        current_bom_id = None
+        current_parent = None
 
-    for r in range(5, ws_bd.max_row + 1):
-        bom_id = clean_string(ws_bd.cell(r, 5).value) # Col E: BOM ID
-        mat_val = ws_bd.cell(r, 9).value or ws_bd.cell(r, 6).value
-        mat_clean = clean_material_code(mat_val)
-        ratio_val = ws_bd.cell(r, 10).value or ws_bd.cell(r, 7).value
-        um_val = clean_string(ws_bd.cell(r, 11).value).upper()
+        for r in range(5, ws_bd.max_row + 1):
+            bom_id = clean_string(ws_bd.cell(r, 5).value) # Col E: BOM ID
+            mat_val = ws_bd.cell(r, 9).value or ws_bd.cell(r, 6).value
+            mat_clean = clean_material_code(mat_val)
+            ratio_val = ws_bd.cell(r, 10).value or ws_bd.cell(r, 7).value
+            um_val = clean_string(ws_bd.cell(r, 11).value).upper()
 
-        if bom_id and mat_clean:
-            # A new parent row is identified by PRK or BOM ID change
-            if bom_id != current_bom_id or um_val == 'PRK':
-                current_bom_id = bom_id
-                current_parent = mat_clean
-                if current_parent not in boms_by_parent:
-                    boms_by_parent[current_parent] = []
-            else:
-                ratio = clean_int(ratio_val, default=1)
-                if current_parent and mat_clean != current_parent:
-                    boms_by_parent[current_parent].append({
-                        'child': mat_clean,
-                        'ratio': ratio
-                    })
+            if bom_id and mat_clean:
+                # A new parent row is identified by PRK or BOM ID change
+                if bom_id != current_bom_id or um_val == 'PRK':
+                    current_bom_id = bom_id
+                    current_parent = mat_clean
+                    if current_parent not in boms_by_parent:
+                        boms_by_parent[current_parent] = []
+                else:
+                    ratio = clean_int(ratio_val, default=1)
+                    if current_parent and mat_clean != current_parent:
+                        boms_by_parent[current_parent].append({
+                            'child': mat_clean,
+                            'ratio': ratio
+                        })
 
     # 2. Dynamic column detection in CONTROL DATA
-    ws_qc = wb['CONTROL DATA']
+    qc_sheet_name = next((s for s in wb.sheetnames if any(k in s.upper() for k in ['CONTROL DATA', 'CONTROL_DATA', 'CONTROL', 'QC'])), wb.sheetnames[0])
+    ws_qc = wb[qc_sheet_name]
     col_mat = None
     col_desc = None
     col_um = None
@@ -222,6 +225,7 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
     col_bultos_comp = None
     col_unid_comp = None
     col_total_prk = None
+    col_part = None
 
     # Scan row 6 headers
     for c in range(1, ws_qc.max_column + 1):
@@ -231,6 +235,8 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
         v_low = val.lower()
         if v_low == 'material':
             col_mat = c
+        elif any(k in v_low for k in ['parte', 'contenedor', 'container', 'lote']):
+            col_part = c
         elif 'descripci' in v_low and not col_desc:
             col_desc = c
         elif v_low == 'um':
@@ -268,10 +274,40 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
     col_total_prk = col_total_prk or 34
     col_curva = col_curva or 35
 
+    # Detect multi-part distribution sheets dynamically (e.g. DIST. PARTE A, PARTE B, PARTE C...)
+    part_materials: Dict[str, str] = {}
+    detected_parts = set()
+    for sname in wb.sheetnames:
+        m_part = re.search(r'PARTE\s+([A-Z0-9]+)', sname, re.IGNORECASE)
+        if m_part:
+            p_code = m_part.group(1).upper()
+            detected_parts.add(p_code)
+            try:
+                ws_part = wb[sname]
+                for r_p in range(1, min(ws_part.max_row + 1, 1000)):
+                    for c_p in range(1, min(ws_part.max_column + 1, 6)):
+                        val_p = str(ws_part.cell(r_p, c_p).value or "").strip()
+                        if val_p.isdigit() and len(val_p) >= 7:
+                            clean_m = clean_material_code(val_p)
+                            if clean_m and clean_m not in part_materials:
+                                part_materials[clean_m] = p_code
+            except Exception:
+                pass
+
     qc_details: Dict[str, Dict] = {}
     for r in range(7, ws_qc.max_row + 1):
         m_clean = clean_material_code(ws_qc.cell(r, col_mat).value)
         if m_clean:
+            if col_part:
+                raw_part = clean_string(ws_qc.cell(r, col_part).value)
+                if raw_part:
+                    m_p = re.search(r'(?:PARTE|CONTENEDOR|LOTE)?\s*([A-Z0-9]+)', raw_part, re.IGNORECASE)
+                    p_val = m_p.group(1).upper() if m_p else raw_part.upper()
+                    part_materials[m_clean] = p_val
+                    detected_parts.add(p_val)
+
+            assigned_part = part_materials.get(m_clean, "A" if detected_parts else "")
+
             # We record total_unidades, bultos, curve, and packaging breakdown for complete dock audit
             qc_details[m_clean] = {
                 'desc': clean_string(ws_qc.cell(r, col_desc).value),
@@ -285,7 +321,11 @@ def parse_quality_control_boms(qc_source: Any) -> Tuple[Dict[str, List[Dict]], D
                 'bultos_complementos': clean_number(ws_qc.cell(r, col_bultos_comp).value) if col_bultos_comp else 0.0,
                 'unidades_por_bulto_comp': clean_number(ws_qc.cell(r, col_unid_comp).value) if col_unid_comp else 0.0,
                 'total_prk': clean_number(ws_qc.cell(r, col_total_prk).value) if col_total_prk else 0.0,
+                'part': assigned_part,
             }
+
+    if detected_parts:
+        qc_details['_detected_parts'] = sorted(list(detected_parts))
 
     return boms_by_parent, qc_details
 
@@ -480,16 +520,37 @@ def parse_cierre_recepcion(
         if not desc and mat_code in qc_details:
             desc = qc_details[mat_code].get('desc', '')
 
-        # Determine container part (Part A if in BOMs or arrived in QC dock, otherwise Part B)
+        # Determine container part dynamically
         is_in_qc = mat_code in qc_details and qc_details[mat_code].get('unidades', 0) > 0
-        is_in_bom = mat_code in boms
-        container_part = "A" if (is_in_bom or is_in_qc) else "B"
+        detected_parts = qc_details.get('_detected_parts', [])
+        assigned_part = qc_details.get(mat_code, {}).get('part', '')
 
-        # Determine status
+        # Check observations or action columns in CIERRE RECEP if unassigned
+        if not assigned_part:
+            obs_text = f"{clean_string(ws.cell(r, col_map.get('desc', 30)).value)} {clean_string(ws.cell(r, 20).value)} {clean_string(ws.cell(r, 29).value)}"
+            p_match = re.search(r'PARTE\s+([A-Z0-9]+)', obs_text, re.IGNORECASE)
+            if p_match:
+                assigned_part = p_match.group(1).upper()
+
+        if not assigned_part:
+            if is_in_qc or (mat_code in boms):
+                assigned_part = "A" if detected_parts else ""
+            elif detected_parts:
+                other_parts = [p for p in detected_parts if p != "A"]
+                assigned_part = other_parts[0] if other_parts else "B"
+            else:
+                assigned_part = ""
+
+        container_part = assigned_part
+
+        # Determine status dynamically based on physical count vs commercial invoice
         diff = rec_u - ped41_u
-        if container_part == "B" and rec_u == 0:
-            status = "PENDIENTE_PARTE_B"
-            obs = "Mercadería en Contenedor Parte B o pendiente de descarga."
+        if container_part and container_part != "A" and rec_u == 0:
+            status = f"PENDIENTE_PARTE_{container_part}"
+            obs = f"Mercadería en Contenedor Parte {container_part} o pendiente de descarga."
+        elif not container_part and rec_u == 0 and ped41_u > 0:
+            status = "FALTANTE"
+            obs = f"No recibido en muelle (faltante de {ped41_u:,.0f} unidades)."
         elif falt > 0:
             status = "FALTANTE"
             obs = f"Faltante registrado de {falt:,.0f} unidades."

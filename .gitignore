@@ -35,4 +35,5 @@ data/
 *.csv
 *.docx
 docs/drafts/
+scratch/
 

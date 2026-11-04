@@ -27,8 +27,9 @@ def compute_summary(
     total_mat = len(items)
     container_parts_breakdown = {}
     for i in items:
-        p = (i.container_part or "A").upper()
-        container_parts_breakdown[p] = container_parts_breakdown.get(p, 0) + 1
+        p = str(i.container_part or "").strip().upper()
+        if p:
+            container_parts_breakdown[p] = container_parts_breakdown.get(p, 0) + 1
 
     part_a_mat = container_parts_breakdown.get("A", 0)
     part_b_mat = container_parts_breakdown.get("B", 0)
@@ -88,18 +89,26 @@ def filter_items(
     items: List[PrepackItem],
     part_filter: str = "ALL", # "ALL", "A", "B", "C", "D", "E", "F"...
     status_filter: str = "ALL",
+    category_filter: str = "ALL",
     search_query: str = ""
 ) -> List[PrepackItem]:
     """
-    Filters items by container part, status, and search keyword (searches parent or child SKUs).
-    Supports arbitrary container parts dynamically (Parts A through F+).
+    Filters items by container part, status, category, and search keyword (searches parent or child SKUs).
+    Supports arbitrary container parts (Parts A through Z+) and dynamic statuses extracted from live data.
     """
     filtered = items
     if part_filter != "ALL":
-        filtered = [i for i in filtered if (i.container_part or "A").upper() == part_filter.upper()]
+        p_clean = part_filter.strip().upper()
+        if p_clean in ["NONE", "SIN_PARTE", "SINGLE", "UNICO", "ÚNICO"]:
+            filtered = [i for i in filtered if not str(i.container_part or "").strip()]
+        else:
+            filtered = [i for i in filtered if str(i.container_part or "").strip().upper() == p_clean]
         
     if status_filter != "ALL":
-        filtered = [i for i in filtered if i.status == status_filter]
+        filtered = [i for i in filtered if str(i.status or "").strip().upper() == status_filter.strip().upper()]
+
+    if category_filter != "ALL":
+        filtered = [i for i in filtered if str(i.category or "").strip().upper() == category_filter.strip().upper()]
         
     if search_query:
         q = search_query.lower().strip()
@@ -111,7 +120,9 @@ def filter_items(
                 q in i.vendor_material.lower() or
                 q in i.description.lower() or
                 q in i.order_po_43.lower() or
-                q in i.category.lower()
+                q in i.category.lower() or
+                q in str(i.container_part).lower() or
+                q in str(i.status).lower()
             )
             # Search children SKUs
             child_match = any(q in c.material_code.lower() or q in c.description.lower() for c in i.children)

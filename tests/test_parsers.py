@@ -161,3 +161,175 @@ def test_synthetic_full_reconciliation_clean(tmp_path):
     assert summary.total_materials == 1
     assert summary.total_received_units == 240
     assert summary.status == "LIMPIO"
+
+
+def test_dynamic_multi_part_c_d_extraction(tmp_path):
+    """
+    Verifies that imports with 3 or more parts (e.g. Part A, Part B, Part C, Part D)
+    dynamically detect all parts from distribution sheets without hardcoded limitations.
+    """
+    qc_wb = openpyxl.Workbook()
+    ws_cd = qc_wb.active
+    ws_cd.title = "CONTROL DATA"
+    ws_cd.cell(6, 5, "Material")
+    ws_cd.cell(6, 13, "Descripción")
+    ws_cd.cell(6, 34, "Total Bultos")
+    ws_cd.cell(6, 35, "Total Unidades")
+
+    items_data = [("A", "1001001"), ("B", "1001002"), ("C", "1001003"), ("D", "1001004")]
+    for idx, (p, mat_id) in enumerate(items_data, start=7):
+        ws_cd.cell(idx, 5, mat_id)
+        ws_cd.cell(idx, 13, f"Item Part {p}")
+        ws_cd.cell(idx, 34, 10)
+        ws_cd.cell(idx, 35, 120)
+
+    # Add distribution sheets for Parts A, B, C, D
+    for part_letter, mat_id in items_data:
+        ws_p = qc_wb.create_sheet(title=f"DIST. PARTE {part_letter}")
+        ws_p.cell(1, 1, mat_id)
+
+    qc_file = tmp_path / "QC_MultiPart.xlsx"
+    qc_wb.save(qc_file)
+
+    boms, qc_details = parse_quality_control_boms(str(qc_file))
+    assert qc_details.get('_detected_parts') == ["A", "B", "C", "D"]
+    assert qc_details["1001001"]["part"] == "A"
+    assert qc_details["1001002"]["part"] == "B"
+    assert qc_details["1001003"]["part"] == "C"
+    assert qc_details["1001004"]["part"] == "D"
+
+
+def test_single_container_fallback_never_fabricates_part_b(tmp_path):
+    """
+    Verifies that a single container import never assumes Part B for unreceived goods,
+    correctly assigning FALTANTE status instead.
+    """
+    qc_wb = openpyxl.Workbook()
+    ws_cd = qc_wb.active
+    ws_cd.title = "CONTROL DATA"
+    ws_cd.append(["Material", "Descripción", "Bultos", "Total Unidades"])
+    ws_cd.append(["2001001", "Single Container Item 1", 10, 100])
+    qc_file = tmp_path / "QC_Single.xlsx"
+    qc_wb.save(qc_file)
+
+    cierre_wb = openpyxl.Workbook()
+    ws_cr = cierre_wb.active
+    ws_cr.title = "CIERRE RECEP"
+    ws_cr.cell(1, 1, "CIERRE RECEPCION")
+    for c in range(1, 60):
+        ws_cr.cell(12, c, f"Col_{c}")
+    ws_cr.cell(12, 5, "Material")
+
+    # Item 1: Received
+    ws_cr.cell(13, 1, "PO-100")
+    ws_cr.cell(13, 5, "2001001")
+    ws_cr.cell(13, 4, "Item Received")
+    ws_cr.cell(13, 6, 100)
+    ws_cr.cell(13, 7, 100)
+    ws_cr.cell(13, 8, 100)
+
+    # Item 2: Unreceived (0 units received)
+    ws_cr.cell(14, 1, "PO-100")
+    ws_cr.cell(14, 5, "2001002")
+    ws_cr.cell(14, 4, "Item Missing")
+    ws_cr.cell(14, 6, 50)
+    ws_cr.cell(14, 7, 50)
+    ws_cr.cell(14, 8, 0) # 0 received
+
+    cierre_file = tmp_path / "Cierre_Single.xlsx"
+    cierre_wb.save(cierre_file)
+
+    boms, qc_details = parse_quality_control_boms(str(qc_file))
+    items = parse_cierre_recepcion(str(cierre_file), boms, qc_details)
+
+    assert len(items) == 2
+    item_clean = items[0]
+    item_missing = items[1]
+
+    assert item_clean.status == "LIMPIO"
+    # Crucial test: item_missing must NOT be PENDIENTE_PARTE_B because it's a single container!
+    assert item_missing.status == "FALTANTE"
+    assert "PENDIENTE_PARTE_B" not in item_missing.status
+
+
+def test_dynamic_filter_items_arbitrary_parts_and_statuses():
+    """
+    Verifies that filter_items dynamically filters by arbitrary container parts (C, D, etc.),
+    dynamic statuses, and categories without any hardcoded restrictions.
+    """
+    from src.models import PrepackItem, ChildSKU
+    from src.engine import filter_items
+
+    item_a = PrepackItem(
+        material_code="1001",
+        vendor_material="V-01",
+        description="Camisa Parte A",
+        category="TEXTIL",
+        order_po_43="4301",
+        quantity_po_43_prk=10,
+        quantity_po_43_units=120,
+        quantity_inv_41_prk=10,
+        quantity_inv_41_units=120,
+        received_real_units=120,
+        curve_total=12,
+        unit_cost=10.0,
+        container_part="A",
+        status="LIMPIO"
+    )
+
+    item_c = PrepackItem(
+        material_code="1002",
+        vendor_material="V-02",
+        description="Pantalón Parte C",
+        category="MODA",
+        order_po_43="4302",
+        quantity_po_43_prk=5,
+        quantity_po_43_units=60,
+        quantity_inv_41_prk=5,
+        quantity_inv_41_units=60,
+        received_real_units=0,
+        curve_total=12,
+        unit_cost=15.0,
+        container_part="C",
+        status="PENDIENTE_PARTE_C"
+    )
+
+    item_d = PrepackItem(
+        material_code="1003",
+        vendor_material="V-03",
+        description="Zapatos Parte D",
+        category="CALZADO",
+        order_po_43="4303",
+        quantity_po_43_prk=8,
+        quantity_po_43_units=48,
+        quantity_inv_41_prk=8,
+        quantity_inv_41_units=48,
+        received_real_units=40,
+        curve_total=6,
+        unit_cost=25.0,
+        container_part="D",
+        status="DAÑADO",
+        danado=8
+    )
+
+    items = [item_a, item_c, item_d]
+
+    # Test filtering by arbitrary Part C
+    res_c = filter_items(items, part_filter="C")
+    assert len(res_c) == 1
+    assert res_c[0].material_code == "1002"
+
+    # Test filtering by dynamic status PENDIENTE_PARTE_C
+    res_stat = filter_items(items, status_filter="PENDIENTE_PARTE_C")
+    assert len(res_stat) == 1
+    assert res_stat[0].material_code == "1002"
+
+    # Test filtering by category CALZADO
+    res_cat = filter_items(items, category_filter="CALZADO")
+    assert len(res_cat) == 1
+    assert res_cat[0].material_code == "1003"
+
+    # Test search query matching container part
+    res_q_part = filter_items(items, search_query="Parte C")
+    assert len(res_q_part) == 1
+    assert res_q_part[0].material_code == "1002"

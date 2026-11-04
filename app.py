@@ -10,6 +10,7 @@ import pandas as pd
 import openpyxl
 import os
 import io
+import collections
 from pathlib import Path
 import streamlit.components.v1 as components
 
@@ -491,10 +492,13 @@ with k1:
         help="Código único / Unique import reference"
     )
 with k2:
-    if summary.container_parts_breakdown:
+    if summary.container_parts_breakdown and len(summary.container_parts_breakdown) > 1:
         breakdown_str = " | ".join(f"{cnt} P.{part}" for part, cnt in sorted(summary.container_parts_breakdown.items()))
+    elif summary.container_parts_breakdown and len(summary.container_parts_breakdown) == 1:
+        only_p, cnt = list(summary.container_parts_breakdown.items())[0]
+        breakdown_str = (f"Parte {only_p} ({cnt} mat)" if only_p else f"{cnt} mat") if current_lang == "es" else (f"Part {only_p} ({cnt} mat)" if only_p else f"{cnt} mat")
     else:
-        breakdown_str = f"{summary.part_a_materials} P.A | {summary.part_b_materials} P.B"
+        breakdown_str = f"{summary.total_materials} {'materiales' if current_lang == 'es' else 'materials'}"
     st.metric(
         label="AUDITED STYLES" if current_lang == "en" else "MATERIALES AUDITADOS",
         value=f"{summary.total_materials} {'Styles' if current_lang == 'en' else 'Estilos'}",
@@ -679,14 +683,20 @@ with tab_bultos:
 
     df_bultos_all = pd.DataFrame(bultos_rows)
 
-    # Filter & Search for Bultos table
-    fb_c1, fb_c2 = st.columns([1, 3])
+    # Dynamic Filter & Search for Bultos table
+    cat_counts_b = collections.Counter(r["CATEGORIA"] for r in bultos_rows if r["CATEGORIA"])
+    cat_map_b = {("Todas (" + str(len(bultos_rows)) + ")" if current_lang == "es" else "All (" + str(len(bultos_rows)) + ")"): "ALL"}
+    for c, cnt in sorted(cat_counts_b.items()):
+        cat_map_b[f"{c} ({cnt})"] = c
+
+    fb_c1, fb_c2 = st.columns([1.5, 3])
     with fb_c1:
-        filter_b_cat = st.selectbox(
+        sel_b_cat_lbl = st.selectbox(
             "Filtrar Categoría:" if current_lang == "es" else "Filter Category:",
-            options=["Todas" if current_lang == "es" else "All"] + sorted(list(set(r["CATEGORIA"] for r in bultos_rows))),
+            options=list(cat_map_b.keys()),
             key="fb_cat"
         )
+        filter_b_cat = cat_map_b[sel_b_cat_lbl]
     with fb_c2:
         search_b = st.text_input(
             "Buscar en Hoja Bultos:" if current_lang == "es" else "Search Bultos Sheet:",
@@ -695,7 +705,7 @@ with tab_bultos:
         )
 
     df_bultos_filtered = df_bultos_all
-    if filter_b_cat not in ["Todas", "All"]:
+    if filter_b_cat != "ALL":
         df_bultos_filtered = df_bultos_filtered[df_bultos_filtered["CATEGORIA"] == filter_b_cat]
     if search_b:
         sb_low = search_b.lower().strip()
@@ -738,56 +748,113 @@ with tab_inspector:
     st.markdown(f"### {t('inspector_title')}")
     st.caption("Inspecciona cualquier material padre, sus curvas de compra y su balance físico sin desplazarte entre hojas:" if current_lang == "es" else "Inspect any parent style, purchase curves, and dock physical receipts on a single screen:")
     
-    col_search1, col_search2 = st.columns([3, 1])
-    with col_search1:
-        query_search = st.text_input(
-            "Buscar por código SAP, estilo de proveedor o descripción:" if current_lang == "es" else "Search by SAP code, vendor style or description:",
-            value="",
-            placeholder="Escribe código (ej: 1001001), estilo (ej: ST-2024), o prenda..." if current_lang == "es" else "Enter code (e.g. 1001001), style (e.g. ST-2024), or product...",
-            help="Filtra en tiempo real por cualquier dato del material padre o de sus tallas hijas." if current_lang == "es" else "Real-time search across parent or child SKU codes.",
-            key="f360_search"
-        )
-    distinct_parts_360 = sorted(list(set((it.container_part or "A").upper() for it in items)))
-    if current_lang == "es":
-        part_options_360 = ["Todos"] + [f"Contenedor {p} (Parte {p})" for p in distinct_parts_360]
-    else:
-        part_options_360 = ["All"] + [f"Container {p} (Part {p})" for p in distinct_parts_360]
+    # Dynamic counts & distinct dimensions
+    parts_counts_360 = collections.Counter(str(it.container_part or "").strip().upper() for it in items if str(it.container_part or "").strip())
+    distinct_parts_360 = sorted(list(parts_counts_360.keys()))
+    
+    status_counts_360 = collections.Counter(it.status for it in items if it.status)
+    distinct_status_360 = sorted(list(status_counts_360.keys()))
+    
+    cat_counts_360 = collections.Counter(it.category for it in items if it.category and it.category != "-")
+    distinct_cats_360 = sorted(list(cat_counts_360.keys()))
+    
+    has_parts_360 = len(distinct_parts_360) > 1
+    has_status_360 = len(distinct_status_360) > 1
+    has_cats_360 = len(distinct_cats_360) > 1
 
-    with col_search2:
-        part_filter_360 = st.selectbox(
-            "Filtrar Contenedor:" if current_lang == "es" else "Filter Container:",
-            part_options_360,
-            index=0,
-            help="Separa los materiales por parte o viaje de descarga." if current_lang == "es" else "Filter items by shipment part.",
-            key="f360_part"
-        )
-        
-    selected_p_360 = None
+    # Dynamic options maps
+    part_options_map_360 = {("Todos (" + str(len(items)) + ")" if current_lang == "es" else "All (" + str(len(items)) + ")"): "ALL"}
     for p in distinct_parts_360:
-        if f"({p})" in part_filter_360 or f"Parte {p}" in part_filter_360 or f"Part {p}" in part_filter_360 or f"Contenedor {p}" in part_filter_360 or f"Container {p}" in part_filter_360:
-            selected_p_360 = p
-            break
+        part_options_map_360[f"Parte {p} ({parts_counts_360[p]})" if current_lang == "es" else f"Part {p} ({parts_counts_360[p]})"] = p
+
+    stat_options_map_360 = {("Todos (" + str(len(items)) + ")" if current_lang == "es" else "All (" + str(len(items)) + ")"): "ALL"}
+    for s in distinct_status_360:
+        s_u = s.upper()
+        if "LIMPIO" in s_u or "CLEAN" in s_u:
+            icon = "🟢"
+        elif any(k in s_u for k in ["PENDIENTE", "CONT", "PART", "DESPACHO"]):
+            icon = "🔵"
+        elif "SOBRANTE" in s_u:
+            icon = "🟣"
+        elif "REVUELTO" in s_u:
+            icon = "🟠"
+        else:
+            icon = "🔴"
+        stat_options_map_360[f"{icon} {s} ({status_counts_360[s]})"] = s
+
+    cat_options_map_360 = {("Todas (" + str(len(items)) + ")" if current_lang == "es" else "All (" + str(len(items)) + ")"): "ALL"}
+    for c in distinct_cats_360:
+        cat_options_map_360[f"{c} ({cat_counts_360[c]})"] = c
+
+    # Responsive Filter Layout
+    if has_parts_360 and has_status_360 and has_cats_360:
+        c_s1, c_s2, c_s3, c_s4 = st.columns([2.2, 1.2, 1.4, 1.2])
+        with c_s1:
+            query_search = st.text_input("Buscar estilo o SKU:" if current_lang == "es" else "Search style or SKU:", value="", placeholder="Código, estilo, descripción..." if current_lang == "es" else "Code, style, description...", key="f360_search")
+        with c_s2:
+            sel_p_lbl = st.selectbox("Contenedor:" if current_lang == "es" else "Container:", list(part_options_map_360.keys()), key="f360_part")
+            selected_p_360 = part_options_map_360[sel_p_lbl]
+        with c_s3:
+            sel_s_lbl = st.selectbox("Estado:" if current_lang == "es" else "Status:", list(stat_options_map_360.keys()), key="f360_stat")
+            selected_s_360 = stat_options_map_360[sel_s_lbl]
+        with c_s4:
+            sel_c_lbl = st.selectbox("Categoría:" if current_lang == "es" else "Category:", list(cat_options_map_360.keys()), key="f360_cat")
+            selected_c_360 = cat_options_map_360[sel_c_lbl]
+    elif has_parts_360 and has_status_360:
+        c_s1, c_s2, c_s3 = st.columns([2.5, 1.2, 1.5])
+        with c_s1:
+            query_search = st.text_input("Buscar estilo o SKU:" if current_lang == "es" else "Search style or SKU:", value="", placeholder="Código, estilo, descripción..." if current_lang == "es" else "Code, style, description...", key="f360_search")
+        with c_s2:
+            sel_p_lbl = st.selectbox("Contenedor:" if current_lang == "es" else "Container:", list(part_options_map_360.keys()), key="f360_part")
+            selected_p_360 = part_options_map_360[sel_p_lbl]
+        with c_s3:
+            sel_s_lbl = st.selectbox("Estado:" if current_lang == "es" else "Status:", list(stat_options_map_360.keys()), key="f360_stat")
+            selected_s_360 = stat_options_map_360[sel_s_lbl]
+        selected_c_360 = "ALL"
+    elif has_status_360:
+        c_s1, c_s2 = st.columns([3.0, 1.5])
+        with c_s1:
+            query_search = st.text_input("Buscar estilo o SKU:" if current_lang == "es" else "Search style or SKU:", value="", placeholder="Código, estilo, descripción..." if current_lang == "es" else "Code, style, description...", key="f360_search")
+        with c_s2:
+            sel_s_lbl = st.selectbox("Estado:" if current_lang == "es" else "Status:", list(stat_options_map_360.keys()), key="f360_stat")
+            selected_s_360 = stat_options_map_360[sel_s_lbl]
+        selected_p_360 = "ALL"
+        selected_c_360 = "ALL"
+    else:
+        query_search = st.text_input("Buscar estilo o SKU:" if current_lang == "es" else "Search style or SKU:", value="", placeholder="Código, estilo, descripción..." if current_lang == "es" else "Code, style, description...", key="f360_search")
+        selected_p_360 = "ALL"
+        selected_s_360 = "ALL"
+        selected_c_360 = "ALL"
 
     q_norm = query_search.lower().strip()
     matching = []
     for it in items:
-        it_part = (it.container_part or "A").upper()
-        if selected_p_360 and it_part != selected_p_360:
+        it_part = str(it.container_part or "").strip().upper()
+        if selected_p_360 != "ALL" and it_part != selected_p_360:
+            continue
+        if selected_s_360 != "ALL" and str(it.status).strip().upper() != selected_s_360.strip().upper():
+            continue
+        if selected_c_360 != "ALL" and str(it.category or "").strip().upper() != selected_c_360.strip().upper():
             continue
         if not q_norm or (
             q_norm in it.material_code.lower() or
             q_norm in it.vendor_material.lower() or
             q_norm in it.description.lower() or
+            q_norm in it.order_po_43.lower() or
             any(q_norm in c.material_code.lower() for c in it.children)
         ):
             matching.append(it)
             
     if matching:
         if len(matching) > 1:
-            opt_labels = {
-                f"📦 {it.material_code} | {it.vendor_material} | {it.description[:45]} ({'Parte' if current_lang == 'es' else 'Part'} {it.container_part})": it
-                for it in matching
-            }
+            def make_f360_label(it):
+                p_tag = f" (Parte {it.container_part})" if it.container_part else ""
+                cat_tag = f" [{it.category}]" if it.category and it.category != "-" else ""
+                s_u = it.status.upper()
+                icon = "🟢" if "LIMPIO" in s_u else ("🔵" if any(k in s_u for k in ["PENDIENTE", "CONT", "PART"]) else "🔴")
+                return f"{icon} {it.material_code} | {it.vendor_material} | {it.description[:40]}{p_tag}{cat_tag}"
+
+            opt_labels = {make_f360_label(it): it for it in matching}
             selected_label = st.selectbox(
                 f"Selecciona un estilo ({len(matching)} coincidencias disponibles):" if current_lang == "es" else f"Select a style ({len(matching)} matches available):",
                 options=list(opt_labels.keys()),
@@ -797,16 +864,19 @@ with tab_inspector:
             selected_item = opt_labels[selected_label]
         else:
             selected_item = matching[0]
-            st.info(f"{'Mostrando resultado único:' if current_lang == 'es' else 'Showing single match:'} **{selected_item.material_code}** — {selected_item.description}")
+            st.info(f"{'Mostrando resultado único:' if current_lang == "es" else 'Showing single match:'} **{selected_item.material_code}** — {selected_item.description}")
             
         st.markdown("<br>", unsafe_allow_html=True)
         
         # Status banner
-        if selected_item.status == "LIMPIO":
+        st_upper = selected_item.status.upper()
+        if "LIMPIO" in st_upper or "CLEAN" in st_upper:
             st.markdown(f'<div class="status-banner-clean">✅ {"ESTADO: LIMPIO" if current_lang == "es" else "STATUS: CLEAN"} — {selected_item.observations}</div>', unsafe_allow_html=True)
-        elif selected_item.status.startswith("PENDIENTE_PARTE_") or "CONTENEDOR" in selected_item.status:
-            part_lbl = selected_item.container_part
-            st.markdown(f'<div class="status-banner-info">🚢 {"ESTADO: CONTENEDOR" if current_lang == "es" else "STATUS: CONTAINER"} {part_lbl} — {selected_item.observations}</div>', unsafe_allow_html=True)
+        elif any(k in st_upper for k in ["PENDIENTE", "CONT", "PART", "DESPACHO"]):
+            part_lbl = selected_item.container_part or ""
+            st.markdown(f'<div class="status-banner-info">🚢 {"ESTADO: PENDIENTE" if current_lang == "es" else "STATUS: PENDING"} {part_lbl} — {selected_item.observations}</div>', unsafe_allow_html=True)
+        elif "SOBRANTE" in st_upper:
+            st.markdown(f'<div class="status-banner-clean" style="border-left-color: #A855F7; background: rgba(168, 85, 247, 0.1);">🟣 {"ESTADO: SOBRANTE" if current_lang == "es" else "STATUS: EXCESS"} — {selected_item.observations}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="status-banner-warn">⚠️ {"ESTADO:" if current_lang == "es" else "STATUS:"} {selected_item.status} — {selected_item.observations} ({"Reclamo NCR:" if current_lang == "es" else "NCR Claim:"} ${selected_item.ncr_amount:,.2f} USD)</div>', unsafe_allow_html=True)
             
@@ -820,7 +890,7 @@ with tab_inspector:
                 <div class="detail-row"><span class="detail-label">{"Estilo Prov:" if current_lang == "es" else "Vendor Style:"}</span><span class="detail-value">{selected_item.vendor_material}</span></div>
                 <div class="detail-row"><span class="detail-label">{"Categoría:" if current_lang == "es" else "Category:"}</span><span class="detail-value">{selected_item.category}</span></div>
                 <div class="detail-row"><span class="detail-label">{"Descripción:" if current_lang == "es" else "Description:"}</span><span class="detail-value" style="font-size:12px;">{selected_item.description[:32]}</span></div>
-                <div class="detail-row"><span class="detail-label">{"Contenedor:" if current_lang == "es" else "Container:"}</span><span class="detail-value">{"Parte" if current_lang == "es" else "Part"} {selected_item.container_part}</span></div>
+                <div class="detail-row"><span class="detail-label">{"Contenedor:" if current_lang == "es" else "Container:"}</span><span class="detail-value">{("Parte " + selected_item.container_part) if selected_item.container_part else ("Contenedor Único" if current_lang == "es" else "Single Container")}</span></div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -881,38 +951,106 @@ with tab_inspector:
 # ----------------- TAB 1: TABLA SEMÁFORO -----------------
 with tab_reconcile:
     st.subheader(t("semaforo_title"))
-    st.caption("🟢 Verde = Conciliación Limpia | 🔵 Azul = Pendiente Contenedor B | 🔴 Rojo = Faltante / Dañado Reclamable" if current_lang == "es" else "🟢 Green = Clean Reconciled | 🔵 Blue = Pending Container B | 🔴 Red = Shortage / Claimable Damage")
+    st.caption("🟢 Verde = Conciliación Limpia | 🔵 Azul = Mercadería Pendiente de Descarga / Contenedores Posteriores | 🟣 Púrpura = Sobrante | 🔴 Rojo = Faltante / Dañado Reclamable" if current_lang == "es" else "🟢 Green = Clean Reconciled | 🔵 Blue = Pending Discharge / Subsequent Containers | 🟣 Purple = Excess | 🔴 Red = Shortage / Claimable Damage")
     
-    distinct_parts_t = sorted(list(set((it.container_part or "A").upper() for it in items)))
-    if current_lang == "es":
-        part_options_t = ["Todos"] + [f"Contenedor {p} (Parte {p})" for p in distinct_parts_t]
-    else:
-        part_options_t = ["All"] + [f"Container {p} (Part {p})" for p in distinct_parts_t]
+    # Dynamic counts & distinct dimensions
+    part_counts_t = collections.Counter(str(it.container_part or "").strip().upper() for it in items if str(it.container_part or "").strip())
+    distinct_parts_t = sorted(list(part_counts_t.keys()))
+    
+    status_counts_t = collections.Counter(it.status for it in items if it.status)
+    distinct_statuses_t = sorted(list(status_counts_t.keys()))
+    
+    category_counts_t = collections.Counter(it.category for it in items if it.category and it.category != "-")
+    distinct_categories_t = sorted(list(category_counts_t.keys()))
 
-    col_t1, col_t2, col_t3 = st.columns([1.5, 1.5, 3])
-    with col_t1:
-        part_table = st.selectbox("Filtrar Contenedor:" if current_lang == "es" else "Filter Container:", part_options_t, index=0, key="t_part")
+    # 1. Container Part Options (Only shown if multiple parts exist)
+    has_parts_t = len(distinct_parts_t) > 1
+    part_options_map_t = {}
+    if has_parts_t:
+        part_options_map_t[f"Todos ({len(items)})" if current_lang == "es" else f"All ({len(items)})"] = "ALL"
+        for p in distinct_parts_t:
+            cnt = part_counts_t[p]
+            lbl = f"Contenedor {p} (Parte {p}) — {cnt} mat" if current_lang == "es" else f"Container {p} (Part {p}) — {cnt} mat"
+            part_options_map_t[lbl] = p
+
+    # 2. Dynamic Status Options (Only statuses actually present in the data!)
+    stat_options_map_t = {}
+    stat_options_map_t[f"Todos ({len(items)})" if current_lang == "es" else f"All ({len(items)})"] = "ALL"
+    for st_name in distinct_statuses_t:
+        cnt = status_counts_t[st_name]
+        st_upper = st_name.upper()
+        if "LIMPIO" in st_upper or "CLEAN" in st_upper:
+            badge = "🟢"
+        elif any(k in st_upper for k in ["PENDIENTE", "CONT", "PART", "DESPACHO"]):
+            badge = "🔵"
+        elif "SOBRANTE" in st_upper or "EXCESS" in st_upper:
+            badge = "🟣"
+        elif "REVUELTO" in st_upper or "MIXED" in st_upper:
+            badge = "🟠"
+        else:
+            badge = "🔴"
+        lbl = f"{badge} {st_name} ({cnt})"
+        stat_options_map_t[lbl] = st_name
+
+    # 3. Dynamic Category Options (Only if multiple categories exist!)
+    has_cats_t = len(distinct_categories_t) > 1
+    cat_options_map_t = {}
+    if has_cats_t:
+        cat_options_map_t[f"Todas ({len(items)})" if current_lang == "es" else f"All ({len(items)})"] = "ALL"
+        for c in distinct_categories_t:
+            cnt = category_counts_t[c]
+            cat_options_map_t[f"{c} ({cnt})"] = c
+
+    # Responsive Filter Row Layout
+    if has_parts_t and has_cats_t:
+        col_f1, col_f2, col_f3, col_f4 = st.columns([1.5, 1.5, 1.5, 2.5])
+        with col_f1:
+            sel_part_lbl = st.selectbox("Filtrar Contenedor:" if current_lang == "es" else "Filter Container:", list(part_options_map_t.keys()), index=0, key="t_part")
+            p_val = part_options_map_t[sel_part_lbl]
+        with col_f2:
+            sel_stat_lbl = st.selectbox("Filtrar Estado:" if current_lang == "es" else "Filter Status:", list(stat_options_map_t.keys()), index=0, key="t_stat")
+            s_val = stat_options_map_t[sel_stat_lbl]
+        with col_f3:
+            sel_cat_lbl = st.selectbox("Filtrar Categoría:" if current_lang == "es" else "Filter Category:", list(cat_options_map_t.keys()), index=0, key="t_cat")
+            c_val = cat_options_map_t[sel_cat_lbl]
+        with col_f4:
+            search_table = st.text_input("Buscar en la grilla:" if current_lang == "es" else "Search table:", placeholder="Filtrar por código, estilo o descripción..." if current_lang == "es" else "Filter by code, style or description...", key="t_search")
+    elif has_parts_t and not has_cats_t:
+        col_f1, col_f2, col_f3 = st.columns([1.5, 1.5, 3.0])
+        with col_f1:
+            sel_part_lbl = st.selectbox("Filtrar Contenedor:" if current_lang == "es" else "Filter Container:", list(part_options_map_t.keys()), index=0, key="t_part")
+            p_val = part_options_map_t[sel_part_lbl]
+        with col_f2:
+            sel_stat_lbl = st.selectbox("Filtrar Estado:" if current_lang == "es" else "Filter Status:", list(stat_options_map_t.keys()), index=0, key="t_stat")
+            s_val = stat_options_map_t[sel_stat_lbl]
+        c_val = "ALL"
+        with col_f3:
+            search_table = st.text_input("Buscar en la grilla:" if current_lang == "es" else "Search table:", placeholder="Filtrar por código, estilo o descripción..." if current_lang == "es" else "Filter by code, style or description...", key="t_search")
+    elif not has_parts_t and has_cats_t:
+        col_f1, col_f2, col_f3 = st.columns([1.5, 1.5, 3.0])
         p_val = "ALL"
-        for p in distinct_parts_t:
-            if f"({p})" in part_table or f"Parte {p}" in part_table or f"Part {p}" in part_table:
-                p_val = p
-                break
-
-    with col_t2:
-        stat_options = ["Todos" if current_lang == "es" else "All", "LIMPIO"]
-        for p in distinct_parts_t:
-            if p != "A":
-                stat_options.append(f"PENDIENTE_PARTE_{p}")
-        stat_options.extend(["FALTANTE", "DAÑADO", "SOBRANTE"])
-        status_table = st.selectbox("Filtrar Estado:" if current_lang == "es" else "Filter Status:", stat_options, index=0, key="t_stat")
-        s_val = "ALL" if ("Todos" in status_table or "All" in status_table) else status_table
-
-    with col_t3:
-        search_table = st.text_input("Buscar en la grilla:" if current_lang == "es" else "Search table:", placeholder="Filtrar por código, estilo o descripción..." if current_lang == "es" else "Filter by code, style or description...", key="t_search")
+        with col_f1:
+            sel_stat_lbl = st.selectbox("Filtrar Estado:" if current_lang == "es" else "Filter Status:", list(stat_options_map_t.keys()), index=0, key="t_stat")
+            s_val = stat_options_map_t[sel_stat_lbl]
+        with col_f2:
+            sel_cat_lbl = st.selectbox("Filtrar Categoría:" if current_lang == "es" else "Filter Category:", list(cat_options_map_t.keys()), index=0, key="t_cat")
+            c_val = cat_options_map_t[sel_cat_lbl]
+        with col_f3:
+            search_table = st.text_input("Buscar en la grilla:" if current_lang == "es" else "Search table:", placeholder="Filtrar por código, estilo o descripción..." if current_lang == "es" else "Filter by code, style or description...", key="t_search")
+    else:
+        col_f1, col_f2 = st.columns([2.0, 4.0])
+        p_val = "ALL"
+        c_val = "ALL"
+        with col_f1:
+            sel_stat_lbl = st.selectbox("Filtrar Estado:" if current_lang == "es" else "Filter Status:", list(stat_options_map_t.keys()), index=0, key="t_stat")
+            s_val = stat_options_map_t[sel_stat_lbl]
+        with col_f2:
+            search_table = st.text_input("Buscar en la grilla:" if current_lang == "es" else "Search table:", placeholder="Filtrar por código, estilo o descripción..." if current_lang == "es" else "Filter by code, style or description...", key="t_search")
         
-    items_table = filter_items(items, part_filter=p_val, status_filter=s_val, search_query=search_table)
+    items_table = filter_items(items, part_filter=p_val, status_filter=s_val, category_filter=c_val, search_query=search_table)
     
     col_cont = "Contenedor" if current_lang == "es" else "Container"
+    col_cat = "Categoría" if current_lang == "es" else "Category"
     col_mat = "Material SAP" if current_lang == "es" else "SAP Code"
     col_style = "Estilo Prov" if current_lang == "es" else "Vendor Style"
     col_desc = "Descripción" if current_lang == "es" else "Description"
@@ -929,17 +1067,25 @@ with tab_reconcile:
 
     t_rows = []
     for i in items_table:
-        is_clean = (i.status == "LIMPIO")
-        is_pending = (i.status.startswith("PENDIENTE_PARTE_") or "CONTENEDOR" in i.status)
-        if is_clean:
+        st_val = i.status
+        st_upper = st_val.upper()
+        if "LIMPIO" in st_upper or "CLEAN" in st_upper:
             status_badge = "🟢 LIMPIO" if current_lang == "es" else "🟢 CLEAN"
-        elif is_pending:
-            status_badge = f"🔵 CONT. {i.container_part}" if current_lang == "es" else f"🔵 PART {i.container_part}"
+        elif any(k in st_upper for k in ["PENDIENTE", "CONT", "PART", "DESPACHO"]):
+            p_code = i.container_part or ""
+            status_badge = f"🔵 CONT. {p_code}" if p_code else f"🔵 {st_val}"
+        elif "SOBRANTE" in st_upper:
+            status_badge = f"🟣 {st_val}"
+        elif "REVUELTO" in st_upper:
+            status_badge = f"🟠 {st_val}"
         else:
-            status_badge = f"🔴 {i.status}"
+            status_badge = f"🔴 {st_val}"
+
+        cont_disp = f"Parte {i.container_part}" if i.container_part else ("Único" if current_lang == "es" else "Single")
 
         t_rows.append({
-            col_cont: f"Parte {i.container_part}" if current_lang == "es" else f"Part {i.container_part}",
+            col_cont: cont_disp,
+            col_cat: i.category or "—",
             col_mat: i.material_code,
             col_style: i.vendor_material,
             col_desc: i.description,
@@ -957,11 +1103,15 @@ with tab_reconcile:
     df_t = pd.DataFrame(t_rows)
     
     def highlight_status(row):
-        st_val = row[col_stat]
-        if "LIMPIO" in st_val or "CLEAN" in st_val:
+        st_badge = str(row[col_stat]).upper()
+        if "LIMPIO" in st_badge or "CLEAN" in st_badge or "🟢" in st_badge:
             return ["background-color: rgba(16, 185, 129, 0.08)"] * len(row)
-        elif "CONT." in st_val or "PART" in st_val:
+        elif any(k in st_badge for k in ["CONT.", "PART", "PENDIENTE", "DESPACHO", "🔵"]):
             return ["background-color: rgba(59, 130, 246, 0.08)"] * len(row)
+        elif "SOBRANTE" in st_badge or "🟣" in st_badge:
+            return ["background-color: rgba(168, 85, 247, 0.08)"] * len(row)
+        elif "REVUELTO" in st_badge or "🟠" in st_badge:
+            return ["background-color: rgba(245, 158, 11, 0.08)"] * len(row)
         else:
             return ["background-color: rgba(239, 68, 68, 0.15)"] * len(row)
 
@@ -1014,6 +1164,8 @@ with tab_curves:
                     "Costo Unitario ($)" if current_lang == "es" else "Unit Cost ($)": f"${c.unit_cost:.2f}"
                 })
             st.dataframe(pd.DataFrame(c_rows_v), use_container_width=True)
+    else:
+        st.info("No se encontraron curvas o desgloses de tallas (BOMs) para los materiales de este libro." if current_lang == "es" else "No size curves or BOM breakdowns were found for the materials in this workbook.")
 
 # ----------------- TAB 3: VERIFICADOR PRE-MACRO -----------------
 with tab_clipboard:

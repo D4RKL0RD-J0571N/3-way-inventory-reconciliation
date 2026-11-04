@@ -34,7 +34,7 @@ def validate_item_integrity(item: PrepackItem) -> List[ValidationIssue]:
             ))
 
     # 2. Missing BOM Check (Prepack without children)
-    if item.curve_total > 1 and not item.children and item.container_part == "A":
+    if item.curve_total > 1 and not item.children and (item.received_real_units > 0 or item.container_part in ["", "A"]):
         issues.append(ValidationIssue(
             severity="WARNING",
             material_code=item.material_code,

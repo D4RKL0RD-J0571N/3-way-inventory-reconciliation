@@ -39,7 +39,7 @@ class PrepackItem:
     received_real_units: float
     curve_total: int
     unit_cost: float
-    container_part: str = "A" # "A" or "B"
+    container_part: str = "A" # Dynamic part identifier: "A", "B", "C", "D", "E", "F"... or "" if single container
     sap_mov_101: float = 0.0
     sap_mov_641: float = 0.0
     children: List[ChildSKU] = field(default_factory=list)
@@ -47,7 +47,7 @@ class PrepackItem:
     danado: float = 0.0
     sobrante: float = 0.0
     revuelto: float = 0.0
-    status: str = "LIMPIO" # "LIMPIO", "FALTANTE", "SOBRANTE", "DAÑADO", "REVUELTO", "PENDIENTE_PARTE_B"
+    status: str = "LIMPIO" # Dynamic status: "LIMPIO", "FALTANTE", "SOBRANTE", "DAÑADO", "REVUELTO", "PENDIENTE_PARTE_X"...
     ncr_amount: float = 0.0
     observations: str = ""
     # Explicit Bultos & Packaging Fields (Muelle vs Packing List)
