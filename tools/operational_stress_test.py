@@ -268,13 +268,25 @@ def run_stress_test_suite() -> List[Dict[str, Any]]:
             if 'CIERRE RECEP' in wb_patch.sheetnames:
                 ws_p = wb_patch['CIERRE RECEP']
                 for r_idx, it in enumerate(items, start=13):
-                    b_val = it.bultos_descarga if it.bultos_descarga > 0 else it.quantity_inv_41_prk
-                    u_val = it.received_real_units
+                    is_other_p = it.status.startswith("PENDIENTE_PARTE") or (it.container_part and it.container_part != "A")
+                    if it.received_real_units == 0 or is_other_p:
+                        b_val = 0.0
+                        u_val = 0.0
+                        b_pl = 0.0
+                        u_pl = 0.0
+                        emp = "0"
+                    else:
+                        u_val = it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units
+                        b_val = it.bultos_descarga if it.bultos_descarga > 0 else (round(u_val / max(it.curve_total, 1), 2) if u_val > 0 else 0.0)
+                        u_pl = it.unidades_packing_list if it.unidades_packing_list > 0 else (it.quantity_inv_41_units if it.quantity_inv_41_units > 0 else u_val)
+                        b_pl = it.bultos_packing_list if it.bultos_packing_list > 0 else b_val
+                        emp = it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12")
+
                     ws_p.cell(r_idx, 45, b_val)
                     ws_p.cell(r_idx, 46, u_val)
-                    ws_p.cell(r_idx, 49, b_val)
-                    ws_p.cell(r_idx, 50, u_val)
-                    ws_p.cell(r_idx, 51, it.empaque_str or str(it.curve_total))
+                    ws_p.cell(r_idx, 49, b_pl)
+                    ws_p.cell(r_idx, 50, u_pl)
+                    ws_p.cell(r_idx, 51, emp)
                 wb_patch.save(cierre_final_file)
         except Exception as e_pt:
             pass

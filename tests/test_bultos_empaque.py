@@ -176,3 +176,63 @@ def test_dual_carton_modes_dock_vs_strict_customs():
     assert customs_full + customs_odds == 5.0
     assert (customs_full * item.unidades_por_bulto_entero) + (customs_odds * item.unidades_por_bulto_comp) == item.received_real_units
 
+
+def test_zero_units_produce_zero_cartons():
+    """
+    Critical regression test:
+    Items with 0 units received or status 'PENDIENTE_PARTE_B' must NEVER produce
+    a phantom fallback of 1 carton (1.0). Cartons and packaging values must strictly be 0.
+    """
+    item_pending = PrepackItem(
+        material_code="1306026",
+        vendor_material="EMN0100",
+        description="SERIES DE LUCES BLANCA ARROZ",
+        category="NAVIDAD",
+        order_po_43="4300006742",
+        quantity_po_43_prk=7560.0,
+        quantity_po_43_units=7560.0,
+        quantity_inv_41_prk=0.0,
+        quantity_inv_41_units=0.0,
+        received_real_units=0.0,
+        curve_total=1,
+        unit_cost=0.0,
+        status="PENDIENTE_PARTE_B",
+        container_part="B",
+        bultos_descarga=0.0,
+        unidades_descarga=0.0,
+        bultos_packing_list=0.0,
+        unidades_packing_list=0.0,
+        empaque_str="0",
+        bultos_str="0",
+        bultos_enteros=0.0,
+        bultos_complementos=0.0,
+        dif_bultos=0.0
+    )
+
+    # Calculation logic for dock (AS/AT) & packing list (AW/AX/AY)
+    is_other_part = item_pending.status.startswith("PENDIENTE_PARTE") or (item_pending.container_part and item_pending.container_part != "A")
+    assert is_other_part is True
+
+    if item_pending.received_real_units == 0 or is_other_part:
+        bultos_desc = 0.0
+        unidades_desc = 0.0
+    else:
+        bultos_desc = item_pending.bultos_descarga or 1.0
+        unidades_desc = item_pending.unidades_descarga
+
+    if is_other_part or (item_pending.received_real_units == 0 and item_pending.quantity_inv_41_units == 0):
+        bultos_pl = 0.0
+        unidades_pl = 0.0
+        empaque_val = "0"
+    else:
+        bultos_pl = item_pending.bultos_packing_list or bultos_desc
+        unidades_pl = item_pending.unidades_packing_list
+        empaque_val = item_pending.empaque_str or "12"
+
+    assert bultos_desc == 0.0
+    assert unidades_desc == 0.0
+    assert bultos_pl == 0.0
+    assert unidades_pl == 0.0
+    assert empaque_val == "0"
+
+

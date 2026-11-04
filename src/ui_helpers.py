@@ -4,6 +4,8 @@ Provides high-performance shimmering skeleton placeholders,
 progressive loading indicators, and fast pagination for mega-importations (Parts A through F+).
 """
 import streamlit as st
+import streamlit.components.v1 as components
+import json
 import pandas as pd
 from typing import Tuple, List, Any
 
@@ -184,3 +186,98 @@ def paginate_dataframe(
         st.caption(f"Mostrando {start_idx + 1} - {end_idx} de {total_rows} materiales")
 
     return df.iloc[start_idx:end_idx]
+
+
+def render_clipboard_copy_button(
+    button_id: str,
+    label: str,
+    text_to_copy: str,
+    success_label: str = "¡Copiado al portapapeles!"
+) -> None:
+    """
+    Renders an instant 1-click clipboard copy button that safely copies
+    multi-line TSV text to the system clipboard without triggering any Streamlit hotkeys.
+    """
+    payload = json.dumps(text_to_copy)
+    btn_html = f"""
+    <div style="margin-bottom: 6px;">
+        <button id="btn_{button_id}" onclick="doCopy_{button_id}()" style="
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 7px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        ">
+            {label}
+        </button>
+        <span id="msg_{button_id}" style="
+            margin-left: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #10b981;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        "></span>
+    </div>
+    <script>
+    function doCopy_{button_id}() {{
+        const text = {payload};
+        function showSuccess() {{
+            const btn = document.getElementById('btn_{button_id}');
+            const msg = document.getElementById('msg_{button_id}');
+            if (btn) {{
+                btn.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
+                btn.innerText = '✅ ¡Copiado!';
+            }}
+            if (msg) {{
+                msg.innerText = '{success_label}';
+                msg.style.opacity = '1';
+            }}
+            setTimeout(() => {{
+                if (btn) {{
+                    btn.style.background = 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+                    btn.innerText = '{label}';
+                }}
+                if (msg) {{
+                    msg.style.opacity = '0';
+                }}
+            }}, 2500);
+        }}
+
+        if (navigator.clipboard && window.isSecureContext) {{
+            navigator.clipboard.writeText(text).then(showSuccess).catch(fallback);
+        }} else {{
+            fallback();
+        }}
+
+        function fallback() {{
+            try {{
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                showSuccess();
+            }} catch(e) {{
+                console.error('Clipboard copy failed', e);
+            }}
+        }}
+    }}
+    </script>
+    """
+    components.html(btn_html, height=45)
+

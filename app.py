@@ -23,7 +23,13 @@ from src.validator import validate_all_items
 from src.sanitizer import clean_material_code, clean_number, clean_string
 from src.models import PrepackItem
 from src.i18n import t, get_current_language, render_language_selector, get_table_toolbar_js
-from src.ui_helpers import inject_skeleton_css, render_skeleton_dashboard, render_skeleton_table, paginate_dataframe
+from src.ui_helpers import (
+    inject_skeleton_css,
+    render_skeleton_dashboard,
+    render_skeleton_table,
+    paginate_dataframe,
+    render_clipboard_copy_button
+)
 
 # High-Resolution Widescreen Layout
 st.set_page_config(
@@ -828,38 +834,73 @@ with tab_bultos:
 
     bultos_rows = []
     for it in items:
+        is_other_p = it.status.startswith("PENDIENTE_PARTE") or (it.container_part and it.container_part != "A")
+        is_zero_rec = (it.received_real_units == 0) or is_other_p
+
         if is_strict_customs:
-            b_disp = f"{int(it.bultos_enteros)} E + {int(it.bultos_complementos)} P" if it.bultos_complementos > 0 else f"{int(it.bultos_enteros)} Enteros"
+            if is_zero_rec:
+                b_disp = "0 Enteros"
+                b_ent = 0
+                b_pico = 0
+                u_zc = 0
+                r_fis = 0
+                emp_str = "0"
+                b_pl = 0
+                dif_b = 0
+            else:
+                b_disp = f"{int(it.bultos_enteros)} E + {int(it.bultos_complementos)} P" if it.bultos_complementos > 0 else f"{int(it.bultos_enteros)} Enteros"
+                b_ent = int(it.bultos_enteros)
+                b_pico = int(it.bultos_complementos)
+                u_zc = int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units)
+                r_fis = int(it.received_real_units)
+                emp_str = it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12")
+                b_pl = int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga)
+                dif_b = int(it.dif_bultos)
+
             bultos_rows.append({
                 "CATEGORIA": it.category or "TEXTIL",
                 "CANTIDAD DE BULTOS Z-Carga": b_disp,
-                "Bultos Enteros": int(it.bultos_enteros),
-                "Bultos Pico": int(it.bultos_complementos),
-                "CANTIDAD DE UNIDADES Z-Carga": int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units),
+                "Bultos Enteros": b_ent,
+                "Bultos Pico": b_pico,
+                "CANTIDAD DE UNIDADES Z-Carga": u_zc,
                 "MATERIAL": it.material_code,
-                "RECIBIDO REAL & FISICO": int(it.received_real_units),
+                "RECIBIDO REAL & FISICO": r_fis,
                 "Curva": it.curve_total,
                 "UM": it.um or "PRK",
                 "DESCRIPCION": it.description,
-                "EMPAQUE UNIDADES Z-Carga": it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12"),
-                "Bultos Packing List": int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga),
-                "Diferencia Bultos": int(it.dif_bultos),
+                "EMPAQUE UNIDADES Z-Carga": emp_str,
+                "Bultos Packing List": b_pl,
+                "Diferencia Bultos": dif_b,
                 "_status": it.status
             })
         else:
-            b_disp = it.bultos_str if (it.bultos_str and "*" in it.bultos_str) else (int(it.bultos_descarga) if it.bultos_descarga > 0 else int(it.quantity_inv_41_prk))
+            if is_zero_rec:
+                b_disp = 0
+                u_zc = 0
+                r_fis = 0
+                emp_str = "0"
+                b_pl = 0
+                dif_b = 0
+            else:
+                b_disp = it.bultos_str if (it.bultos_str and "*" in it.bultos_str) else (int(it.bultos_descarga) if it.bultos_descarga > 0 else int(it.quantity_inv_41_prk))
+                u_zc = int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units)
+                r_fis = int(it.received_real_units)
+                emp_str = it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12")
+                b_pl = int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga)
+                dif_b = int(it.dif_bultos)
+
             bultos_rows.append({
                 "CATEGORIA": it.category or "TEXTIL",
                 "CANTIDAD DE BULTOS Z-Carga": b_disp,
-                "CANTIDAD DE UNIDADES Z-Carga": int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units),
+                "CANTIDAD DE UNIDADES Z-Carga": u_zc,
                 "MATERIAL": it.material_code,
-                "RECIBIDO REAL & FISICO": int(it.received_real_units),
+                "RECIBIDO REAL & FISICO": r_fis,
                 "Curva": it.curve_total,
                 "UM": it.um or "PRK",
                 "DESCRIPCION": it.description,
-                "EMPAQUE UNIDADES Z-Carga": it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12"),
-                "Bultos Packing List": int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga),
-                "Diferencia Bultos": int(it.dif_bultos),
+                "EMPAQUE UNIDADES Z-Carga": emp_str,
+                "Bultos Packing List": b_pl,
+                "Diferencia Bultos": dif_b,
                 "_status": it.status
             })
 
@@ -1471,17 +1512,28 @@ with tab_excel_export:
         
         for i in items:
             qc_item = qc_details.get(i.material_code, {})
-            if i.bultos_descarga > 0:
-                bultos_desc = i.bultos_str if (i.bultos_str and "*" in i.bultos_str) else i.bultos_descarga
-            elif qc_item.get('bultos', 0) > 0:
-                bultos_desc = qc_item['bultos']
+            is_other_part = i.status.startswith("PENDIENTE_PARTE") or (i.container_part and i.container_part != "A")
+            
+            if i.received_real_units == 0 or is_other_part:
+                unidades_desc = 0
+                bultos_desc = 0
             else:
-                bultos_desc = i.quantity_inv_41_prk if i.quantity_inv_41_prk > 0 else 1.0
+                unidades_desc = i.unidades_descarga if i.unidades_descarga > 0 else (qc_item.get('unidades', 0) if qc_item.get('unidades', 0) > 0 else i.received_real_units)
+                if i.bultos_descarga > 0:
+                    bultos_desc = i.bultos_str if (i.bultos_str and "*" in i.bultos_str) else i.bultos_descarga
+                elif qc_item.get('bultos', 0) > 0:
+                    bultos_desc = qc_item['bultos']
+                else:
+                    bultos_desc = i.quantity_inv_41_prk if i.quantity_inv_41_prk > 0 else (round(unidades_desc / max(i.curve_total, 1), 2) if unidades_desc > 0 else 0)
 
-            unidades_desc = i.unidades_descarga if i.unidades_descarga > 0 else (qc_item.get('unidades', 0) if qc_item.get('unidades', 0) > 0 else i.received_real_units)
-            bultos_pl = i.bultos_packing_list if i.bultos_packing_list > 0 else bultos_desc
-            unidades_pl = i.unidades_packing_list if i.unidades_packing_list > 0 else i.quantity_inv_41_units
-            curva_empaque = i.empaque_str or (str(i.curve_total) if i.curve_total > 0 else "12")
+            if is_other_part or (i.received_real_units == 0 and i.quantity_inv_41_units == 0):
+                unidades_pl = 0
+                bultos_pl = 0
+                curva_empaque = "0"
+            else:
+                unidades_pl = i.unidades_packing_list if i.unidades_packing_list > 0 else (i.quantity_inv_41_units if i.quantity_inv_41_units > 0 else unidades_desc)
+                bultos_pl = i.bultos_packing_list if i.bultos_packing_list > 0 else bultos_desc
+                curva_empaque = i.empaque_str or (str(i.curve_total) if i.curve_total > 0 else "12")
             
             descarga_rows.append({
                 "Fila Excel": len(descarga_rows) + 13,
@@ -1505,23 +1557,35 @@ with tab_excel_export:
         with col_tira1:
             st.markdown("##### 📌 Tira 1: ZDESCARGA (Columnas AS y AT)")
             st.caption("2 columnas contiguas: `[TOTAL BULTOS DESCARGA | CANTIDAD UNIDADES EN BULTOS]`")
+            render_clipboard_copy_button(
+                button_id="copy_tira1",
+                label="📋 Copiar Tira 1 (AS13)",
+                text_to_copy="\n".join(tsv_as_at_lines),
+                success_label="¡Tira 1 copiada! Lista para pegar en celda AS13"
+            )
             st.text_area(
-                "Copiar con Ctrl+A -> Ctrl+C y pegar en celda AS13 de Excel:",
+                "Vista previa / Copia manual:",
                 value="\n".join(tsv_as_at_lines),
                 height=180,
                 key="tsv_as_at_area",
-                help="Selecciona todo este texto, cópialo y pégalo directamente en la celda AS13 de la hoja CIERRE RECEP."
+                help="Haz clic en el botón de copiar arriba o selecciona este texto para pegarlo en la celda AS13."
             )
             
         with col_tira2:
             st.markdown("##### 📌 Tira 2: PACKING LIST (Columnas AW, AX y AY)")
             st.caption("3 columnas contiguas: `[Bultos según Packing List | CANTIDAD UNIDADES | Empaque]`")
+            render_clipboard_copy_button(
+                button_id="copy_tira2",
+                label="📋 Copiar Tira 2 (AW13)",
+                text_to_copy="\n".join(tsv_aw_ay_lines),
+                success_label="¡Tira 2 copiada! Lista para pegar en celda AW13"
+            )
             st.text_area(
-                "Copiar con Ctrl+A -> Ctrl+C y pegar en celda AW13 de Excel:",
+                "Vista previa / Copia manual:",
                 value="\n".join(tsv_aw_ay_lines),
                 height=180,
                 key="tsv_aw_ay_area",
-                help="Selecciona todo este texto, cópialo y pégalo directamente en la celda AW13 de la hoja CIERRE RECEP."
+                help="Haz clic en el botón de copiar arriba o selecciona este texto para pegarlo en la celda AW13."
             )
             
         col_dl1, col_dl2 = st.columns(2)
@@ -1552,18 +1616,28 @@ with tab_excel_export:
                     for idx_c, it_c in enumerate(items):
                         row_c = 13 + idx_c
                         qc_i = qc_details.get(it_c.material_code, {})
+                        is_other_p = it_c.status.startswith("PENDIENTE_PARTE") or (it_c.container_part and it_c.container_part != "A")
                         
-                        if it_c.bultos_descarga > 0:
-                            b_desc = it_c.bultos_str if (it_c.bultos_str and "*" in it_c.bultos_str) else it_c.bultos_descarga
-                        elif qc_i.get('bultos', 0) > 0:
-                            b_desc = qc_i['bultos']
+                        if it_c.received_real_units == 0 or is_other_p:
+                            b_desc = 0
+                            u_desc = 0
                         else:
-                            b_desc = it_c.quantity_inv_41_prk if it_c.quantity_inv_41_prk > 0 else 1.0
+                            u_desc = it_c.unidades_descarga if it_c.unidades_descarga > 0 else (qc_i.get('unidades', 0) if qc_i.get('unidades', 0) > 0 else it_c.received_real_units)
+                            if it_c.bultos_descarga > 0:
+                                b_desc = it_c.bultos_str if (it_c.bultos_str and "*" in it_c.bultos_str) else it_c.bultos_descarga
+                            elif qc_i.get('bultos', 0) > 0:
+                                b_desc = qc_i['bultos']
+                            else:
+                                b_desc = it_c.quantity_inv_41_prk if it_c.quantity_inv_41_prk > 0 else (round(u_desc / max(it_c.curve_total, 1), 2) if u_desc > 0 else 0)
 
-                        u_desc = it_c.unidades_descarga if it_c.unidades_descarga > 0 else (qc_i.get('unidades', 0) if qc_i.get('unidades', 0) > 0 else it_c.received_real_units)
-                        b_pl = it_c.bultos_packing_list if it_c.bultos_packing_list > 0 else b_desc
-                        u_pl = it_c.unidades_packing_list if it_c.unidades_packing_list > 0 else it_c.quantity_inv_41_units
-                        emp = it_c.empaque_str or (str(it_c.curve_total) if it_c.curve_total > 0 else "12")
+                        if is_other_p or (it_c.received_real_units == 0 and it_c.quantity_inv_41_units == 0):
+                            b_pl = 0
+                            u_pl = 0
+                            emp = 0
+                        else:
+                            u_pl = it_c.unidades_packing_list if it_c.unidades_packing_list > 0 else (it_c.quantity_inv_41_units if it_c.quantity_inv_41_units > 0 else u_desc)
+                            b_pl = it_c.bultos_packing_list if it_c.bultos_packing_list > 0 else b_desc
+                            emp = it_c.empaque_str or (str(it_c.curve_total) if it_c.curve_total > 0 else "12")
 
                         # Reparar fórmula de Col H si fue borrada o sobreescrita manualmente
                         val_h = ws_closure.cell(row=row_c, column=8).value
