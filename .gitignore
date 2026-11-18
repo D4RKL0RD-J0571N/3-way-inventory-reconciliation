@@ -37,4 +37,5 @@ data/
 docs/drafts/
 scratch/
 sandbox_benchmark/
+.agents/
 
