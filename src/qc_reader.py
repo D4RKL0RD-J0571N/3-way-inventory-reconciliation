@@ -137,6 +137,8 @@ def _build_column_mapping(header_row: Tuple[Any, ...]) -> Dict[str, int]:
                     if kw in c_clean:
                         if field_name == "material" and "PROVEEDOR" in c_clean:
                             continue
+                        if field_name == "comp_cartons" and "UNIDADES" in c_clean:
+                            continue
                         mapping[field_name] = idx
                         break
     return mapping
