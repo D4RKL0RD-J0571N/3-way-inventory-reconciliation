@@ -1,0 +1,412 @@
+{
+  "manifest_version": "1.0.0",
+  "safety_mode": "Testing",
+  "fixed_zip_timestamp": "2026-11-18T12:00:00Z",
+  "fixture_count": 47,
+  "fixtures": {
+    "qc/qc_canonical_clean.xlsm": {
+      "category": "qc",
+      "features": ["F03", "F04", "F11", "F17"],
+      "container_id": "IMP-901",
+      "sheet_signature": "CONTROL DATA",
+      "shared_strings": true,
+      "vba_sha256": "19b4a7d1938f79dbcafd9b852d4be1649fb3cb756f74aaa0f5740bfaf6a62f11",
+      "expected_items": 4,
+      "expected_primary_items": 2,
+      "expected_calculated_units": 1080,
+      "expected_calculated_cartons": 19,
+      "expected_flags": []
+    },
+    "qc/qc_no_tarima_layout.xlsm": {
+      "category": "qc",
+      "features": ["F11"],
+      "container_id": "IMP-902",
+      "layout": "Layout #2 (no Tarima)",
+      "shared_strings": true,
+      "vba_sha256": "5087f2574a94660d6a526356e10a514d5c93ee77a6f91c7c76d6fa9a88c35c72",
+      "expected_items": 4,
+      "expected_calculated_units": 1080,
+      "expected_calculated_cartons": 19,
+      "expected_flags": []
+    },
+    "qc/qc_shifted_spacer_layout.xlsm": {
+      "category": "qc",
+      "features": ["F11"],
+      "container_id": "IMP-903",
+      "layout": "Layout #3 (shifted spacer before TOTAL DE BULTOS)",
+      "shared_strings": true,
+      "vba_sha256": "e05d30033a6e311af03e2d13cdfdafe494bf4171d26a6db1b48e3dc348edc09f",
+      "expected_items": 4,
+      "expected_calculated_units": 1080,
+      "expected_calculated_cartons": 19,
+      "expected_flags": []
+    },
+    "qc/qc_no_comp_cartons_layout.xlsm": {
+      "category": "qc",
+      "features": ["F04", "F11"],
+      "container_id": "IMP-904",
+      "layout": "Layout #4 (no BULTOS COMPLEMENTOS; commit 14240a8 guard)",
+      "shared_strings": true,
+      "vba_sha256": "1c5b844aaa0ecb8db27ac873e4bbcbc7372b67f2bdcceb98e7c64ee479e4d5a0",
+      "expected_items": 4,
+      "expected_calculated_units": 1080,
+      "expected_calculated_cartons": 19,
+      "expected_flags": ["QC_COMPLEMENT_WITHOUT_CARTON_COUNT"]
+    },
+    "qc/qc_numero_tarima_layout.xlsm": {
+      "category": "qc",
+      "features": ["F11"],
+      "container_id": "IMP-905",
+      "layout": "Layout #5 (NUMERO DE TARIMA)",
+      "shared_strings": true,
+      "vba_sha256": "0ab3e93d1af2e6e5f2fbab5ee2090ec9127460b59e726839b76f0902b71e700a",
+      "expected_items": 4,
+      "expected_calculated_units": 1080,
+      "expected_calculated_cartons": 19,
+      "expected_flags": []
+    },
+    "qc/qc_material_col_g_layout.xlsm": {
+      "category": "qc",
+      "features": ["F11"],
+      "container_id": "IMP-906",
+      "layout": "Layout #12 (Material in Col G)",
+      "shared_strings": true,
+      "vba_sha256": "e67624d5a0592c5c2d0121cff2999750100a2bb3b2d3e8ecc72f76d1e7bde28a",
+      "expected_items": 4,
+      "expected_calculated_units": 1080,
+      "expected_calculated_cartons": 19,
+      "expected_flags": []
+    },
+    "qc/qc_edge_cases.xlsm": {
+      "category": "qc",
+      "features": ["F03", "F04", "F11"],
+      "container_id": "IMP-907",
+      "shared_strings": true,
+      "vba_sha256": "010d68502916feabb956a9b2cf7a55f58c95dbed0288bc3e05ecef305bbf413e",
+      "expected_items": 13,
+      "expected_calculated_units": 5492,
+      "expected_calculated_cartons": 123,
+      "expected_reported_units": 5480,
+      "expected_reported_cartons": 122,
+      "expected_flags": [
+        "EMPTY_COMPLEMENT_CARTONS",
+        "NEGATIVE_REPORTED_DIFF",
+        "QC_COMPLEMENT_WITHOUT_CARTON_COUNT",
+        "QC_FORMULA_MISMATCH",
+        "QC_OBSERVATION_ADJUSTMENT",
+        "SHARED_CARTON_PRIMARY",
+        "SHARED_CARTON_SECONDARY",
+        "UNEVEN_PREPACK_CURVE",
+        "VARIANTE_SUELTA_ROW"
+      ]
+    },
+    "qc/qc_inlinestr.xlsm": {
+      "category": "qc",
+      "features": ["F11"],
+      "container_id": "IMP-908",
+      "shared_strings": false,
+      "vba_sha256": "4a76557be929bcff70b0932793c5e2bff33623af954f929bed161a9e59c43536",
+      "expected_items": 4,
+      "expected_calculated_units": 1080,
+      "expected_calculated_cartons": 19
+    },
+    "qc/qc_bloat_streaming.xlsm": {
+      "category": "qc",
+      "features": ["F11", "F15"],
+      "container_id": "IMP-100",
+      "shared_strings": true,
+      "vba_sha256": "aec8efd444adbb3b5239ed3fb714a748e5eaea675d971d4377aaef266d29adeb",
+      "expected_items": 19,
+      "expected_calculated_units": 2280,
+      "expected_calculated_cartons": 95,
+      "trap": "trailing_empty_rows"
+    },
+    "qc/qc_reconciliation_discrepancies.xlsm": {
+      "category": "qc",
+      "features": ["F05", "F06", "F11", "F17"],
+      "container_id": "IMP-909",
+      "sheet_signature": "CONTROL DATA",
+      "shared_strings": true,
+      "vba_sha256": "4bb8f98546848d695117f738dd69a225ca125ab8f5c5ab06f9897f295ffb6607",
+      "expected_items": 5,
+      "expected_calculated_units": 1668,
+      "expected_calculated_cartons": 45,
+      "expected_flags": [],
+      "paired_closure": "closures/closure_discrepancy_template.xlsm"
+    },
+    "qc/SYNTH_IMP81_NOCALIDAD.xlsm": {
+      "category": "qc",
+      "features": ["F11", "F17"],
+      "container_id": "IMP-81",
+      "shared_strings": true,
+      "vba_sha256": "f99c7deb1cb4c5cd82e68f644694cf9d98d122645ae322b811842e450bd90586",
+      "expected_items": 4,
+      "expected_calculated_units": 1080,
+      "expected_calculated_cartons": 19,
+      "trap": "filename_omits_calidad_qc"
+    },
+    "closures/closure_template_clean.xlsm": {
+      "category": "closures",
+      "features": ["F12", "F17"],
+      "sheet_signature": "CIERRE RECEP",
+      "shared_strings": true,
+      "vba_sha256": "175755b6d04366da72a1dbe3a501d3082a001319083139bce17650c2ec722176",
+      "expected_physical_units": 1080,
+      "expected_physical_cartons": 19,
+      "expected_bultos_stale_rows": 15
+    },
+    "closures/closure_discrepancy_template.xlsm": {
+      "category": "closures",
+      "features": ["F05", "F06", "F12", "F17"],
+      "sheet_signature": "CIERRE RECEP",
+      "shared_strings": true,
+      "vba_sha256": "ea523f180144e7093a6395a2dcc33381f03fbca080f90eb7d1e089f0be06f023",
+      "expected_items": 5,
+      "expected_declared_units": 1680,
+      "expected_declared_cartons": 44,
+      "expected_shortage_units": 60,
+      "expected_overage_units": 48,
+      "expected_revuelto_pairs": 1,
+      "paired_qc": "qc/qc_reconciliation_discrepancies.xlsm"
+    },
+    "closures/closure_over500_rows.xlsm": {
+      "category": "closures",
+      "features": ["F05", "F12", "F17"],
+      "sheet_signature": "CIERRE RECEP",
+      "shared_strings": true,
+      "vba_sha256": "d6edb73948f90916717b6b3acf6e8bf677043ef1519e096093bd53a9a1e47a18",
+      "max_item_row": 560,
+      "omit_dimension": true,
+      "duplicate_sku": "1455103",
+      "duplicate_rows": [15, 350]
+    },
+    "closures/closure_preexisting_errors.xlsm": {
+      "category": "closures",
+      "features": ["F12", "F15", "F17"],
+      "sheet_signature": "CIERRE RECEP",
+      "shared_strings": true,
+      "vba_sha256": "2126785a04733668ca2fb95df522ed73d2bc0762b02abd6dc3cefa8103fd48cf",
+      "trap": "preexisting_source_errors"
+    },
+    "closures/IMP-184_sin_control_calidad.xlsm": {
+      "category": "closures",
+      "features": ["F11", "F15"],
+      "sheet_signature": "CIERRE RECEP",
+      "shared_strings": true,
+      "vba_sha256": "95f27e3a6be046c0c87ecba6ce1c2b9ee2701d4e4cfd5f10f79fb09e7c8077ce",
+      "trap": "no_control_data_sheet"
+    },
+    "closures/closure_missing_cierre.xlsm": {
+      "category": "closures",
+      "features": ["F12"],
+      "sheet_signature": null,
+      "expected_sheets": ["Bultos", "PROV Y CATEG", "DATOS GENERALES"],
+      "shared_strings": true,
+      "vba_sha256": "845f91fd58146e51545d567cb646329156a92415af123d94c7692843b3fc5d88",
+      "trap": "missing_cierre_recep"
+    },
+    "closures/SYNTH_LEGACY.xls": {
+      "category": "closures",
+      "features": ["F10", "F17"],
+      "is_zip": false,
+      "trap": "ole2_biff_legacy_xls"
+    },
+    "closures/~$SYNTH_LOCK.xlsm": {
+      "category": "closures",
+      "features": ["F10", "F14", "F17"],
+      "is_zip": false,
+      "expected_size_bytes": 165,
+      "trap": "office_lockfile"
+    },
+    "historical_sync/IMP104_Clean.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-104",
+      "pedido_41": "4100002248",
+      "author_b33": "Jostin Lopez Sobalbarro",
+      "core_creator": "Hilario Lopez Rivera",
+      "vba_sha256": "5320bfe9a431efb974e1da776e8c5dec4a29edfe232f9a4a99f27903062cc7df"
+    },
+    "historical_sync/IMP326_Typo.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-326",
+      "pedido_41": "4100002302",
+      "author_b33": "Jostin Lopez Sobalbaro",
+      "vba_sha256": "9d926fd0d788fcdb1d783e2f2c671338bac1c2da766dc1ab8f9bed94d11daeab",
+      "trap": "author_single_r_typo"
+    },
+    "historical_sync/IMP209_SharedStringsTrap.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-209",
+      "pedido_41": "4100002290",
+      "author_b33": "Angie Montero Rojas",
+      "vba_sha256": "fb1a1d66b8fe17ace6c2f4c80a0d0f591c3f4b82626e3029aa506d7b5308c26d",
+      "trap": "shared_strings_decoy_jostin"
+    },
+    "historical_sync/IMP182_Final.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-182",
+      "pedido_41": "4100002283",
+      "author_b33": "Jostin Lopez Sobalbarro",
+      "vba_sha256": "2d68d471a74a1279dc3a2c61bfd972f7889218d617e6a71f342dba43bf761473"
+    },
+    "historical_sync/Copia de IMP182 inprogress.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-182",
+      "pedido_41": "4100002283",
+      "author_b33": "Jostin Lopez Sobalbarro",
+      "vba_sha256": "f99ebf34ed1ca4d167a3dd946fadd68ec1bf642e0190839c5b73a5f8ea39642b",
+      "trap": "duplicate_draft_copy"
+    },
+    "historical_sync/drafts/IMP182_inprogress.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-182",
+      "pedido_41": "4100002283",
+      "author_b33": "Jostin Lopez Sobalbarro",
+      "vba_sha256": "fb9558ca51c565489a7d6dbca3c838e98a1004f2bd77993ed8b068a1d665c93f",
+      "trap": "duplicate_draft_nested"
+    },
+    "historical_sync/IMP224_SharedPO.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-224",
+      "pedido_41": "4100002293",
+      "po_43": "4300007562",
+      "vba_sha256": "248af4ebaa98e4f031eb7805f4687d2c6b61a43d9f88382eff078bfe04a816df"
+    },
+    "historical_sync/IMP225_SharedPO.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-225",
+      "pedido_41": "4100002296",
+      "po_43": "4300007562",
+      "vba_sha256": "bfe07d2766a628f2e1b81aa6d19eb82e6063ecf132c565d6f0673ff9f74b91a8"
+    },
+    "historical_sync/IMP226_SharedPO.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-226",
+      "pedido_41": "4100002297",
+      "po_43": "4300007562",
+      "vba_sha256": "cba3c88595adbfe8c86c2dd9be968533f1e8ac795fd934de465d6bd7c3fdbad3"
+    },
+    "historical_sync/IMP195_ZeroCartons.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F14"],
+      "container_id": "IMP-195",
+      "pedido_41": "4100002284",
+      "vba_sha256": "5fde631a1eeb81bba5ff59af4eb6c16fabf1c71859e35f32bf431de2462da9c1",
+      "trap": "zero_cartons_with_lines"
+    },
+    "historical_sync/IMP218_Hybrid.xlsm": {
+      "category": "historical_sync",
+      "features": ["F08", "F11", "F14"],
+      "container_id": "IMP-218",
+      "pedido_41": "4100002274",
+      "vba_sha256": "81e0258c723a37b8aa9c251f03bb29cefd3c579d866cac83e9a92a158b1ebe9c",
+      "trap": "hybrid_qc_and_closure_c18_zero"
+    },
+    "historical_sync/Macro para cierre hannia.xlsm": {
+      "category": "historical_sync",
+      "features": ["F14"],
+      "container_id": "IMP-950",
+      "pedido_41": "4100002950",
+      "vba_sha256": "1a66471c5ddc64f34176fee6360b23f61469bb0addd9612c34ac9588258237c6",
+      "trap": "non_imp_filename_closure"
+    },
+    "historical_sync/~$IMP349_Lockfile.xlsm": {
+      "category": "historical_sync",
+      "features": ["F10", "F14"],
+      "is_zip": false,
+      "expected_size_bytes": 165,
+      "trap": "office_lockfile"
+    },
+    "daily_log/Control_Diario_Synthetic.xlsx": {
+      "category": "daily_log",
+      "features": ["F07", "F10", "F13", "F18"],
+      "expected_sheets": [
+        "Dashboard General",
+        "Maestro Contenedores",
+        "Control Parte B y Bultos",
+        "Comunicados y Guia SAP",
+        "Catalogos"
+      ],
+      "expected_tables": ["tblMaestroContenedores", "tblParteB", "tblNotificaciones"],
+      "expected_rows": 22,
+      "b45_stray_text": true,
+      "trap": "duplicate_imp_202"
+    },
+    "daily_log/Control_Diario_57Rows.xlsx": {
+      "category": "daily_log",
+      "features": ["F13", "F18"],
+      "expected_rows": 52,
+      "table_ref": "A5:R57",
+      "trap": "row_57_boundary"
+    },
+    "daily_log/~$Control_Diario_Synthetic.xlsx": {
+      "category": "daily_log",
+      "features": ["F10", "F13", "F18"],
+      "is_zip": false,
+      "expected_size_bytes": 165,
+      "trap": "office_lockfile"
+    },
+    "sap_docs/SYNTH_SAP_GUIDE.pdf": {
+      "category": "sap_docs",
+      "features": ["F19", "F20"],
+      "expected_pages": 2
+    },
+    "sap_docs/SYNTH_SCAN_NO_TEXT.pdf": {
+      "category": "sap_docs",
+      "features": ["F19"],
+      "expected_pages": 1,
+      "expected_text_chars": 0
+    },
+    "sap_docs/SYNTH_SOP.docx": {
+      "category": "sap_docs",
+      "features": ["F19", "F20", "F21"]
+    },
+    "sap_docs/SYNTH_DATA_DICT.xlsx": {
+      "category": "sap_docs",
+      "features": ["F19", "F20"]
+    },
+    "sap_docs/SYNTH_CLOSURE_WITH_HOJA1_PII.xlsx": {
+      "category": "sap_docs",
+      "features": ["F09", "F19"],
+      "trap": "hoja1_mv998_pii_exclusion"
+    },
+    "sap_docs/SYNTH_NOTES.txt": {
+      "category": "sap_docs",
+      "features": ["F19", "F20"]
+    },
+    "sap_docs/SYNTH_TCODE_REF.md": {
+      "category": "sap_docs",
+      "features": ["F19", "F20"]
+    },
+    "sap_docs/SYNTH_EXPORT_GUIDE.html": {
+      "category": "sap_docs",
+      "features": ["F19", "F20"]
+    },
+    "sap_docs/corrupt/empty.txt": {
+      "category": "sap_docs_corrupt",
+      "features": ["F19"],
+      "expected_size_bytes": 0
+    },
+    "sap_docs/corrupt/malformed.pdf": {
+      "category": "sap_docs_corrupt",
+      "features": ["F19"]
+    },
+    "sap_docs/corrupt/corrupt.docx": {
+      "category": "sap_docs_corrupt",
+      "features": ["F19"]
+    },
+    "sap_docs/corrupt/unsupported.bin": {
+      "category": "sap_docs_corrupt",
+      "features": ["F19"]
+    }
+  }
+}

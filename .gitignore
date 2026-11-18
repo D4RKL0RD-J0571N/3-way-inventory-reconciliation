@@ -27,6 +27,16 @@ build/
 dist/
 *.spec
 
+# .NET / C#
+[Bb]in/
+[Oo]bj/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+TestResults/
+
 # Confidential Business Data & Spreadsheets
 data/
 *.xlsm
