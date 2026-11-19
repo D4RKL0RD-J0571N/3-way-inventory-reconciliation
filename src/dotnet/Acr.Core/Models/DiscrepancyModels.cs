@@ -187,6 +187,20 @@ public sealed record DiscrepancyItem
 
     /// <summary>Concise Spanish explanation of the discrepancy.</summary>
     public string Explanation { get; init; } = "";
+
+    /// <summary>Texto en español del tipo de discrepancia basado en los términos de CIERRE RECEP.</summary>
+    public string DiscrepancyTypeDescription => DiscrepancyType switch
+    {
+        DiscrepancyType.ExactMatch => "CUADRADO (0 DIF)",
+        DiscrepancyType.Shortage => "FALTANTE",
+        DiscrepancyType.Overage => "SOBRANTE",
+        DiscrepancyType.RevueltoCandidate => "REVUELTO",
+        DiscrepancyType.CartonMismatchOnly => "DIF. BULTOS",
+        DiscrepancyType.DamageOnly => "DAÑADO",
+        DiscrepancyType.UnexpectedItem => "SOBRANTE (NO FACTURADO)",
+        DiscrepancyType.MissingItem => "FALTANTE TOTAL",
+        _ => DiscrepancyType.ToString()
+    };
 }
 
 /// <summary>

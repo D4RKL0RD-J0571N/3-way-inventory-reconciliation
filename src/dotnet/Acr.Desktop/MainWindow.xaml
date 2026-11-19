@@ -80,21 +80,21 @@
                               BorderBrush="#E2E8F0" BorderThickness="1">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Material" Binding="{Binding MaterialCode}" Width="110"/>
-                            <DataGridTextColumn Header="U. Declaradas" Binding="{Binding DeclaredUnits}" Width="95"/>
+                            <DataGridTextColumn Header="U. Facturadas" Binding="{Binding DeclaredUnits}" Width="95"/>
                             <DataGridTextColumn Header="U. Físicas" Binding="{Binding PhysicalUnits}" Width="95"/>
                             <DataGridTextColumn Header="Diferencia U." Binding="{Binding DeltaUnits}" Width="95"/>
-                            <DataGridTextColumn Header="Bultos Decl." Binding="{Binding DeclaredCartons}" Width="85"/>
-                            <DataGridTextColumn Header="Bultos Fís." Binding="{Binding PhysicalCartons}" Width="85"/>
+                            <DataGridTextColumn Header="Bultos Fact." Binding="{Binding DeclaredCartons}" Width="85"/>
+                            <DataGridTextColumn Header="Bultos Físicos" Binding="{Binding PhysicalCartons}" Width="90"/>
                             
-                            <!-- Discrepancy Type with Interactive Diagnostic Button -->
-                            <DataGridTemplateColumn Header="Tipo Discrepancia / Diagnóstico" Width="180">
+                            <!-- Discrepancy Type with Interactive Diagnostic Button in Spanish -->
+                            <DataGridTemplateColumn Header="Tipo Discrepancia / Diagnóstico" Width="190">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="{Binding DiscrepancyType}" 
+                                        <Button Content="{Binding DiscrepancyTypeDescription}" 
                                                 Command="{Binding DataContext.OpenDiagnosticGuideForDiscrepancyCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                 CommandParameter="{Binding}"
                                                 Padding="6,2" Margin="2"
-                                                Background="#E0F2FE" Foreground="#0369A1" BorderBrush="#BAE6FD" FontWeight="Medium"
+                                                Background="#E0F2FE" Foreground="#0369A1" BorderBrush="#BAE6FD" FontWeight="SemiBold"
                                                 ToolTip="Haga clic para abrir la Guía de Diagnóstico SAP correspondiente"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>

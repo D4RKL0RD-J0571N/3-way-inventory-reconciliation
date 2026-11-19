@@ -189,7 +189,7 @@ public sealed class QcReaderTests : IDisposable
     [Theory]
     [InlineData(@"IMP-103\Informacion General\imp 103 control calidad corregirdo.xlsm", "103", 267, 1038, 102854, 1038, 102711, 41)]
     [InlineData(@"IMP-100\Informacion General\IMP 100 Control Calidad.xlsm", "100", 18, 990, 990, 990, 990, 0)]
-    [InlineData(@"IMP-218\IMP-218.xlsm", "218", 5, 532, 11580, 532, 11580, 0)]
+    [InlineData(@"IMP-218\IMP-218.xlsm", "218", 8, 781, 51740, 781, 51740, 0)]
     [InlineData(@"IMP-298\Informacion General\imp298 control calidad ver2.xlsm", "298", 163, 1036, 67746, 1032, 67314, 11)]
     [InlineData(@"IMP-327\Informacion General\cierre imp 327 Control de calidad.xlsm", "327", 6, 669, 4014, 669, 4014, 0)]
     [InlineData(@"IMP-348\Informacion General\imp 348.xlsm", "348", 1, 620, 620, 620, 620, 0)]

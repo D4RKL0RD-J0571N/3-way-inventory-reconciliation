@@ -148,7 +148,7 @@ public static class QcReader
         new("observation", ["OBSERVACIONES", "OBSERVACION"])
     ];
 
-    private static readonly string[] FooterKeywords = ["TOTAL", "SUMA", "RESUMEN", "FIRMA"];
+    private static readonly string[] FooterKeywords = ["TOTAL", "RESUMEN", "FIRMA"];
 
     /// <summary>
     /// Reads and validates a QC inspection workbook in a single forward-only OpenXML pass.
@@ -551,11 +551,17 @@ public static class QcReader
 
     private static bool IsFooterOrTotalRow(string matStr, string descStr)
     {
-        string combined = $"{matStr} {descStr}".ToUpperInvariant();
-        foreach (string keyword in FooterKeywords)
+        string matUpper = matStr.ToUpperInvariant();
+        string descUpper = descStr.ToUpperInvariant();
+
+        if (matUpper.Contains("TOTAL", StringComparison.Ordinal) ||
+            matUpper.Contains("RESUMEN", StringComparison.Ordinal) ||
+            matUpper.Contains("FIRMA", StringComparison.Ordinal) ||
+            matUpper.StartsWith("SUMA", StringComparison.Ordinal) ||
+            descUpper.StartsWith("TOTAL", StringComparison.Ordinal) ||
+            descUpper.StartsWith("RESUMEN", StringComparison.Ordinal))
         {
-            if (combined.Contains(keyword, StringComparison.Ordinal))
-                return true;
+            return true;
         }
 
         return !matStr.Any(char.IsDigit) && descStr.Length == 0;

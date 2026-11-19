@@ -146,8 +146,16 @@ def _build_column_mapping(header_row: Tuple[Any, ...]) -> Dict[str, int]:
 
 def _is_footer_or_total_row(mat_str: str, desc_str: str) -> bool:
     """Determine whether row is a footer summary row rather than item merchandise."""
-    combined = f"{mat_str} {desc_str}".upper()
-    if any(k in combined for k in ("TOTAL", "SUMA", "RESUMEN", "FIRMA")):
+    mat_upper = mat_str.upper()
+    desc_upper = desc_str.upper()
+    if (
+        "TOTAL" in mat_upper
+        or "RESUMEN" in mat_upper
+        or "FIRMA" in mat_upper
+        or mat_upper.startswith("SUMA")
+        or desc_upper.startswith("TOTAL")
+        or desc_upper.startswith("RESUMEN")
+    ):
         return True
     if not re.search(r"\d", mat_str) and not desc_str:
         return True
