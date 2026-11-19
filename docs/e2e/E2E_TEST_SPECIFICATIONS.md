@@ -1,3 +1,5 @@
+> **Estado: HISTÓRICO / Historical snapshot.** Describe el sistema Python-only (revisión 589f6aa) o un plan previo. Para el estado actual vea [docs/README.md](../README.md) y [CURRENT_ARCHITECTURE](../architecture/CURRENT_ARCHITECTURE.md).
+
 # Opaque-Box E2E Test Specifications — Asistente de Cierre de Recepción (ACR)
 
 **Document ID:** `ACR-E2E-SPEC-PHASE-A-2026-11-18`  

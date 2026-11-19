@@ -185,6 +185,29 @@ public sealed record DiscrepancyItem
     /// <summary>Aggregated physical and comparison flags.</summary>
     public IReadOnlyList<string> Flags { get; init; } = Array.Empty<string>();
 
+    /// <summary>Source worksheet row index.</summary>
+    public int SourceRow { get; init; }
+
+    /// <summary>Unit cost in USD.</summary>
+    public decimal UnitCost { get; init; }
+
+    /// <summary>Effective prepack curve (units per prepack).</summary>
+    public int Curve { get; init; } = 12;
+
+    /// <summary>Container part if multi-part container (e.g. "A", "B").</summary>
+    public string? ContainerPart { get; init; }
+
+    /// <summary>Canonical packaging expression (e.g. "8*48 1*36" or "8*48 +36").</summary>
+    public string CanonicalPackaging { get; init; } = "";
+
+    /// <summary>Calculated NCR claim amount in USD.</summary>
+    public decimal NcrAmount => (DiscrepancyType is DiscrepancyType.Shortage or DiscrepancyType.MissingItem)
+        ? Math.Abs(DifferenceUnits) * UnitCost
+        : (DamagedUnits > 0 ? DamagedUnits * UnitCost : 0m);
+
+    /// <summary>Child SKU size breakdown when this item is a prepack parent.</summary>
+    public IReadOnlyList<ChildSkuItem> Children { get; init; } = Array.Empty<ChildSkuItem>();
+
     /// <summary>Concise Spanish explanation of the discrepancy.</summary>
     public string Explanation { get; init; } = "";
 
@@ -371,4 +394,10 @@ public sealed record ComparisonSummary
 
     /// <summary>Material codes that had multiple declared PO lines aggregated.</summary>
     public IReadOnlyList<string> MultiPoMaterials { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Indica si la importación corresponde a un montaje o cierre a ciegas preliminar
+    /// (se dispone de factura/declarado > 0, pero el conteo físico de control de calidad o descarga es 0).
+    /// </summary>
+    public bool IsBlindReceiving => TotalDeclaredUnits > 0 && TotalPhysicalUnits == 0;
 }

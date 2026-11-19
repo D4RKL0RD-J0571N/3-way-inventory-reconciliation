@@ -1,69 +1,120 @@
-# ACR (Asistente de Cierre de Recepción): Resumen de trabajo y prompt de continuación
+# Handoff & Contexto Completo para Continuación con otro LLM
 
-## 1. Resumen del trabajo realizado
+> **Instrucción:** Copia y pega este documento completo como prompt inicial en tu nueva sesión con otro LLM para darle contexto exacto del proyecto, sus reglas de negocio, su arquitectura y el estado actual del código.
 
-Repo: `D4RKL0RD-J0571N/3-way-inventory-reconciliation`, rama `repository_audit_planning`.
-Objetivo: aplicación de escritorio personal en C# (.NET 10 LTS, WPF) para cierres de recepción de contenedores de importación, conciliación QC vs proveedor, control diario y base de conocimiento SAP offline.
+---
 
-| Fase | Estado | Detalle |
-|---|---|---|
-| Fase 0: Auditoría | PASS | `docs/PHASE_0_AUDIT_REPORT.md`. 58 columnas (A..BF) en fila 12 de `CIERRE RECEP`. 6 etapas de ciclo de vida. 5 libros históricos corruptos preexistentes (IMP-241, 244, 256, 360, 90). Autor en `'DATOS GENERALES'!B33`. |
-| Fase 1: `Acr.Core` | PASS | Modelos y servicios de dominio, `SapKnowledge` (modelos), 104 tests. |
-| Pista E2E fase A | PASS | `docs/e2e/E2E_TEST_SPECIFICATIONS.md` (254 casos) y 47 fixtures en `tests/e2e_fixtures/`. |
-| Fase 2-A: Infraestructura | PASS (compuerta formal) | `QcReader`, `WorkbookSignatureScanner`, `HistoricalClosureScanner`, `OperationalSafetyGuard`. |
-| Fase 2-B: Infraestructura | Implementada, compuerta NO cerrada | `ClosureExporter`, `FormulaIntegrityAuditor`, `DailyLogRepository/Service`, `AtomicFileTransaction`, `ReceivingPipeline`, `Reporting/`. 175/175 tests pasan. |
-| Fases 3 a 6 | No iniciadas | Paridad de regresión, WPF, SAP KB, empaquetado. |
+## 1. Contexto General y Repositorio
 
-Commits: `e8c601b` (Fase 0 + 1) y el commit de Fase 2 con este documento.
+- **Proyecto:** **ACR — Asistente de Cierre de Recepción (3-Way Inventory Reconciliation)**
+- **Repositorio GitHub:** `https://github.com/D4RKL0RD-J0571N/3-way-inventory-reconciliation.git`
+- **Rama Activa:** `feat/web-react-and-csharp-parity` (sincronizada con `origin`)
+- **Rutas Locales de Trabajo:**
+  - Worktree actual: `C:\Users\Jostin\.gemini\antigravity\worktrees\3 Way Inventory Reconciliation\web_edition_csharp_parity`
+  - Repositorio principal / Datos locales (NO versionados en Git): `D:\Development\Software Development\3 Way Inventory Reconciliation\data`
+  - Muestra local de prueba para Montaje a Ciegas: `D:\Development\Software Development\3 Way Inventory Reconciliation\data\IMP-100_MONTAJE_A_CIEGAS\`
 
-### Defectos pendientes de la verificación adversaria de M2-B
-Se reportaron 4. El worker de remediación pudo haber corregido algunos (el conteo subió de 165 a 175 tests). **Verifica cada uno con un test antes de darlo por resuelto:**
-1. **Alto.** `JsonProcessingReportStore.BuildReportFileName`: `ReportId` sin sanitizar (path traversal, subdirectorios, ADS). Sin tope de longitud en tokens (`IOException` con `ContainerId` de 300 caracteres).
-2. **Alto.** `OperationHistoryStore.Append`: sin sincronización por archivo. Con 10 hilos hubo excepciones y pérdida de escrituras. Usar lock o `SemaphoreSlim` por ruta canónica.
-3. **Medio.** `DailyLogRepository.WriteDataRow`: no borra la columna C cuando `UpdatedDate` es null.
-4. **Medio.** `JsonProcessingReportStore.LoadAll`: falla si hay otro `.json` en la carpeta (ej. `operation_history.json`). Filtrar por `report_*.json`.
+---
 
-## 2. Entorno
-- SDK .NET 10 instalado en `%LocalAppData%\Microsoft\dotnet`. Antes de cada comando:
-  `$env:PATH = "$env:LOCALAPPDATA\Microsoft\dotnet;" + $env:PATH; $env:DOTNET_ROOT="$env:LOCALAPPDATA\Microsoft\dotnet"`
-- Solución: `src/dotnet/Acr.sln` con `Acr.Core`, `Acr.Infrastructure`, `Acr.Tests` (falta `Acr.Desktop`).
-- Línea base Python (autoritativa hasta cerrar paridad): `src/` y `tests/test_real_dataset_audit.py` (58/58).
-- Datos de producción (SOLO LECTURA): `D:\Development\Software Development\3 Way Inventory Reconciliation\data` y `...\Control_Diario_Operaciones_Jostin.xlsx`.
-- Estado de teamwork: el coordinador se detuvo por cuota agotada. Notas internas en `%USERPROFILE%\.gemini\antigravity\scratch\teamwork\607b2f1d-d517-4470-b4e8-1178ccb12f9e\.agents\teamwork\` (`PROJECT.md`, `sub_orch_m2_b\GATE_STATUS.md`, `teamwork_challenger_m2b_r1_2\handoff.md`).
+## 2. Arquitectura de las 3 Ediciones en el Repositorio
 
-## 3. Prompt para otro LLM
+El repositorio mantiene tres ediciones bajo las mismas reglas de negocio:
 
+1. **Edición de Escritorio C# / WPF (Principal — `src/dotnet/Acr.sln`):**
+   - Target Framework actual: `net9.0` / `net9.0-windows` (el equipo tiene instalado .NET SDK `9.0.312`; `CoreIsolationTests` acepta `net9.0` o `net10.0`).
+   - `Acr.Core`: Dominio puro sin I/O (`DiscrepancyClassifier`, `QuantityEngine`, `BomAllocationService`, `SapClipboardSanitizer`, `DailyLogLifecycleValidator`, `HistoricalIdentityMatcher`, `OperationalSafetyPolicy`, modelos y `SapKnowledge`).
+   - `Acr.Infrastructure`: Lectores/escritores OpenXML en streaming (`QcReader`, `ClosureTemplateReader`, `WorkbookSignatureScanner`, `ClosureExporter`, `FormulaIntegrityAuditor`, `ReceivingPipeline`, `DailyLogRepository/Service`, `OperationalSafetyGuard`, `AtomicFileTransaction`, `DefaultSapCatalog`).
+   - `Acr.Desktop`: Aplicación WPF con `CommunityToolkit.Mvvm` (`MainWindow.xaml` + `MainViewModel.cs`), 8 pestañas operativas, iconos vectoriales `StreamGeometry` (cero emojis) y tooltips en español en todos los controles.
+   - `Acr.Tests`: Suite xUnit con **222 pruebas automatizadas pasando (0 fallos)**.
+
+2. **Edición Web React + TypeScript (`web/`):**
+   - Stack: React 19, TypeScript, Vite 6, Tailwind CSS 4, SheetJS (`xlsx`), JSZip, Lucide Icons.
+   - Procesamiento 100% en navegador (`web/src/utils/excelParser.ts`, `discrepancyClassifier.ts`, `quantityEngine.ts`, `sanitizer.ts`, `macroSafeXlsmExporter.ts`) y 8 componentes de pestañas en `web/src/components/`.
+
+3. **Edición Python / Streamlit (Legado — raíz y `src/*.py`):**
+   - `app.py`, `cli.py`, `generar_cierre_oficial.py`. Mantenida únicamente para uso rápido por CLI o lotes.
+
+---
+
+## 3. Reglas de Oro y Comportamientos Críticos Implementados
+
+Cualquier modificación futura **DEBE** preservar estas reglas verificadas por la suite de pruebas:
+
+1. **Regla Cardinal de Discrepancias:**
+   - **Jamás** compensar algebraicamente faltantes (`Shortage`) y sobrantes (`Overage`) entre materiales distintos. Cada discrepancia se reporta íntegra por separado. Si dos materiales del mismo contenedor tienen magnitudes opuestas equivalentes, se emparejan como `RevueltoCandidate` indicando la pareja (`REVUELTO ↔ código`), sin borrar las diferencias individuales.
+2. **Materiales sin Movimiento (`IsZeroTotal`):**
+   - Cuando `DeclaredUnits == 0 && PhysicalUnits == 0 && DeclaredCartons == 0 && PhysicalCartons == 0 && DamagedUnits == 0`, el ítem se clasifica como `SIN MOVIMIENTO (0 TOTAL)` con badge gris neutro (`#F1F5F9`).
+   - Por defecto (`ExcludeZeroTotalFromStripsAndBultos = true`), se excluyen de las tiras de pegado (`AS:AT`, `AW:AY`) y de la hoja `Bultos` para no ensuciar el libro oficial.
+3. **Empaque Canónico:**
+   - Diferencia estrictamente entre cajas complementarias (`8*48 1*36`, cuando hay bulto complemento físico) y unidades sueltas sin bulto adicional (`8*48 +36`).
+4. **Exportación `.xlsm` Macro-Safe:**
+   - `ClosureExporter` modifica el libro de cierre preservando intacto `xl/vbaProject.bin` y verifica que el hash **SHA-256** del proyecto VBA de entrada y de salida sean idénticos.
+5. **Blindaje `IMP-207` (Bug colisión `288`, Layout #4 y `ESQUEMA ALISTO`):**
+   - *ID de Importación:* Al extraer metadatos de `DATOS GENERALES` y `CIERRE RECEP`, se excluyen etiquetas de resumen (`importadora`, `faltante`, `dañad`, `sobrant`, `revuelt`, `total`, `bulto`, `valor`, `costo`, `unidad`, `fecha`, `diferencia`, `ncr`, `reclamo`, `monto`) para que `"Faltante Importación" = 288` nunca sobrescriba `"IMP-207"`. Se bloquea el primer ID con prefijo `IMP-` y se respalda con regex `\b(IMP)[\s\-_]*([0-9]+[A-Z0-9\-]*)(?=[_\s.\-]|$|\b)` sobre el nombre del archivo.
+   - *Layout #4:* En `QcReader.cs`, la columna de bultos complementos ignora encabezados que contengan `"UNIDADES"` o `"UNID"`, activando el rescate matemático de bultos.
+   - *Hojas `ESQUEMA ALISTO`:* Se ignoran estrictamente al detectar partes (`PARTE A/B/C`), evitando 21 falsos `PENDIENTE_PARTE_B` en `IMP-207`.
+   - *Sin límite de 500 filas:* `ClosureTemplateReader` lee en streaming sin tope artificial (soporta `IMP-187` fila 612+).
+   - *Detección por firma OpenXML:* `WorkbookSignatureScanner` distingue `CONTROL DATA` (QC) vs `CIERRE RECEP` (Cierre). Si el usuario selecciona los archivos al revés, `ReceivingPipeline` los intercambia automáticamente; también soporta libros híbridos (`IMP-218`).
+6. **Reparto Proporcional BOM (*Largest-Remainder Method*):**
+   - `BomAllocationService.AllocateChildSkus` distribuye las unidades físicas recibidas del prepack padre entre las tallas hijas (`BASE DE DATOS`) proporcionalmente al ratio de curva, asignando los residuos por mayor fracción decimal con desempate determinista para que la suma de hijos sea exactamente igual al total físico del padre.
+7. **Sanitizador SAP (`SapClipboardSanitizer`):**
+   - Limpia tablas crudas pegadas desde SAP (`\t`, `|`, `;`, `,`), quita ceros a la izquierda en códigos de material sin corromper códigos con forma de notación científica (`1E2`), convierte negativos contables `(48)` → `-48` y monedas `$-50.00` → `-50.00`.
+8. **Detección de Montaje a Ciegas (`IsBlindReceiving`):**
+   - Cuando `TotalDeclaredUnits > 0 && TotalPhysicalUnits == 0` (ya sea porque se cargó un archivo QC con 0 unidades o porque se dejó vacío el campo QC y solo se cargó la Plantilla de Cierre), `ComparisonSummary.IsBlindReceiving` es `true`.
+   - El pipeline emite la advertencia `[MONTAJE A CIEGAS]`, la UI WPF despliega un banner ámbar (`AVISO: MONTAJE A CIEGAS DETECTADO — PENDIENTE DE DESCARGA FÍSICA`), suspende el reclamo NCR en el checklist y marca pendiente la hoja de Bultos.
+9. **Estética y Ergonomía UI en WPF (`MainWindow.xaml`):**
+   - **Cero emojis:** Todos los iconos son geometrías vectoriales `StreamGeometry` (`GeoFolderOpen`, `GeoPlayReconcile`, `GeoPackage`, `GeoSearch`, `GeoTraffic`, `GeoBom`, `GeoClipboard`, `GeoExcelExport`, `GeoChecklist`, `GeoWiki`, `GeoCalculator`, `GeoCopy`, `GeoShieldCheck`).
+   - **Barra de archivos en 9 columnas independientes:** Los dos botones `Examinar...` y el botón `Ejecutar Conciliación 3-Way` tienen columnas propias y jamás se solapan.
+   - **Contraste en selección de tablas:** Las filas seleccionadas en `DataGrid` usan fondo celeste suave (`#E0F2FE`) y texto oscuro (`#0F172A` / `#0C4A6E` en *Empaque Canónico*), evitando texto azul ilegible sobre fondo azul.
+   - **Tooltips en español** en absolutamente todos los botones, KPIs, filtros, entradas y pestañas.
+
+---
+
+## 4. Las 8 Pestañas de `Acr.Desktop` (`MainWindow.xaml` / `MainViewModel.cs`)
+
+1. **Cuadre & Bultos:** Modos Conteo Muelle vs Estricto Aduanero, filtro *Ocultar en cero*, Calculadora Interactiva de Bultos/Sueltas, copia rápida de Tira 1 (`AS:AT`) y tabla de la hoja `Bultos`.
+2. **Ficha 360° Material:** Buscador y selector de estilo padre, banner de estado y monto NCR, 4 tarjetas (Identificación + Fila Excel, Empaque & PO 43, Factura 41 & Físico, Balances & Revuelto) y tabla de tallas hijas BOM.
+3. **Tabla Semáforo:** Filtros por texto y clasificación (`CUADRADO`, `FALTANTE`, `SOBRANTE`, `REVUELTO`, `DIF. BULTOS`, `DAÑADO`), badges semánticos, pareja revuelto y botón *Guía SAP* por fila.
+4. **Explosión Curvas (BOM):** Selector de prepack con 4 KPIs y tabla del reparto proporcional *largest-remainder* por SKU hijo.
+5. **Validador SAP (Portapapeles):** Área de pegado crudo, botón *Cargar Muestra SAP*, *Sanitizar Tabla SAP*, detector de delimitador y copia de TSV limpio.
+6. **Copiar a Excel & Exportar:** Exportación `.XLSM Macro-Safe` con hash SHA-256 verificado de `xl/vbaProject.bin`, Tira 1 (`AS:AT`), Tira 2 (`AW:AY`) y vista previa de columnas `AS..AZ`.
+7. **Checklist de Expediente Físico:** 7 documentos reglamentarios dinámicos con los totales reales de la importación (o estado adaptado en montaje a ciegas) y barra de progreso.
+8. **SAP & Wiki:** Buscador de transacciones/tablas SAP conectado a `DefaultSapCatalog`, guías diagnósticas paso a paso y manual operativo SOP.
+
+---
+
+## 5. Comandos Clave de Compilación, Pruebas y Empaquetado
+
+```powershell
+# 1. Compilar solución C# en Release (0 errores, 0 advertencias)
+dotnet build src/dotnet/Acr.sln -c Release
+
+# 2. Ejecutar las 222 pruebas unitarias y de integración
+dotnet test src/dotnet/Acr.sln
+
+# 3. Ejecutar la aplicación de escritorio en modo desarrollo
+dotnet run --project src/dotnet/Acr.Desktop
+
+# 4. Compilar la edición Web (React + TypeScript)
+cd web
+npm install
+npm run build
+cd ..
+
+# 5. Generar paquetes portables (publish/desktop-standalone/Acr.Desktop.exe y publish/web-edition.zip)
+.\empaquetar_standalone.bat
 ```
-Continúas el proyecto ACR (Asistente de Cierre de Recepción) en el repo
-D4RKL0RD-J0571N/3-way-inventory-reconciliation, rama repository_audit_planning.
-Lee primero docs/HANDOFF_CONTINUATION_PROMPT.md, docs/PHASE_0_AUDIT_REPORT.md y
-docs/e2e/E2E_TEST_SPECIFICATIONS.md.
 
-Producto: herramienta personal de escritorio (C#, .NET 10 LTS, WPF, CommunityToolkit.Mvvm)
-para cierres de recepción de contenedores de importación. Sin login, sin servidores,
-sin microservicios, sin LLM ni vector DB, ejecutable portable. Tema corporativo sobrio,
-sin emojis. ACR nunca ejecuta ni modifica transacciones SAP.
+---
 
-Reglas: PascalCase, funciones < 50 líneas, XML docs en APIs públicas, Acr.Core sin
-dependencias externas. Los datos de producción y Control_Diario_Operaciones_Jostin.xlsx
-son SOLO LECTURA; las pruebas usan copias temporales. Nunca compenses entre materiales
-distintos (Cardinal Discrepancy Rule). Separa identidad de negocio (contenedor, PO, fecha)
-de procedencia (ruta, hash). Antes de cada commit, dotnet test debe pasar sin fallos.
+## 6. Estado de Entregables y Siguientes Pasos Posibles
 
-Estado: Fase 0, Fase 1 y Fase 2-A cerradas. Fase 2-B implementada (175 tests verdes) con
-4 defectos por verificar o corregir (lista en la sección 1 del documento de traspaso).
-
-Tareas, en orden:
-1. Verifica y corrige los 4 defectos de M2-B, cada uno con un test de regresión.
-2. Fase 3: ejecuta el pipeline C# sobre los 51 QC y 77 cierres reales (solo lectura) y
-   compara con la línea base Python. Produce un reporte de excepciones; los 5 libros
-   corruptos preexistentes se clasifican como excepciones, no como errores del exportador.
-3. Fase 4: crea src/dotnet/Acr.Desktop con 3 vistas (Conciliación, Control Diario,
-   Sincronización Histórica) y ViewModels con tests. Español e inglés.
-4. Fase 5: base de conocimiento SAP offline (índice determinista, enciclopedia ME80FN,
-   SE16N, MB51, VL31N, RFUI, MIGO, ME21N/22N/23N, ZDescarga, EINA, MAST, STPO, guías de
-   diagnóstico enlazadas desde las discrepancias).
-5. Fase 6: publicar ACR.exe portable (self-contained, single-file), smoke test y push.
-
-Haz commit y push al cerrar cada fase. Trabaja en pasos pequeños y verifica con tests reales.
-```
+- **Entregables listos localmente (ignorados en Git):**
+  - `publish/desktop-standalone/Acr.Desktop.exe` (~65.1 MB, ejecutable único win-x64 autocontenido sin requerir .NET Runtime).
+  - `publish/web-edition.zip` (~301 KB, bundle estático de producción de `web/dist`).
+- **Documentación actualizada:**
+  - `README.md`, `README.es.md`, `docs/README.md` (índice maestro), `docs/WIKI.md`, `docs/architecture/CURRENT_ARCHITECTURE.md`, `docs/RELEASE_NOTES_DEMO.md` y `docs/quality/KNOWN_LIMITATIONS.md`.
+- **Posibles tareas futuras si el usuario lo solicita:**
+  1. Abrir un Pull Request o hacer merge de `feat/web-react-and-csharp-parity` hacia la rama principal (`main` o `repository_audit_planning`).
+  2. Migrar `<TargetFramework>` de `net9.0` a `net10.0` cuando se instale el SDK de .NET 10 en la estación de trabajo.
+  3. Añadir conversión automática o lector para archivos `.xls` binarios antiguos (BIFF8) si aparecen facturas de proveedores en ese formato.

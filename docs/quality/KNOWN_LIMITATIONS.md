@@ -1,4 +1,20 @@
-# Known Limitations & Operational Constraints — ReconcileAI (Track A)
+# Known Limitations — ACR
+
+## 0. Current limitations (desktop/web editions)
+
+- **Input formats:** only `.xlsx`/`.xlsm` are read. Binary `.xls`, PDF/scanned NCR, `.msg`/`.eml` and photos are not parsed.
+- **Target framework:** `net9.0` (SDK 9.0.x). .NET 10 retargeting pending.
+- **Blind receiving:** detected only when physical units total 0 with declared units > 0; partially counted containers are analyzed normally.
+- **Web edition:** runs in memory in the browser; very large workbooks are limited by browser memory.
+- **Python legacy edition** does not include the IMP-207, BOM largest-remainder, sheet-signature or blind-receiving fixes.
+- **Portable exe:** ~62 MB, Windows x64 only, unsigned (SmartScreen may warn).
+- **Historical Phase 2-B gate** (exporter/daily-log formal sign-off) was never formally closed, although all related tests pass.
+
+---
+
+# Original corpus audit (historical)
+
+> Sections below describe the Python-only system at revision `589f6aa`; file-format counts remain a useful corpus snapshot.
 
 **Assessment Date:** 2026-11-17  
 **Audited Revision:** `589f6aa` (`repository_audit_planning`)  
