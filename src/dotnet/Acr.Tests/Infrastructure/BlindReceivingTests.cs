@@ -154,6 +154,45 @@ public sealed class BlindReceivingTests : IDisposable
         Assert.Contains(result.Warnings, w => w.Contains("[MONTAJE A CIEGAS]"));
     }
 
+    [Fact]
+    public void ReceivingPipeline_ClosureOnlyWithoutQcFile_RunsInBlindReceivingModeWithoutThrowing()
+    {
+        string cierrePath = Path.Combine(_tempDir, "IMP-998_CierreOnly.xlsx");
+        using (var doc = SpreadsheetDocument.Create(cierrePath, SpreadsheetDocumentType.Workbook))
+        {
+            var wbPart = doc.AddWorkbookPart();
+            wbPart.Workbook = new Workbook();
+            var wsPart = wbPart.AddNewPart<WorksheetPart>();
+            wsPart.Worksheet = new Worksheet();
+
+            var sheets = wbPart.Workbook.AppendChild(new Sheets());
+            sheets.AppendChild(new Sheet { Id = wbPart.GetIdOfPart(wsPart), SheetId = 1, Name = "CIERRE RECEP" });
+
+            var sd = wsPart.Worksheet.AppendChild(new SheetData());
+            var row12 = sd.AppendChild(new Row { RowIndex = 12 });
+            row12.AppendChild(CreateCell("E12", "MATERIAL", CellValues.String));
+            row12.AppendChild(CreateCell("G12", "CANTIDAD PEDIDO 41", CellValues.String));
+
+            var row13 = sd.AppendChild(new Row { RowIndex = 13 });
+            row13.AppendChild(CreateCell("E13", "MAT-NO-QC", CellValues.String));
+            row13.AppendChild(CreateCell("G13", "300", CellValues.Number));
+
+            wbPart.Workbook.Save();
+        }
+
+        ReceivingPipelineResult result = ReceivingPipeline.Execute(new ReceivingPipelineOptions
+        {
+            QcFilePath = "",
+            ClosureTemplatePath = cierrePath
+        });
+
+        Assert.Equal("IMP-998", result.ContainerId);
+        Assert.True(result.Comparison.IsBlindReceiving);
+        Assert.Equal(300, result.Comparison.TotalDeclaredUnits);
+        Assert.Equal(0, result.Comparison.TotalPhysicalUnits);
+        Assert.Contains(result.Warnings, w => w.Contains("[MONTAJE A CIEGAS]"));
+    }
+
     private static Cell CreateCell(string reference, string text, CellValues dataType)
     {
         return new Cell

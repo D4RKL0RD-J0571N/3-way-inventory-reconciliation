@@ -12,8 +12,8 @@ namespace Acr.Infrastructure.Receiving;
 /// </summary>
 public sealed record ReceivingPipelineOptions
 {
-    /// <summary>Path to the Quality Control (<c>CONTROL DATA</c>) workbook.</summary>
-    public required string QcFilePath { get; init; }
+    /// <summary>Path to the Quality Control (<c>CONTROL DATA</c>) workbook (optional when running in blind receiving mode).</summary>
+    public string QcFilePath { get; init; } = "";
 
     /// <summary>Path to the closure template (<c>CIERRE RECEP</c>) workbook.</summary>
     public required string ClosureTemplatePath { get; init; }
@@ -92,30 +92,46 @@ public static class ReceivingPipeline
     public static ReceivingPipelineResult Execute(ReceivingPipelineOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentException.ThrowIfNullOrWhiteSpace(options.QcFilePath);
-        ArgumentException.ThrowIfNullOrWhiteSpace(options.ClosureTemplatePath);
+        if (string.IsNullOrWhiteSpace(options.ClosureTemplatePath) && string.IsNullOrWhiteSpace(options.QcFilePath))
+            throw new ArgumentException("At least ClosureTemplatePath or QcFilePath must be provided.");
 
-        string qcPath = options.QcFilePath;
-        string closurePath = options.ClosureTemplatePath;
+        string qcPath = options.QcFilePath ?? "";
+        string closurePath = options.ClosureTemplatePath ?? "";
 
-        // Auto-detect swapped workbooks or hybrid workbooks using internal sheet signatures
+        // Auto-detect swapped workbooks, single closure workbook (blind setup), or hybrid workbooks using sheet signatures
         try
         {
-            WorkbookSignature sigQc = WorkbookSignatureScanner.Inspect(qcPath, options.SafetyGuard);
-            WorkbookSignature sigClosure = WorkbookSignatureScanner.Inspect(closurePath, options.SafetyGuard);
+            bool hasQcFile = !string.IsNullOrWhiteSpace(qcPath) && File.Exists(qcPath);
+            bool hasClosureFile = !string.IsNullOrWhiteSpace(closurePath) && File.Exists(closurePath);
 
-            if (sigQc.Kind == WorkbookKind.ReceivingClosure && sigClosure.Kind == WorkbookKind.QcInspection)
+            if (hasQcFile && hasClosureFile)
             {
-                qcPath = options.ClosureTemplatePath;
-                closurePath = options.QcFilePath;
+                WorkbookSignature sigQc = WorkbookSignatureScanner.Inspect(qcPath, options.SafetyGuard);
+                WorkbookSignature sigClosure = WorkbookSignatureScanner.Inspect(closurePath, options.SafetyGuard);
+
+                if (sigQc.Kind == WorkbookKind.ReceivingClosure && sigClosure.Kind == WorkbookKind.QcInspection)
+                {
+                    qcPath = options.ClosureTemplatePath!;
+                    closurePath = options.QcFilePath!;
+                }
             }
-            else if (sigQc.Kind == WorkbookKind.HybridQcAndClosure && !File.Exists(closurePath))
+            else if (hasQcFile && !hasClosureFile)
             {
-                closurePath = qcPath;
+                WorkbookSignature sigQc = WorkbookSignatureScanner.Inspect(qcPath, options.SafetyGuard);
+                if (sigQc.Kind is WorkbookKind.HybridQcAndClosure or WorkbookKind.ReceivingClosure)
+                {
+                    closurePath = qcPath;
+                    if (sigQc.Kind == WorkbookKind.ReceivingClosure)
+                        qcPath = "";
+                }
             }
-            else if (sigClosure.Kind == WorkbookKind.HybridQcAndClosure && !File.Exists(qcPath))
+            else if (hasClosureFile && !hasQcFile)
             {
-                qcPath = closurePath;
+                WorkbookSignature sigClosure = WorkbookSignatureScanner.Inspect(closurePath, options.SafetyGuard);
+                if (sigClosure.Kind == WorkbookKind.HybridQcAndClosure)
+                {
+                    qcPath = closurePath;
+                }
             }
         }
         catch
@@ -123,8 +139,30 @@ public static class ReceivingPipeline
             // Fallback to configured paths on any inspection anomaly
         }
 
-        QcInspectionReport qcReport = QcReader.Read(qcPath, options.SafetyGuard);
         ClosureTemplateData templateData = ClosureTemplateReader.ReadDeclaredItems(closurePath, options.SafetyGuard);
+
+        QcInspectionReport qcReport;
+        bool canReadQc = !string.IsNullOrWhiteSpace(qcPath) && File.Exists(qcPath);
+        if (canReadQc)
+        {
+            WorkbookSignature sigQcFinal = WorkbookSignatureScanner.Inspect(qcPath, options.SafetyGuard);
+            canReadQc = sigQcFinal.Kind is WorkbookKind.QcInspection or WorkbookKind.HybridQcAndClosure;
+        }
+
+        if (canReadQc)
+        {
+            qcReport = QcReader.Read(qcPath, options.SafetyGuard);
+        }
+        else
+        {
+            qcReport = new QcInspectionReport
+            {
+                FilePath = closurePath,
+                ContainerId = templateData.ContainerId ?? "",
+                Warnings = ["[MONTAJE A CIEGAS] No se proporcionó libro de Control de Calidad (QC). Se analizan únicamente los valores declarados en la plantilla de cierre."]
+            };
+        }
+
         IReadOnlyList<PhysicalItem> physicalItems = MapPhysicalItems(qcReport);
         ComparisonSummary summary = DiscrepancyClassifier.CompareMerchandise(templateData.DeclaredItems, physicalItems);
 

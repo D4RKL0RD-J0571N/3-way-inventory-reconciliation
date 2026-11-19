@@ -653,15 +653,12 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     public void ExecuteReconciliation()
     {
-        if (string.IsNullOrWhiteSpace(QcFilePath) || !File.Exists(QcFilePath))
-        {
-            StatusMessage = "Seleccione un archivo de Control de Calidad (QC) existente.";
-            return;
-        }
+        bool hasQc = !string.IsNullOrWhiteSpace(QcFilePath) && File.Exists(QcFilePath);
+        bool hasClosure = !string.IsNullOrWhiteSpace(ClosureTemplatePath) && File.Exists(ClosureTemplatePath);
 
-        if (string.IsNullOrWhiteSpace(ClosureTemplatePath) || !File.Exists(ClosureTemplatePath))
+        if (!hasClosure && !hasQc)
         {
-            StatusMessage = "Seleccione una plantilla de Cierre existente.";
+            StatusMessage = "Seleccione al menos una plantilla de Cierre (y opcionalmente el archivo de Control de Calidad QC).";
             return;
         }
 
