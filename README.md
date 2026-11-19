@@ -1,168 +1,96 @@
-# 🛡️ ACR — Asistente de Cierre de Recepción & Conciliador de Inventarios
-### Enterprise Desktop Application (.NET 10 LTS Win-x64) for Supply Chain & Import Closures
+# ACR — Receiving Closure Assistant (3-Way Inventory Reconciliation)
 
-[**Español**](README.es.md) | **English** | [**Operational Wiki**](docs/WIKI.md) | [**Release Notes**](docs/RELEASE_NOTES_DEMO.md) | [**SAP Receiving SOP**](docs/SOP_RECEPCION_SAP.md) | [**Cartons & VBA Audit**](docs/CONOCIMIENTO_EMPIRICO_BULTOS_MACROS.md) | [**Dispatch Architecture**](docs/AUDITORIA_DESPACHO_MACRO.md)
+[Versión en español](README.es.md) · [Documentation index](docs/README.md) · [Web edition](web/README.md)
 
----
+ACR reconciles the three sources of an import container receiving: **PO 43 / Pedido 41 invoice** (declared), **dock Quality Control (QC)** and **packing list / ZDESCARGA cartons**, and produces the squared official closure workbook (`.xlsm`) with its VBA macros intact.
 
-## 🌟 Standalone Portable Desktop Edition (.NET 10 LTS)
+The repository contains **three editions** that share the same business rules:
 
-> [!TIP]
-> **Zero Installation Required:** ACR is built as a single-file, self-contained native Windows desktop executable (`dist/ACR_Release/Acr.Desktop.exe`, Win-x64). It runs natively out of the box **without requiring .NET Runtime or Python installations, and without administrative privileges**.
+| Edition | Location | Stack | Status |
+|---|---|---|---|
+| **Desktop (primary)** | `src/dotnet/` | C#, WPF/MVVM, OpenXML, `net9.0` (SDK 9.0.x) | Active, 221 automated tests |
+| **Web** | `web/` | React 19, TypeScript, Vite 6, Tailwind 4, SheetJS | Active, reference UI for the desktop tabs |
+| **Legacy** | `app.py`, `cli.py`, `src/*.py` | Python, Streamlit, openpyxl | Maintained for CLI/batch use only |
 
-An agnostic, enterprise-grade calculation engine and interactive audit assistant for **3-Way Supply Chain Inventory Reconciliation**. Designed to eliminate manual cross-referencing between Purchase Orders (PO), Commercial Invoices/Customs Declarations, Physical Warehouse Receiving counts, and ERP Material Movements (`Mov 101` and `Mov 641`).
+## Golden rules (enforced in all editions)
 
-```mermaid
-flowchart LR
-    A["ERP Purchasing (PO 43)"] --> D["ACR Desktop Assistant (.NET 10)"]
-    B["Commercial Invoice (Ped 41)"] --> D
-    C["Physical Dock QC & Packaging"] --> D
-    
-    D --> E["📦 Executive KPI Strip & Reconcile Grid"]
-    D --> F["📋 1-to-1 Official Bultos Sheet Projection"]
-    D --> G["⚡ Instant TSV Paste Strips (AS:AT / AW:AY)"]
-    D --> H["📖 Embedded SAP T-Code & Diagnostic Encyclopedia"]
-    D --> I["💾 Macro-Safe 1-Click .XLSM Export"]
-    
-    G -->|"10-Second Copy/Paste"| J["Official Workbook (.xlsm)"]
-    I -->|"Instant Generation"| J
-    J --> K["100% Squared Zero-Discrepancy Closure"]
-```
+- **Cardinal Rule:** shortages and overages are never offset algebraically. Each is reported on its own.
+- **Zero-total lines** (`IsZeroTotal`: 0 declared, 0 physical, 0 cartons) are shown as `SIN MOVIMIENTO (0 TOTAL)` in neutral gray and excluded from the paste strips and the `Bultos` sheet by default (`ExcludeZeroTotalFromStripsAndBultos = true`).
+- **Canonical packaging:** `8*48 1*36` (complement carton) vs `8*48 +36` (loose pieces).
+- **Macro-safe export:** `.xlsm` output preserves `xl/vbaProject.bin`; SHA-256 of source and output is compared.
+- **Operational Spanish** terminology in every user-facing string.
 
----
+## Desktop edition (`src/dotnet/Acr.sln`)
 
-## 🎯 Executive Overview & Value Proposition
+Projects: `Acr.Core` (domain, no I/O), `Acr.Infrastructure` (OpenXML readers/writers, pipeline, safety), `Acr.Desktop` (WPF), `Acr.Tests` (xUnit).
 
-In international retail logistics and distribution centers, closing an import container typically requires reconciling data across multiple disconnected sources:
-1. **Commercial / ERP Layer:** Purchase Orders (`PO 43`) and Customs Declaration Invoices (`Invoice 41`).
-2. **Physical Receiving Layer:** Warehouse dock counts, carton/bulto tallies, and Quality Control size-curve breakdowns.
-3. **Accounting / Ledger Layer:** ERP inventory movements (`SAP Mov 101` for Goods Receipt and `SAP Mov 641` for Store Transfers).
+Eight tabs (vector icons, Spanish tooltips on every control):
 
-### The 3 Independent Numerical Levels in Supply Chain
-ACR enforces mathematical segregation across the three levels of inventory data:
-* **Level 1 — Physical Cartons (Bultos Físicos):** Boxes physically handled at the dock (Col `AS`), Vendor Packing List cartons (Col `AW`), and Quality Control count (`Enteros` + `Complementos`).
-* **Level 2 — Prepacks / Commercial Assortments (PRK / Curva):** Ordering unit for assortments (Col `BD` and `BE` in PRKs, Col `BB` Curve ratio, Col `BC` UoM).
-* **Level 3 — Total Pieces (Unidades Totales):** Invoiced and nationalized garments (Col `F`, `G`, `H`, `AT`, `AX`).
+1. **Cuadre & Bultos** — dock-count vs strict-customs modes, interactive carton/loose calculator, hide-zero filter, `Bultos` sheet projection.
+2. **Ficha 360° Material** — identification, packaging/PO 43, invoice 41 vs physical, balances/revuelto/NCR, BOM child sizes.
+3. **Tabla Semáforo** — status colors, revuelto pairing, canonical packaging, SAP guide shortcut.
+4. **Explosión Curvas (BOM)** — prepack selector, KPIs, proportional per-size split (largest-remainder).
+5. **Validador SAP (Portapapeles)** — sanitizes raw SAP tables (`\t`, `|`, `;`, `,`), strips leading zeros, preserves `1E2`, `(48)` → `-48`, `$-50.00`.
+6. **Copiar a Excel & Exportar** — Strip 1 `AS:AT`, Strip 2 `AW:AY`, real differences `AU`/`AZ`, macro-safe `.xlsm` export with SHA-256 check.
+7. **Checklist de Expediente Físico** — 7 dynamic items with real totals and progress bar.
+8. **SAP & Wiki** — T-code catalog (`DefaultSapCatalog`), diagnostic guides, SOP manual.
 
-### Key Operational Capabilities
-- **Native .NET 10 Win-x64 Architecture:** Core algorithms and OpenXML processing execute natively with 181 automated tests.
-- **Executive KPI Strip:** Instant banner with container ID, PO, audited styles, declared vs physical units, cartons, and revueltos.
-- **Dedicated Carton Reconciliation Tab (`Bultos y Empaque`):** Direct 1-to-1 projection of the official 10-column `'Bultos'` sheet, complete with master cartons, picos, and packaging formulas.
-- **Dual Strip Copy-Pasting (`ZDESCARGA` & `PACKING LIST`):** Generates clean pre-formatted TSV text blocks for Columns `AS:AT` and `AW:AY` so operators can square official corporate macros in **10 seconds**.
-- **Embedded SAP Diagnostic & T-Code Encyclopedia:** Direct access to SAP transactions (`ME80FN`, `SE16N`, `MB51`, `VL31N`, `RFUI`) and step-by-step triage guides directly from discrepancy rows.
-- **1-Click Official `.xlsm` Export:** Automatically generates the finalized, fully-squared official Excel file preserving all VBA macros and styles.
+### Notable behaviors
 
----
+- **Import ID hardening (IMP-207 → 288 bug):** summary labels (`Faltante`, `Dañado`, `Sobrante`, `Total`, `Bulto`, `Valor`, `NCR`, …) can never overwrite the container ID; the first valid ID is locked and the file name (`IMP-207_...`) is the fallback.
+- **Workbook detection by signature:** `CONTROL DATA` ⇒ QC, `CIERRE RECEP` ⇒ closure. Swapped inputs are auto-corrected; hybrid workbooks (IMP-218) are supported.
+- **No row cap** (IMP-187 reads past row 600); `ESQUEMA ALISTO` sheets are ignored when detecting `PARTE A/B/C`.
+- **Layout #4:** `UNIDADES BULTOS COMPLEMENTOS` headers are not mistaken for complement-carton counts (mathematical rescue is applied).
+- **Blind receiving (montaje a ciegas):** when invoice units are present but physical units are 0, the app shows an amber banner, a `[MONTAJE A CIEGAS]` warning, suspends the NCR checklist item and does not treat the gap as a vendor claim.
 
-## 🚀 Quickstart Guide
+### Build, test, run
 
-### Option A: Portable Standalone Executable (Recommended)
-1. Run `dist/ACR_Release/Acr.Desktop.exe`.
-2. Browse or select your Quality Control (`CONTROL CALIDAD.xlsm`) and Template (`CIERRE_TEMPLATE.xlsm`) files.
-3. Click **"Ejecutar Conciliación y Generar Cierre .XLSM"**.
-
-### Option B: Building from Source (.NET 10 LTS)
-```bash
-# 1. Restore and build
+```powershell
 dotnet build src/dotnet/Acr.sln -c Release
-
-# 2. Run automated test suite (181 tests)
-dotnet test src/dotnet/Acr.sln
-
-# 3. Publish single-file executable
-dotnet publish src/dotnet/Acr.Desktop/Acr.Desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/ACR_Release
+dotnet test  src/dotnet/Acr.sln            # 221 tests
+dotnet run --project src/dotnet/Acr.Desktop
 ```
 
-### Option C: 1-Second Terminal Audit (CLI Mode)
-*For headless batch verification and terminal lovers.*
+Portable single-file executable (no .NET install needed): run `empaquetar_standalone.bat` → `publish/desktop-standalone/Acr.Desktop.exe` and `publish/web-edition.zip`.
+
+> The projects target `net9.0` because the build machine has SDK 9.0.x. `CoreIsolationTests` accepts `net9.0` or `net10.0`; retarget the four `.csproj` files once the .NET 10 SDK is installed.
+
+## Web edition (`web/`)
+
 ```bash
-python cli.py -i CONT-001
-# or specify direct paths:
-python cli.py --qc path/to/QC_Receiving.xlsm --cierre path/to/Official_Closure.xlsm
+cd web && npm install && npm run dev      # http://localhost:3000
+npm run build                              # production bundle in web/dist
 ```
 
----
+Runs entirely in the browser (no upload). See [web/README.md](web/README.md).
 
-## 📋 2-Minute Demo Walkthrough
+## Legacy Python tools
 
-1. **Launch the App:** Open `http://localhost:8501`.
-2. **Select Container:** In the file explorer, choose a local folder (e.g. `data/CONT-001` or your own container folder) or drag and drop your two Excel files:
-   - File 1: Quality Control / Dock Receiving (`Dock_QC_Receiving.xlsm`)
-   - File 2: Official Closure Template (`Official_Closure.xlsm`)
-3. **Run Audit:** Click **`🚀 Iniciar Auditoría de estos Archivos`**.
-4. **Audit Cartons & Packaging:**
-   - Go to **`📦 Cuadre & Desglose de Bultos`** to compare dock cartons vs vendor packing list cartons, use the packaging calculator, and verify the `'Bultos'` sheet.
-5. **Inspect Styles & Discrepancies:**
-   - Use the **`🔍 Ficha 360° Material`** to inspect parent-child curves and unit costs without scrolling.
-   - Check the **`🚦 Tabla Semáforo`**: Green items are 100% matched; Blue items indicate split shipments (Parte B); Red items indicate actual physical shortages.
-6. **Square the Official Closure:**
-   - Go to **`📋 Copiar a Excel Oficial`**.
-   - Either click **`⚡ Descargar Libro Oficial Cuadrado (.xlsm con Macros VBA)`** to download the completed file, or copy the pre-formatted text blocks for **`ZDESCARGA` (Cols AS:AT)** and **`PACKING LIST` (Cols AW:AY)** into your official workbook.
-   - Result: Discrepancy column instantly drops to **`0`**.
-
----
-
-## 📁 Project Architecture
-
-```
-3-way-inventory-reconciliation/
-│
-├── 🚀 iniciar_asistente.bat            # One-click Windows launcher (smart fallback)
-├── ⚡ ver_resumen_rapido.bat            # One-click CLI quick auditor
-├── 📦 preparar_equipo.bat               # 1-click venv & dependencies setup
-├── 🖥️ app.py                           # Fullscreen Streamlit UI (Widescreen Fluid Layout)
-├── ⚡ cli.py                            # Fast command-line reconciliation engine
-├── 📄 generar_cierre_oficial.py        # Automated .xlsm builder with preserved VBA macros
-├── 🏃 run_standalone.py                # Standalone Streamlit launcher for PyInstaller
-├── 📖 README.md                         # English Documentation & Demo Guide
-├── 📖 README.es.md                      # Spanish Documentation & Demo Guide
-│
-├── 📁 dist/                             # Compiled Standalone Deliverables (Git-ignored)
-│   ├── ReconcileAI/                    # Standalone executable folder
-│   │   ├── ReconcileAI.exe             # Native Windows executable
-│   │   ├── INICIAR_RECONCILEAI.bat     # Friendly batch launcher
-│   │   └── data/                       # Container files directory
-│   └── ReconcileAI_Portable.zip        # Portable standalone distribution archive
-│
-├── 📁 src/                              # Core Agnostic Reconciliation Engine
-│   ├── __init__.py
-│   ├── config.py                       # Dynamic path discovery & PyInstaller environment resolution
-│   ├── models.py                       # Dataclasses: PrepackItem, PackagingBreakdown, SummaryStats
-│   ├── sanitizer.py                    # Defensive data cleaning (scientific notation, strings)
-│   ├── validator.py                    # Business rules, curve sum checks & discrepancy logic
-│   ├── parsers.py                      # Dynamic header scanner & compound packaging string parser
-│   ├── engine.py                       # 3-Way matching logic, carton balance & NCR calculation
-│   ├── i18n.py                         # Centralized internationalization (ES/EN)
-│   └── ui_helpers.py                   # Responsive CSS shimmers & virtual pagination
-│
-├── 📁 docs/                             # Operational Manuals & Technical Architecture
-│   ├── CONOCIMIENTO_EMPIRICO_BULTOS_MACROS.md # Empirical knowledge base on cartons & VBA macros
-│   ├── AUDITORIA_DESPACHO_MACRO.md     # Dispatch closure architecture & Mov-641 synchronization
-│   ├── WIKI.md                         # Comprehensive Starting Guide & Demo Tutorial
-│   ├── RELEASE_NOTES_DEMO.md           # Release Notes
-│   └── SOP_RECEPCION_SAP.md            # Standard Operating Procedure (SAP Goods Receipt)
-│
-├── 📁 tools/                            # Build & Packaging Utilities
-│   └── build_exe.py                    # Automated PyInstaller onedir builder & packager
-│
-└── 📁 tests/                            # Automated Regression Test Suite (22/22 Passing)
-    ├── __init__.py
-    ├── test_sanitizer.py               # Unit tests for text & numeric sanitizer
-    ├── test_parsers.py                 # Automated tests for Excel extraction & curve math
-    ├── test_i18n.py                    # Tests for language translation & pagination
-    └── test_bultos_empaque.py          # Tests for carton breakdown & compound packaging parsing
+```bash
+pip install -r requirements.txt
+python cli.py --qc path/QC.xlsm --cierre path/Closure.xlsm
+streamlit run app.py
+python -m pytest tests
 ```
 
----
+Helper launchers: `iniciar_asistente.bat`, `preparar_equipo.bat`, `ver_resumen_rapido.bat`.
 
-## 🔒 Security, Privacy & Confidentiality Guarantee
+## Repository layout
 
-- **100% Agnostic Architecture:** Designed to work universally with any vendor, any ERP (SAP, Oracle, NetSuite), and any warehouse system.
-- **Zero Company Branding or Sensitive Data:** No proprietary corporate credentials, facility codes, or confidential supplier data are baked into the codebase.
-- **Local Workstation Memory:** All parsing and mathematical calculations run in temporary local memory (RAM). No data is transmitted over the Internet or persisted to third-party servers.
+```
+src/dotnet/          C# solution (Acr.Core, Acr.Infrastructure, Acr.Desktop, Acr.Tests)
+web/                 React + TypeScript edition
+src/*.py, app.py     Legacy Python engine, Streamlit UI, cli.py
+tests/               Python tests and e2e fixtures
+tools/               Python build/stress utilities
+docs/                Documentation (start at docs/README.md)
+empaquetar_standalone.bat   Builds portable desktop exe + web zip
+```
 
----
+## Privacy
 
-## 📄 License & Attribution
+All processing is local (memory only). No data leaves the workstation; `data/` is never committed.
 
-Developed as an independent, enterprise-grade supply chain automation and reconciliation copilot. Free for operational, professional, and educational use under the MIT License.
+## License
+
+MIT — free for operational, professional and educational use.

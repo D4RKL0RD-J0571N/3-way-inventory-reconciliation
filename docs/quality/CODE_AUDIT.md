@@ -1,3 +1,5 @@
+> **Estado: HISTÓRICO / Historical snapshot.** Describe el sistema Python-only (revisión 589f6aa) o un plan previo. Para el estado actual vea [docs/README.md](../README.md) y [CURRENT_ARCHITECTURE](../architecture/CURRENT_ARCHITECTURE.md).
+
 # Line-by-Line Code & Test Suite Audit — ReconcileAI (Track A)
 
 **Assessment Date:** 2026-11-17  

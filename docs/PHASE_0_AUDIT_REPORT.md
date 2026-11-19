@@ -1,3 +1,5 @@
+> **Estado: HISTÓRICO / Historical snapshot.** Describe el sistema Python-only (revisión 589f6aa) o un plan previo. Para el estado actual vea [docs/README.md](README.md) y [CURRENT_ARCHITECTURE](architecture/CURRENT_ARCHITECTURE.md).
+
 # Phase 0 Audit & Baselines Report — Asistente de Cierre de Recepción (ACR) / Receiving Closure Assistant (RCA)
 
 **Document ID:** `PHASE-0-AUDIT-ACR-2026-11-18`  

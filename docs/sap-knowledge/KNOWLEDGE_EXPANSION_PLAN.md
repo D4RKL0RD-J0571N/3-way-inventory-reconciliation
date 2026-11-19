@@ -1,3 +1,5 @@
+> **Estado: HISTÓRICO / Historical snapshot.** Describe el sistema Python-only (revisión 589f6aa) o un plan previo. Para el estado actual vea [docs/README.md](../README.md) y [CURRENT_ARCHITECTURE](../architecture/CURRENT_ARCHITECTURE.md).
+
 # SAP Knowledge Expansion Plan (`KNOWLEDGE_EXPANSION_PLAN.md`)
 
 **Milestone:** M2 — Track D: SAP Knowledge Engineering  
