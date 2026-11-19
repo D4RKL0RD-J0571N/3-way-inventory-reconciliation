@@ -484,7 +484,7 @@ public static class ClosureExporter
         OpenXmlCellHelper.SetIntegerCell(row, 44, rowIdx, physCartons);
         OpenXmlCellHelper.SetIntegerCell(row, 45, rowIdx, physUnits);
 
-        if (item.PhysicalUnits == 0 && item.DeclaredUnits == 0)
+        if (item.PhysicalUnits == 0 && item.DeclaredUnits == 0 && item.PackingListUnits == 0 && item.DeclaredCartons == 0)
         {
             OpenXmlCellHelper.SetIntegerCell(row, 48, rowIdx, 0);
             OpenXmlCellHelper.SetIntegerCell(row, 49, rowIdx, 0);
@@ -493,7 +493,7 @@ public static class ClosureExporter
         }
 
         OpenXmlCellHelper.SetIntegerCell(row, 48, rowIdx, item.DeclaredCartons);
-        OpenXmlCellHelper.SetIntegerCell(row, 49, rowIdx, item.DeclaredUnits);
+        OpenXmlCellHelper.SetIntegerCell(row, 49, rowIdx, item.PackingListUnits);
 
         string normCode = OpenXmlCellHelper.NormalizeMaterialCode(item.MaterialCode);
         string empaque = empaqueMap.TryGetValue(normCode, out string? emp) && !string.IsNullOrWhiteSpace(emp)

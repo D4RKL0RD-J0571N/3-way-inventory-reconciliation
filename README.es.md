@@ -42,6 +42,8 @@ Ocho pestañas (iconos vectoriales, tooltips en español en cada control):
 - **Sin tope de filas** (IMP-187 lee más allá de la fila 600); las hojas `ESQUEMA ALISTO` se ignoran al detectar `PARTE A/B/C`.
 - **Layout #4:** los encabezados `UNIDADES BULTOS COMPLEMENTOS` no se confunden con bultos complemento (se aplica rescate matemático).
 - **Montaje a ciegas:** si hay unidades facturadas pero el físico es 0, se muestra un aviso ámbar, la advertencia `[MONTAJE A CIEGAS]`, se suspende el ítem de NCR del checklist y la diferencia no se trata como reclamo al proveedor.
+- **Packing list opcional del proveedor:** se pueden revisar archivos Excel (.xls/.xlsx/.xlsm) y PDF con texto frente al cierre y QC; los valores aceptados de unidades/bultos completan AW:AX sin reemplazar las cantidades de factura Pedido 41. Cierre + Packing List funciona sin QC; ambos archivos siguen siendo opcionales para el montaje a ciegas.
+- **Documentos escaneados:** PDFs escaneados e imágenes PNG/JPG/TIFF usan Tesseract OCR local; los PDF escaneados también requieren `pdftoppm` en PATH. Los valores OCR con confianza menor a 85% quedan marcados y desactivados para revisión. Sin esas herramientas opcionales, siguen disponibles Excel, PDF con texto y montaje a ciegas.
 
 ### Compilar, probar, ejecutar
 

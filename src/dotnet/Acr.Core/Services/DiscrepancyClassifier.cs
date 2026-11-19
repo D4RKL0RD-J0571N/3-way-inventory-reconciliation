@@ -106,6 +106,7 @@ public static class DiscrepancyClassifier
                 Category = CoalesceText(physList, declList, p => p.Category, d => d.Category),
                 OrderPo43 = orderPo43,
                 DeclaredUnits = declU,
+                PackingListUnits = SumPackingListUnits(declList),
                 PhysicalUnits = physU,
                 DifferenceUnits = diffU,
                 DeclaredCartons = declC,
@@ -134,6 +135,17 @@ public static class DiscrepancyClassifier
                 cartons += item.DeclaredCartons;
             }
             return (units, cartons);
+        }
+    }
+
+    private static int SumPackingListUnits(List<DeclaredItem> declList)
+    {
+        checked
+        {
+            int units = 0;
+            foreach (DeclaredItem item in declList)
+                units += item.PackingListUnits ?? item.DeclaredUnits;
+            return units;
         }
     }
 

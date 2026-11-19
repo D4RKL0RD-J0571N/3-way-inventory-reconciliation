@@ -74,6 +74,9 @@ public sealed record DeclaredItem
     /// <summary>Declared carton count.</summary>
     public int DeclaredCartons { get; init; }
 
+    /// <summary>Units declared by the supplier Packing List (AX); null when the closure sheet has no value.</summary>
+    public int? PackingListUnits { get; init; }
+
     /// <summary>Unit of measure (<c>"PRK"</c> or <c>"UN"</c>).</summary>
     public string? Uom { get; init; } = "UN";
 
@@ -151,6 +154,9 @@ public sealed record DiscrepancyItem
 
     /// <summary>Aggregated declared cartons.</summary>
     public int DeclaredCartons { get; init; }
+
+    /// <summary>Aggregated supplier Packing List units for AX output, falling back to invoice units when absent.</summary>
+    public int PackingListUnits { get; init; }
 
     /// <summary>Aggregated physical cartons.</summary>
     public int PhysicalCartons { get; init; }

@@ -52,6 +52,7 @@ public static class ClosureTemplateReader
         ["cost_ae"] = 30,
         ["cost_af"] = 31,
         ["cartons_aw"] = 48,
+        ["packing_units_ax"] = 49,
         ["curve_bb"] = 53,
         ["uom_bc"] = 54,
         ["qty_be"] = 56
@@ -297,6 +298,9 @@ public static class ClosureTemplateReader
             {
                 colMap["cartons_aw"] = colIdx;
             }
+            else if (h.Contains("UNIDADES", StringComparison.Ordinal) &&
+                     (h.Contains("PACKING LIST", StringComparison.Ordinal) || h.Contains("PAKING LIST", StringComparison.Ordinal)))
+                colMap["packing_units_ax"] = colIdx;
         }
     }
 
@@ -333,6 +337,7 @@ public static class ClosureTemplateReader
             SourceRow = rowIdx,
             DeclaredUnits = declaredUnits,
             DeclaredCartons = declaredCartons,
+            PackingListUnits = QcReader.ToInt(GetCell(cells, colMap, "packing_units_ax")),
             Uom = rawUom.Length > 0 ? rawUom : "UN",
             UnitCost = ResolveUnitCost(cells, colMap)
         };

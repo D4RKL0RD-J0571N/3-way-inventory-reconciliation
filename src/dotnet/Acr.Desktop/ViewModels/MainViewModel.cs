@@ -28,6 +28,9 @@ public sealed partial class MainViewModel : ObservableObject
     private string _closureTemplatePath = "";
 
     [ObservableProperty]
+    private string _supplierPackingListPath = "";
+
+    [ObservableProperty]
     private string _exportOutputPath = "";
 
     [ObservableProperty]
@@ -651,6 +654,21 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public void BrowseSupplierPackingList()
+    {
+        var dlg = new OpenFileDialog
+        {
+            Filter = "Packing List (Excel o PDF; imágenes requieren OCR) (*.xls;*.xlsx;*.xlsm;*.pdf;*.png;*.jpg;*.jpeg;*.tif;*.tiff)|*.xls;*.xlsx;*.xlsm;*.pdf;*.png;*.jpg;*.jpeg;*.tif;*.tiff|Todos los archivos (*.*)|*.*",
+            Title = "Seleccionar Packing List del proveedor"
+        };
+        if (dlg.ShowDialog() == true)
+        {
+            SupplierPackingListPath = dlg.FileName;
+            StatusMessage = $"Packing List seleccionado: {Path.GetFileName(dlg.FileName)}";
+        }
+    }
+
+    [RelayCommand]
     public void ExecuteReconciliation()
     {
         bool hasQc = !string.IsNullOrWhiteSpace(QcFilePath) && File.Exists(QcFilePath);
@@ -676,6 +694,35 @@ public sealed partial class MainViewModel : ObservableObject
             };
 
             ReceivingPipelineResult result = ReceivingPipeline.Execute(options);
+            if (!string.IsNullOrWhiteSpace(SupplierPackingListPath))
+            {
+                IReadOnlyList<SupplierPackingListRow> supplierRows = SupplierPackingListReader.Read(SupplierPackingListPath);
+                var review = new SupplierPackingListReviewWindow(
+                    SupplierPackingListPath,
+                    supplierRows,
+                    result.DeclaredItems,
+                    result.QcReport.Items)
+                {
+                    Owner = Application.Current.MainWindow
+                };
+                if (review.ShowDialog() != true)
+                {
+                    StatusMessage = "Importación del Packing List cancelada; no se aplicaron valores.";
+                    return;
+                }
+
+                IReadOnlyDictionary<string, SupplierPackingListOverride> overrides =
+                    review.AcceptedOverrides ?? new Dictionary<string, SupplierPackingListOverride>();
+                if (overrides.Count > 0)
+                {
+                    options = options with
+                    {
+                        SupplierPackingListPath = SupplierPackingListPath,
+                        SupplierPackingListOverrides = overrides
+                    };
+                    result = ReceivingPipeline.Execute(options);
+                }
+            }
             LastReconciliationResult = result;
 
             PopulateResults(result);

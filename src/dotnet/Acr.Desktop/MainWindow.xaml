@@ -357,6 +357,10 @@
         <!-- ========================================== -->
         <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="14,10">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <!-- Col 0: QC Label -->
                     <ColumnDefinition Width="Auto"/>
@@ -427,6 +431,28 @@
                         <TextBlock Text="Ejecutar Conciliación 3-Way" FontSize="11" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
+
+                <Grid Grid.Row="1" Grid.ColumnSpan="10" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Packing List proveedor (opcional):" FontWeight="SemiBold" FontSize="11"
+                               Foreground="#334155" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox Grid.Column="1" Text="{Binding SupplierPackingListPath, UpdateSourceTrigger=PropertyChanged}"
+                             VerticalAlignment="Center" FontSize="11" Padding="6,4" BorderBrush="#CBD5E1"
+                             ToolTip="Archivo opcional Excel o PDF de la lista de empaque del proveedor. Se revisará y comparará con QC si se cargó."/>
+                    <Button Grid.Column="2" Command="{Binding BrowseSupplierPackingListCommand}"
+                            Style="{StaticResource BrowseButtonStyle}" Margin="6,0,0,0"
+                            ToolTip="Seleccionar un packing list del proveedor para revisar sus cantidades y bultos.">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource GeoFolderOpen}" Width="13" Height="13" Stretch="Uniform"
+                                  Fill="#475569" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Examinar..." FontSize="11" FontWeight="Medium" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
             </Grid>
         </Border>
 

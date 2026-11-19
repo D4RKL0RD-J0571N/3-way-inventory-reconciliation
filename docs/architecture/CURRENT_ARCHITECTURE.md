@@ -24,11 +24,11 @@ Replaces the former Python-only description (audit of revision `589f6aa`, kept i
 ### Pipeline (`ReceivingPipeline.Execute`)
 
 1. **Signature check** — `WorkbookSignatureScanner` classifies each input (`QcInspection`, `ReceivingClosure`, `HybridQcAndClosure`); swapped paths are exchanged.
-2. **Read** — `QcReader` (sheet `CONTROL DATA`, header row 6; `BASE DE DATOS` for BOM; `PARTE A/B/C` detection ignoring `ESQUEMA`/`ALISTO` sheets) and `ClosureTemplateReader` (`DATOS GENERALES` + `CIERRE RECEP`, header row 12, data from row 13, declared units from `G`, cartons from `AW`, 20-empty-row early exit, no row cap).
+2. **Read** — `QcReader` (sheet `CONTROL DATA`, header row 6; `BASE DE DATOS` for BOM; `PARTE A/B/C` detection ignoring `ESQUEMA`/`ALISTO` sheets) and `ClosureTemplateReader` (`DATOS GENERALES` + `CIERRE RECEP`, header row 12, data from row 13, Pedido 41 units from `G`, Packing List units from `AX`, cartons from `AW`, 20-empty-row early exit, no row cap). An optional operator-reviewed supplier list can populate Packing List fields without changing Pedido 41 units.
 3. **Classify** — `DiscrepancyClassifier.CompareMerchandise` yields `ComparisonSummary` (Shortage, Overage, RevueltoCandidate, CartonMismatchOnly, DamageOnly, Unexpected/Missing, ExactMatch) without offsetting.
 4. **Enrich** — proportional BOM split of child SKUs (largest-remainder), curve, canonical packaging, NCR amount.
 5. **Resolve container ID** — template ID (non-numeric) → QC ID → file-name regex `\b(IMP)[\s\-_]*([0-9]+[A-Z0-9\-]*)` → file name.
-6. **Outputs** — `BultosItems`, Strip 1 (`AS:AT`), Strip 2 (`AW:AY`), optional macro-safe export (SHA-256 of `xl/vbaProject.bin` compared), JSON report and history when configured. Warnings include `[MONTAJE A CIEGAS]` when `ComparisonSummary.IsBlindReceiving` (declared > 0 and physical = 0).
+6. **Outputs** — `BultosItems`, Strip 1 (`AS:AT`), Strip 2 (`AW:AY`), optional macro-safe export (SHA-256 of `xl/vbaProject.bin` compared), JSON report and history when configured. Supplier list fields require explicit review/acceptance and compare with QC when available. Warnings include `[MONTAJE A CIEGAS]` when `ComparisonSummary.IsBlindReceiving` (declared > 0 and physical = 0).
 
 ### Safety
 

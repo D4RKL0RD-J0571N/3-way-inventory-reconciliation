@@ -18,6 +18,13 @@ public sealed record ReceivingPipelineOptions
     /// <summary>Path to the closure template (<c>CIERRE RECEP</c>) workbook.</summary>
     public required string ClosureTemplatePath { get; init; }
 
+    /// <summary>Optional operator-reviewed Packing List overrides keyed by normalized SAP material code.</summary>
+    public IReadOnlyDictionary<string, SupplierPackingListOverride> SupplierPackingListOverrides { get; init; }
+        = new Dictionary<string, SupplierPackingListOverride>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Optional source path for the operator-reviewed supplier list.</summary>
+    public string? SupplierPackingListPath { get; init; }
+
     /// <summary>Optional destination path to export a populated macro-safe closure workbook.</summary>
     public string? ExportOutputPath { get; init; }
 
@@ -41,6 +48,13 @@ public sealed record ReceivingPipelineResult
 {
     /// <summary>Resolved container identifier.</summary>
     public required string ContainerId { get; init; }
+
+    /// <summary>Supplier document and accepted per-material values used for this run, when supplied.</summary>
+    public string? SupplierPackingListPath { get; init; }
+
+    /// <summary>Accepted fields and source locations, keyed by normalized material code.</summary>
+    public IReadOnlyDictionary<string, SupplierPackingListOverride> SupplierPackingListOverrides { get; init; }
+        = new Dictionary<string, SupplierPackingListOverride>(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Parsed QC inspection report.</summary>
     public required QcInspectionReport QcReport { get; init; }
@@ -140,6 +154,21 @@ public static class ReceivingPipeline
         }
 
         ClosureTemplateData templateData = ClosureTemplateReader.ReadDeclaredItems(closurePath, options.SafetyGuard);
+        if (options.SupplierPackingListOverrides.Count > 0)
+        {
+            IReadOnlyList<DeclaredItem> updatedItems = templateData.DeclaredItems.Select(item =>
+            {
+                string key = OpenXmlCellHelper.NormalizeMaterialCode(item.MaterialCode);
+                if (!options.SupplierPackingListOverrides.TryGetValue(key, out SupplierPackingListOverride? imported))
+                    return item;
+                return item with
+                {
+                    PackingListUnits = imported.Units ?? item.PackingListUnits,
+                    DeclaredCartons = imported.Cartons ?? item.DeclaredCartons
+                };
+            }).ToList();
+            templateData = templateData with { DeclaredItems = updatedItems };
+        }
 
         QcInspectionReport qcReport;
         bool canReadQc = !string.IsNullOrWhiteSpace(qcPath) && File.Exists(qcPath);
@@ -243,6 +272,8 @@ public static class ReceivingPipeline
         return new ReceivingPipelineResult
         {
             ContainerId = containerId,
+            SupplierPackingListPath = options.SupplierPackingListPath,
+            SupplierPackingListOverrides = options.SupplierPackingListOverrides,
             QcReport = qcReport,
             DeclaredItems = templateData.DeclaredItems,
             PhysicalItems = physicalItems,
@@ -296,7 +327,7 @@ public static class ReceivingPipeline
             int physUnits = discItem?.PhysicalUnits ?? (qcItem?.CalculationResult?.CalculatedUnits ?? 0);
             int physCartons = discItem?.PhysicalCartons ?? (qcItem?.CalculationResult?.CalculatedCartons ?? 0);
             int declCartons = decl.DeclaredCartons;
-            int declUnits = decl.DeclaredUnits;
+            int declUnits = decl.PackingListUnits ?? decl.DeclaredUnits;
 
             bool isZeroTotal = physUnits == 0 && declUnits == 0 && physCartons == 0 && declCartons == 0;
             if (isZeroTotal && excludeZeroTotal)

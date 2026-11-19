@@ -42,6 +42,8 @@ Eight tabs (vector icons, Spanish tooltips on every control):
 - **No row cap** (IMP-187 reads past row 600); `ESQUEMA ALISTO` sheets are ignored when detecting `PARTE A/B/C`.
 - **Layout #4:** `UNIDADES BULTOS COMPLEMENTOS` headers are not mistaken for complement-carton counts (mathematical rescue is applied).
 - **Blind receiving (montaje a ciegas):** when invoice units are present but physical units are 0, the app shows an amber banner, a `[MONTAJE A CIEGAS]` warning, suspends the NCR checklist item and does not treat the gap as a vendor claim.
+- **Optional supplier packing list:** Excel (.xls/.xlsx/.xlsm) and text PDFs can be reviewed against closure and QC values, then accepted Packing List units/cartons populate AW:AX projections without replacing Pedido 41 invoice quantities. Closure + Packing List works without QC; both QC and Packing List remain optional for blind setup.
+- **Scanned documents:** scanned PDFs and PNG/JPG/TIFF images use local Tesseract OCR; scanned PDFs also require `pdftoppm` on PATH. OCR values below 85% confidence are flagged and left unchecked for review. Without those optional tools, normal Excel, text-PDF, and blind workflows remain available.
 
 ### Build, test, run
 
