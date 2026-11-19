@@ -279,6 +279,91 @@ public sealed class ReceivingPipelineTests : IDisposable
         Assert.Equal(10, all.Count);
     }
 
+    [Fact]
+    public void Execute_CompoundPackagingAndZeroTotal_FormatsCorrectlyInBultosAndTiras()
+    {
+        string qcPath = Path.Combine(_tempRoot, "compound_qc.xlsm");
+        using (SpreadsheetDocument doc = SpreadsheetDocument.Create(qcPath, SpreadsheetDocumentType.MacroEnabledWorkbook))
+        {
+            WorkbookPart wbPart = doc.AddWorkbookPart();
+            wbPart.Workbook = new Workbook();
+            Sheets sheets = wbPart.Workbook.AppendChild(new Sheets());
+            WorksheetPart wsPart = wbPart.AddNewPart<WorksheetPart>();
+            wsPart.Worksheet = new Worksheet(new SheetData());
+            sheets.AppendChild(new Sheet { Id = wbPart.GetIdOfPart(wsPart), SheetId = 1, Name = "CONTROL DATA" });
+
+            SheetData sd = wsPart.Worksheet.GetFirstChild<SheetData>()!;
+            WriteInlineRow(sd, 2, [(0, "CONTENEDOR"), (1, "IMP-888")]);
+            WriteInlineRow(sd, 6, [
+                (0, "TARIMA"), (1, "CATEGORIA"), (2, "MATERIAL PROVEEDOR"), (3, "MATERIAL"),
+                (4, "UM"), (5, "BULTOS ENTEROS"), (6, "UNIDADES POR BULTO"),
+                (7, "BULTOS COMPLEMENTOS"), (8, "UNIDADES BULTOS COMPLEMENTOS"),
+                (9, "TOTAL DE BULTOS"), (10, "TOTAL DE UNIDADES")
+            ]);
+            // Item 1: 8 enteros de 48 + 1 complemento de 36 = 9 bultos, 420 unidades
+            WriteInlineRow(sd, 7, [
+                (0, "1"), (1, "NAVIDAD"), (2, "V888"), (3, "5033280"),
+                (4, "UN"), (5, "8"), (6, "48"), (7, "1"), (8, "36"), (9, "9"), (10, "420")
+            ]);
+            // Item 2: Material en cero en QC (0 unidades, 0 bultos)
+            WriteInlineRow(sd, 8, [
+                (0, "2"), (1, "NAVIDAD"), (2, "V888"), (3, "5033282"),
+                (4, "UN"), (5, "0"), (6, "0"), (7, "0"), (8, "0"), (9, "0"), (10, "0")
+            ]);
+            wsPart.Worksheet.Save();
+            wbPart.Workbook.Save();
+        }
+
+        string tplPath = Path.Combine(_tempRoot, "compound_tpl.xlsm");
+        using (SpreadsheetDocument doc = SpreadsheetDocument.Create(tplPath, SpreadsheetDocumentType.MacroEnabledWorkbook))
+        {
+            WorkbookPart wbPart = doc.AddWorkbookPart();
+            wbPart.Workbook = new Workbook();
+            Sheets sheets = wbPart.Workbook.AppendChild(new Sheets());
+            WorksheetPart wsPart = wbPart.AddNewPart<WorksheetPart>();
+            wsPart.Worksheet = new Worksheet(new SheetData());
+            sheets.AppendChild(new Sheet { Id = wbPart.GetIdOfPart(wsPart), SheetId = 1, Name = "CIERRE RECEP" });
+
+            SheetData sd = wsPart.Worksheet.GetFirstChild<SheetData>()!;
+            WriteInlineRow(sd, 1, [(0, "CONTENEDOR"), (1, "IMP-888")]);
+            WriteInlineRow(sd, 12, [(2, "Categoría"), (3, "MAT. PROVEEDOR"), (4, "MATERIAL"), (6, "CANTIDAD PEDIDO 41"), (48, "Bultos según Paking List")]);
+            WriteInlineRow(sd, 13, [(2, "NAVIDAD"), (3, "V888"), (4, "5033280"), (6, "420"), (48, "9")]);
+            WriteInlineRow(sd, 14, [(2, "NAVIDAD"), (3, "V888"), (4, "5033282"), (6, "0"), (48, "0")]);
+
+            wsPart.Worksheet.Save();
+            wbPart.Workbook.Save();
+        }
+
+        ReceivingPipelineResult result = ReceivingPipeline.Execute(new ReceivingPipelineOptions
+        {
+            QcFilePath = qcPath,
+            ClosureTemplatePath = tplPath,
+            SafetyGuard = _testingGuard
+        });
+
+        Assert.Equal(2, result.BultosItems.Count);
+
+        // Item 1: 5033280
+        BultosPresentationItem bulto1 = result.BultosItems[0];
+        Assert.Equal("5033280", bulto1.MaterialCode);
+        Assert.Equal("8*48 1*36", bulto1.PackagingExpression);
+        Assert.Equal(8, bulto1.FullCartons);
+        Assert.Equal(48, bulto1.UnitsPerFullCarton);
+        Assert.Equal(1, bulto1.ComplementCartons);
+        Assert.Equal(36, bulto1.UnitsInComplement);
+        Assert.False(bulto1.IsZeroTotal);
+
+        // Item 2: 5033282 (Cero total)
+        BultosPresentationItem bulto2 = result.BultosItems[1];
+        Assert.Equal("5033282", bulto2.MaterialCode);
+        Assert.Equal("0", bulto2.PackagingExpression);
+        Assert.True(bulto2.IsZeroTotal);
+
+        // Verificación de Tira 2 (AW:AY)
+        Assert.Contains("9\t420\t8*48 1*36", result.Tira2AwAyTsv);
+        Assert.Contains("0\t0\t0", result.Tira2AwAyTsv);
+    }
+
     private ReceivingPipelineResult RunAndAssertRealPair(
         string qcRelativePath,
         string closureRelativePath,

@@ -231,6 +231,8 @@ public static class DiscrepancyClassifier
     {
         checked
         {
+            if (declU == 0 && physU == 0 && diffC == 0 && damU == 0)
+                return (DiscrepancyType.ExactMatch, "Material en plantilla sin movimiento (0 unidades facturadas y 0 unidades físicas).");
             if (declU > 0 && physU == 0)
                 return (DiscrepancyType.MissingItem, "Material declarado completamente ausente en la recepción física.");
             if (declU == 0 && physU > 0)
@@ -399,9 +401,12 @@ public static class DiscrepancyClassifier
                 else if (item.DifferenceUnits > 0)
                     totOver += item.DifferenceUnits;
 
-                if (item.DiscrepancyType == DiscrepancyType.ExactMatch)
+                if (item.DiscrepancyType == DiscrepancyType.ExactMatch && !item.IsZeroTotal)
                     cleanCount++;
             }
+
+            int activeCount = items.Count(i => !i.IsZeroTotal);
+            int discCount = activeCount - cleanCount;
 
             return new ComparisonSummary
             {
@@ -415,7 +420,7 @@ public static class DiscrepancyClassifier
                 TotalOverageUnits = totOver,
                 TotalDamagedUnits = totDam,
                 CleanMaterialsCount = cleanCount,
-                DiscrepantMaterialsCount = items.Count - cleanCount,
+                DiscrepantMaterialsCount = discCount,
                 RevueltoPairsCount = revueltoMatches.Count,
                 Items = items,
                 RevueltoMatches = revueltoMatches,

@@ -102,6 +102,7 @@
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
@@ -134,8 +135,22 @@
                         </Grid>
                     </Border>
 
+                    <!-- Discrepancy Toolbar & Zero-Total Filter Toggle -->
+                    <Grid Grid.Row="1" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Matriz de Conciliación Física vs Documental (3-Way)" FontWeight="SemiBold" FontSize="13" Foreground="#1E293B" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <CheckBox Content="Ocultar materiales en cero (0 fact / 0 fís)" 
+                                      IsChecked="{Binding HideZeroTotalItems}" 
+                                      FontWeight="Medium" Foreground="#475569" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        </StackPanel>
+                    </Grid>
+
                     <!-- Discrepancy DataGrid with Semantic Colorization & Hyperlink to SAP Diagnostic Guide -->
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding Discrepancies}" SelectedItem="{Binding SelectedDiscrepancy}" 
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding Discrepancies}" SelectedItem="{Binding SelectedDiscrepancy}" 
                               AutoGenerateColumns="False" IsReadOnly="True" 
                               Background="White" GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="32"
                               BorderBrush="#E2E8F0" BorderThickness="1">
@@ -215,6 +230,9 @@
                                 <TextBlock Text="Desglose auditado de cajas maestras (enteros), picos/complementos y unidades por bulto de muelle." FontSize="11" Foreground="#64748B"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                                <CheckBox Content="Ocultar materiales en cero" 
+                                          IsChecked="{Binding HideZeroTotalItems}" 
+                                          FontWeight="Medium" Foreground="#475569" VerticalAlignment="Center" Margin="0,0,12,0"/>
                                 <Border Background="#E0F2FE" BorderBrush="#BAE6FD" BorderThickness="1" CornerRadius="3" Padding="8,4" Margin="0,0,8,0">
                                     <TextBlock Text="{Binding BultosItems.Count, StringFormat='{}Filas Proyectadas: {0}'}" FontWeight="SemiBold" Foreground="#0369A1" FontSize="11"/>
                                 </Border>

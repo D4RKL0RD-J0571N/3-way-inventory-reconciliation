@@ -55,6 +55,9 @@ public sealed record BultosPresentationItem
     /// <summary>Bultos teóricos de Packing List (Col AW).</summary>
     public int DeclaredCartons { get; init; }
 
+    /// <summary>Unidades teóricas de Packing List / Pedido (Col AX).</summary>
+    public int DeclaredUnits { get; init; }
+
     /// <summary>Diferencia de Bultos (Físicos Muelle - Packing List).</summary>
     public int DifferenceCartons => PhysicalCartons - DeclaredCartons;
 
@@ -71,4 +74,7 @@ public sealed record BultosPresentationItem
 
     /// <summary>Observaciones del muelle o notas de empaque.</summary>
     public string Observation { get; init; } = "";
+
+    /// <summary>Indica si el material está completamente en cero (sin movimiento físico ni documental).</summary>
+    public bool IsZeroTotal => PhysicalUnits == 0 && DeclaredUnits == 0 && PhysicalCartons == 0 && DeclaredCartons == 0;
 }

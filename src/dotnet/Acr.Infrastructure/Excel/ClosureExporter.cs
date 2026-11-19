@@ -1,5 +1,6 @@
 using System.Globalization;
 using Acr.Core.Models;
+using Acr.Core.Services;
 using Acr.Infrastructure.Safety;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -166,6 +167,7 @@ public static class ClosureExporter
 
         Dictionary<string, DiscrepancyItem> itemMap = BuildItemMap(summary);
         Dictionary<string, int> curveMap = BuildQcCurveMap(qcReport);
+        Dictionary<string, string> empaqueMap = BuildEmpaqueMap(qcReport, summary);
         var sharedMasters = new Dictionary<uint, string>();
         var matchedRows = new List<int>();
         var activeRows = new HashSet<int>();
@@ -177,7 +179,7 @@ public static class ClosureExporter
                 continue;
 
             ProcessCierreRow(
-                wbPart, sheetData, row, rowIdx, itemMap, curveMap, sharedStrings, sstCache,
+                wbPart, sheetData, row, rowIdx, itemMap, curveMap, empaqueMap, sharedStrings, sstCache,
                 sharedMasters, matchedRows, activeRows, metrics);
         }
 
@@ -226,6 +228,46 @@ public static class ClosureExporter
         return map;
     }
 
+    private static Dictionary<string, string> BuildEmpaqueMap(QcInspectionReport? qcReport, ComparisonSummary summary)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (qcReport is null)
+            return map;
+
+        var discMap = summary.Items.ToDictionary(
+            i => OpenXmlCellHelper.NormalizeMaterialCode(i.MaterialCode),
+            i => i,
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (QcInspectionItem item in qcReport.Items)
+        {
+            if (item.IsChildSku)
+                continue;
+            string norm = OpenXmlCellHelper.NormalizeMaterialCode(item.MaterialCode);
+            if (norm.Length == 0 || map.ContainsKey(norm))
+                continue;
+
+            discMap.TryGetValue(norm, out DiscrepancyItem? disc);
+            int curve = item.CurveSystem is > 0 ? item.CurveSystem.Value : (item.CurvePhysical ?? 1);
+            int fullCartons = item.FullCartons ?? (item.CalculationResult?.FullCartonsUsed ?? (curve > 0 ? (disc?.PhysicalUnits ?? 0) / curve : (disc?.PhysicalCartons ?? 0)));
+            int unitsPerFull = item.UnitsPerFullCarton ?? (item.CalculationResult?.UnitsPerFullCartonUsed ?? curve);
+            int compCartons = item.ComplementCartons ?? (item.CalculationResult?.ComplementCartonsUsed ?? 0);
+            int unitsInComp = item.UnitsInComplement ?? (item.CalculationResult?.ComplementUnits ?? 0);
+
+            string empaque = QuantityEngine.FormatPackagingExpression(
+                fullCartons,
+                unitsPerFull,
+                compCartons,
+                unitsInComp,
+                curve,
+                totalUnits: disc?.PhysicalUnits ?? (item.CalculationResult?.CalculatedUnits ?? 0),
+                totalCartons: disc?.PhysicalCartons ?? (item.CalculationResult?.CalculatedCartons ?? 0));
+
+            map[norm] = empaque;
+        }
+        return map;
+    }
+
     private static void ProcessCierreRow(
         WorkbookPart wbPart,
         SheetData sheetData,
@@ -233,6 +275,7 @@ public static class ClosureExporter
         int rowIdx,
         Dictionary<string, DiscrepancyItem> itemMap,
         Dictionary<string, int> curveMap,
+        Dictionary<string, string> empaqueMap,
         IReadOnlyList<string> sharedStrings,
         Dictionary<string, int> sstCache,
         Dictionary<uint, string> sharedMasters,
@@ -258,7 +301,7 @@ public static class ClosureExporter
 
         matchedRows.Add(rowIdx);
         metrics.MatchedRowsCount++;
-        PopulateMatchedCierreRow(wbPart, sheetData, row, rowIdx, item, curveMap, sstCache, sharedMasters, metrics);
+        PopulateMatchedCierreRow(wbPart, sheetData, row, rowIdx, item, curveMap, empaqueMap, sstCache, sharedMasters, metrics);
     }
 
     private static void TrackSharedMastersInRow(Row row, Dictionary<uint, string> sharedMasters)
@@ -297,6 +340,7 @@ public static class ClosureExporter
         int rowIdx,
         DiscrepancyItem item,
         Dictionary<string, int> curveMap,
+        Dictionary<string, string> empaqueMap,
         Dictionary<string, int> sstCache,
         Dictionary<uint, string> sharedMasters,
         ExportMetrics metrics)
@@ -305,7 +349,7 @@ public static class ClosureExporter
         EnsureOrRepairFormula(sheetData, row, 7, rowIdx, $"+G{r}-J{r}-N{r}-O{r}+L{r}+P{r}+Q{r}", sharedMasters, metrics);
 
         WriteRevueltoColumns(wbPart, row, rowIdx, item, sstCache);
-        WritePhysicalAndDeclaredColumns(wbPart, row, rowIdx, item, curveMap, sstCache);
+        WritePhysicalAndDeclaredColumns(wbPart, row, rowIdx, item, curveMap, empaqueMap, sstCache);
 
         EnsureOrRepairFormula(sheetData, row, 46, rowIdx, $"+AT{r}-H{r}", sharedMasters, metrics);
         EnsureOrRepairFormula(sheetData, row, 51, rowIdx, $"+AX{r}-H{r}", sharedMasters, metrics);
@@ -432,6 +476,7 @@ public static class ClosureExporter
         int rowIdx,
         DiscrepancyItem item,
         Dictionary<string, int> curveMap,
+        Dictionary<string, string> empaqueMap,
         Dictionary<string, int> sstCache)
     {
         int physUnits = item.PhysicalUnits == 0 ? 0 : item.PhysicalUnits;
@@ -451,9 +496,9 @@ public static class ClosureExporter
         OpenXmlCellHelper.SetIntegerCell(row, 49, rowIdx, item.DeclaredUnits);
 
         string normCode = OpenXmlCellHelper.NormalizeMaterialCode(item.MaterialCode);
-        string empaque = curveMap.TryGetValue(normCode, out int curve) && curve > 1
-            ? curve.ToString(CultureInfo.InvariantCulture)
-            : "1";
+        string empaque = empaqueMap.TryGetValue(normCode, out string? emp) && !string.IsNullOrWhiteSpace(emp)
+            ? emp
+            : (curveMap.TryGetValue(normCode, out int curve) && curve > 1 ? curve.ToString(CultureInfo.InvariantCulture) : "1");
         OpenXmlCellHelper.SetSharedStringCell(row, 50, rowIdx, empaque, wbPart, sstCache);
     }
 

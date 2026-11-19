@@ -70,6 +70,16 @@ class MaterialDiscrepancy:
     flags: List[str] = field(default_factory=list)
     explanation: str = ""
 
+    @property
+    def is_zero_total(self) -> bool:
+        return (
+            self.declared_units == 0 and
+            self.physical_units == 0 and
+            self.declared_cartons == 0 and
+            self.physical_cartons == 0 and
+            self.damaged_units == 0
+        )
+
 
 @dataclass
 class ComparisonSummary:
@@ -87,6 +97,14 @@ class ComparisonSummary:
     discrepant_materials_count: int = 0
     revuelto_pairs_count: int = 0
     items: List[MaterialDiscrepancy] = field(default_factory=list)
+
+    @property
+    def active_styles_count(self) -> int:
+        return sum(1 for it in self.items if not it.is_zero_total)
+
+    @property
+    def zero_total_materials_count(self) -> int:
+        return sum(1 for it in self.items if it.is_zero_total)
 
 
 def _determine_discrepancy_type(
@@ -240,8 +258,9 @@ def compare_merchandise(
     overage_u = sum(it.difference_units for it in discrepancies if it.difference_units > 0)
     damaged_u = sum(it.damaged_units for it in discrepancies)
 
-    clean_count = sum(1 for it in discrepancies if it.discrepancy_type == DiscrepancyType.EXACT_MATCH)
-    disc_count = len(discrepancies) - clean_count
+    clean_count = sum(1 for it in discrepancies if it.discrepancy_type == DiscrepancyType.EXACT_MATCH and not it.is_zero_total)
+    active_count = sum(1 for it in discrepancies if not it.is_zero_total)
+    disc_count = active_count - clean_count
 
     return ComparisonSummary(
         total_declared_units=tot_decl_u,

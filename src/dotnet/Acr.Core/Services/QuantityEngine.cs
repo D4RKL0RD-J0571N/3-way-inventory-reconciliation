@@ -56,6 +56,58 @@ public static class QuantityEngine
     }
 
     /// <summary>
+    /// Genera la expresión canónica de empaque (ej. "8*48 1*36", "60", "0")
+    /// reflejando con exactitud bultos enteros y bultos complementarios / picos.
+    /// </summary>
+    public static string FormatPackagingExpression(
+        int fullCartons,
+        int unitsPerFull,
+        int compCartons,
+        int unitsInComp,
+        int curve,
+        int totalUnits = 0,
+        int totalCartons = 0)
+    {
+        // 1. Cero total / entrega diferida
+        if (totalUnits == 0 && totalCartons == 0 && fullCartons == 0 && compCartons == 0 && unitsInComp == 0)
+            return "0";
+
+        // 2. Resolver unidades por bulto entero si no vinieron explícitas pero hay curva
+        int uFull = unitsPerFull > 0 ? unitsPerFull : (curve > 0 ? curve : 0);
+
+        // 3. Compuesto: Enteros + Complementos o Picos
+        if (fullCartons > 0 && uFull > 0 && (compCartons > 0 || unitsInComp > 0))
+        {
+            int cCartons = compCartons;
+            int cUnits = unitsInComp;
+
+            if (cCartons <= 0 && cUnits > 0)
+            {
+                // Si Bultos Complementos es cero o vacío y Unidades Complementos > 0
+                cCartons = (totalCartons > fullCartons) ? (totalCartons - fullCartons) : 1;
+            }
+
+            if (cCartons > 0 && cUnits > 0)
+            {
+                return $"{fullCartons}*{uFull} {cCartons}*{cUnits}";
+            }
+            if (cCartons > 0 && cUnits == 0)
+            {
+                return $"{fullCartons}*{uFull}";
+            }
+        }
+
+        // 4. Solo bultos enteros sin complementos
+        if (fullCartons > 0 && uFull > 0)
+        {
+            return uFull.ToString(CultureInfo.InvariantCulture);
+        }
+
+        // 5. Fallback por curva o unitario
+        return curve > 1 ? curve.ToString(CultureInfo.InvariantCulture) : "1";
+    }
+
+    /// <summary>
     /// Calculates deterministic physical units, cartons, prepacks, loose remainders, and audit flags.
     /// </summary>
     public static CartonCalculationResult CalculateCartonQuantities(CartonCalculationInput input)
