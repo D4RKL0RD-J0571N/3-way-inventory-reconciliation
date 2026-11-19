@@ -75,23 +75,20 @@ public static class QuantityEngine
         // 2. Resolver unidades por bulto entero si no vinieron explícitas pero hay curva
         int uFull = unitsPerFull > 0 ? unitsPerFull : (curve > 0 ? curve : 0);
 
-        // 3. Compuesto: Enteros + Complementos o Picos
+        // 3. Compuesto: Enteros + Complementos o Picos / Unidades Sueltas
         if (fullCartons > 0 && uFull > 0 && (compCartons > 0 || unitsInComp > 0))
         {
-            int cCartons = compCartons;
-            int cUnits = unitsInComp;
-
-            if (cCartons <= 0 && cUnits > 0)
+            if (compCartons > 0 && unitsInComp > 0)
             {
-                // Si Bultos Complementos es cero o vacío y Unidades Complementos > 0
-                cCartons = (totalCartons > fullCartons) ? (totalCartons - fullCartons) : 1;
+                return $"{fullCartons}*{uFull} {compCartons}*{unitsInComp}";
             }
-
-            if (cCartons > 0 && cUnits > 0)
+            if (compCartons <= 0 && unitsInComp > 0)
             {
-                return $"{fullCartons}*{uFull} {cCartons}*{cUnits}";
+                // Si no hay bultos complementos pero sí unidades complemento,
+                // son unidades sueltas: no se deduce un bulto adicional, se representa como "8*48 +36"
+                return $"{fullCartons}*{uFull} +{unitsInComp}";
             }
-            if (cCartons > 0 && cUnits == 0)
+            if (compCartons > 0 && unitsInComp == 0)
             {
                 return $"{fullCartons}*{uFull}";
             }
