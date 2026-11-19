@@ -75,7 +75,7 @@ public sealed class MainViewModelTests
 
         Assert.NotNull(vm.SelectedDiagnosticGuide);
         Assert.Contains("FALTANTE", vm.SelectedDiagnosticGuide.GuideId);
-        Assert.Equal(2, vm.SelectedTabIndex); // Switched to Tab 3 (Index 2)
+        Assert.Equal(1, vm.SelectedTabIndex); // Switched to Tab 2 (Index 1)
     }
 
     [Fact]

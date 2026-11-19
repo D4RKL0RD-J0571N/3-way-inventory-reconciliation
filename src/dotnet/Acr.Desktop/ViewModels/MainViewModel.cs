@@ -243,7 +243,7 @@ public sealed partial class MainViewModel : ObservableObject
         if (matchedGuide is not null)
         {
             SelectedDiagnosticGuide = matchedGuide;
-            SelectedTabIndex = 2; // Jump directly to SAP Knowledge Tab
+            SelectedTabIndex = 1; // Jump directly to SAP Knowledge Tab (Tab 2)
             StatusMessage = $"Abriendo guía de diagnóstico para discrepancia '{item.DiscrepancyType}' del material {item.MaterialCode}.";
         }
         else
