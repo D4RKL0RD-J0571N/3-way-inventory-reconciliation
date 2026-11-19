@@ -1,0 +1,5 @@
+# Treat legacy Python scripts and baseline test suites as vendored/documentation
+# so GitHub Linguist correctly detects C# / .NET 10 as the primary repository language
+*.py linguist-vendored
+tests/** linguist-vendored
+tools/** linguist-vendored
