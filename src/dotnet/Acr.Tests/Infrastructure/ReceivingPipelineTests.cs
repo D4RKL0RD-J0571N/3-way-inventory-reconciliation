@@ -341,7 +341,8 @@ public sealed class ReceivingPipelineTests : IDisposable
             SafetyGuard = _testingGuard
         });
 
-        Assert.Equal(2, result.BultosItems.Count);
+        // Con ExcludeZeroTotalFromStripsAndBultos activo por defecto, el material en cero no aparece en Bultos ni en las Tiras
+        Assert.Single(result.BultosItems);
 
         // Item 1: 5033280
         BultosPresentationItem bulto1 = result.BultosItems[0];
@@ -353,15 +354,23 @@ public sealed class ReceivingPipelineTests : IDisposable
         Assert.Equal(36, bulto1.UnitsInComplement);
         Assert.False(bulto1.IsZeroTotal);
 
-        // Item 2: 5033282 (Cero total)
-        BultosPresentationItem bulto2 = result.BultosItems[1];
-        Assert.Equal("5033282", bulto2.MaterialCode);
-        Assert.Equal("0", bulto2.PackagingExpression);
-        Assert.True(bulto2.IsZeroTotal);
-
-        // Verificación de Tira 2 (AW:AY)
+        // Verificación de Tira 2 (AW:AY) y Tira 1 (AS:AT):
+        // Contienen el material con mercancía real y omiten el material en cero
         Assert.Contains("9\t420\t8*48 1*36", result.Tira2AwAyTsv);
-        Assert.Contains("0\t0\t0", result.Tira2AwAyTsv);
+        Assert.Contains("9\t420", result.Tira1AsAtTsv);
+        Assert.DoesNotContain("0\t0\t0", result.Tira2AwAyTsv);
+        Assert.DoesNotContain("0\t0", result.Tira1AsAtTsv);
+
+        // Si se desactiva explícitamente ExcludeZeroTotalFromStripsAndBultos, se incluyen ambos
+        ReceivingPipelineResult resultWithZeros = ReceivingPipeline.Execute(new ReceivingPipelineOptions
+        {
+            QcFilePath = qcPath,
+            ClosureTemplatePath = tplPath,
+            ExcludeZeroTotalFromStripsAndBultos = false,
+            SafetyGuard = _testingGuard
+        });
+        Assert.Equal(2, resultWithZeros.BultosItems.Count);
+        Assert.Contains("0\t0\t0", resultWithZeros.Tira2AwAyTsv);
     }
 
     private ReceivingPipelineResult RunAndAssertRealPair(
