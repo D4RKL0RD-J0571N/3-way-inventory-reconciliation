@@ -1,0 +1,5 @@
+{
+  "name": "ACR — ReconcileAI 3-Way Inventory Reconciliation",
+  "description": "Universal 3-Way Supply Chain Inventory Reconciliation & Goods Receipt Closure Assistant for Purchase Orders (PO 43), Customs Invoices (Doc 41), and Physical Warehouse Dock Counts.",
+  "requestFramePermissions": []
+}

@@ -29,6 +29,12 @@ dist/
 *.exe
 publish/
 
+# Node / Web
+node_modules/
+web/node_modules/
+web/dist/
+.npm/
+
 # .NET / C#
 [Bb]in/
 [Oo]bj/
