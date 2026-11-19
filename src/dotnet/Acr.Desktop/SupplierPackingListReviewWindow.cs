@@ -41,6 +41,16 @@ public sealed class SupplierPackingListReviewWindow : Window
             .Where(x => x.Key.Length > 0)
             .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
         _validTargetCodes = declaredByCode.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var declaredByVendorCode = declaredItems
+            .Where(x => !string.IsNullOrWhiteSpace(x.VendorMaterial))
+            .GroupBy(x => NormalizeMaterialCode(x.VendorMaterial!), StringComparer.OrdinalIgnoreCase)
+            .Where(x => x.Key.Length > 0)
+            .ToDictionary(
+                x => x.Key,
+                x => x.GroupBy(item => NormalizeMaterialCode(item.MaterialCode), StringComparer.OrdinalIgnoreCase)
+                    .Select(items => items.First())
+                    .ToList(),
+                StringComparer.OrdinalIgnoreCase);
         var qcByCode = qcItems.Where(x => !x.IsChildSku)
             .GroupBy(x => NormalizeMaterialCode(x.MaterialCode), StringComparer.OrdinalIgnoreCase)
             .Where(x => x.Key.Length > 0)
@@ -51,19 +61,44 @@ public sealed class SupplierPackingListReviewWindow : Window
             .Select(group =>
             {
                 string key = group.Key;
-                bool matched = declaredByCode.TryGetValue(key, out DeclaredItem? target);
-                qcByCode.TryGetValue(key, out QcInspectionItem? qc);
+                DeclaredItem? target = null;
+                string matchType = "";
+                IReadOnlyList<DeclaredItem> vendorCandidates = Array.Empty<DeclaredItem>();
+                bool matched = declaredByCode.TryGetValue(key, out target);
+                if (matched)
+                {
+                    matchType = "Código SAP";
+                }
+                else if (declaredByVendorCode.TryGetValue(key, out List<DeclaredItem>? mappedItems))
+                {
+                    vendorCandidates = mappedItems;
+                    if (mappedItems.Count == 1)
+                    {
+                        target = mappedItems[0];
+                        matched = true;
+                        matchType = "MAT. PROVEEDOR";
+                    }
+                    else
+                    {
+                        matchType = "MAT. PROVEEDOR ambiguo";
+                    }
+                }
+                string qcMatchKey = target is not null ? NormalizeMaterialCode(target.MaterialCode) : key;
+                qcByCode.TryGetValue(qcMatchKey, out QcInspectionItem? qc);
                 return new PackingListReviewRow
                 {
                     SupplierCode = group.First().MaterialCode,
                     Description = group.First().Description,
+                    MatchType = matchType,
                     SourceLocation = string.Join(", ", group.Select(x => x.SourceLocation)),
                     SourceRows = group.ToList(),
                     Units = group.Any(x => x.Units.HasValue) ? group.Sum(x => x.Units ?? 0) : null,
                     Cartons = group.Any(x => x.Cartons.HasValue) ? group.Sum(x => x.Cartons ?? 0) : null,
                     ConfidencePercent = (int)Math.Round(group.Min(x => x.Confidence) * 100),
                     TargetMaterialCode = matched ? target!.MaterialCode : "",
-                    SuggestedMaterialCode = matched ? "" : FindDescriptionCandidate(group.First().Description, declaredItems),
+                    SuggestedMaterialCode = matched ? "" : vendorCandidates.Count > 1
+                        ? string.Join(", ", vendorCandidates.Select(x => x.MaterialCode))
+                        : FindDescriptionCandidate(group.First().Description, declaredItems),
                     ClosureUnits = target?.PackingListUnits ?? target?.DeclaredUnits,
                     ClosureCartons = target?.DeclaredCartons,
                     QcUnits = qc?.CalculationResult?.CalculatedUnits,
@@ -115,6 +150,7 @@ public sealed class SupplierPackingListReviewWindow : Window
         };
         AddTextColumn("Código proveedor", nameof(PackingListReviewRow.SupplierCode), 125, true, "Código o referencia del artículo detectado en el documento del proveedor.");
         AddTextColumn("Descripción", nameof(PackingListReviewRow.Description), 190, true, "Descripción del producto detectada en el documento del proveedor.");
+        AddTextColumn("Tipo coincidencia", nameof(PackingListReviewRow.MatchType), 115, true, "Indica si el código coincidió con el material SAP o con MAT. PROVEEDOR de la plantilla.");
         AddTextColumn("Ubicación fuente", nameof(PackingListReviewRow.SourceLocation), 155, true, "Página, hoja y fila de donde se extrajeron los valores.");
         AddTextColumn("Unidades PL", nameof(PackingListReviewRow.Units), 85, false, "Unidades declaradas por el proveedor. Puede corregir este valor antes de importarlo.");
         AddTextColumn("Bultos PL", nameof(PackingListReviewRow.Cartons), 75, false, "Bultos declarados por el proveedor. Puede corregir este valor antes de importarlo.");
@@ -293,6 +329,7 @@ public sealed partial class PackingListReviewRow : ObservableObject
 {
     [ObservableProperty] private string _supplierCode = "";
     [ObservableProperty] private string _description = "";
+    [ObservableProperty] private string _matchType = "";
     [ObservableProperty] private string _sourceLocation = "";
     [ObservableProperty] private string _targetMaterialCode = "";
     [ObservableProperty] private string _suggestedMaterialCode = "";
