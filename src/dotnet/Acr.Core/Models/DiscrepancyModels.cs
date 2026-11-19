@@ -201,6 +201,79 @@ public sealed record DiscrepancyItem
         DiscrepancyType.MissingItem => "FALTANTE TOTAL",
         _ => DiscrepancyType.ToString()
     };
+
+    /// <summary>Color de fondo semántico para el badge del tipo de discrepancia (Hex RGBA).</summary>
+    public string BadgeBackgroundColor => DiscrepancyType switch
+    {
+        DiscrepancyType.ExactMatch => "#DCFCE7", // Verde suave
+        DiscrepancyType.Shortage => "#FEE2E2",   // Rojo suave
+        DiscrepancyType.MissingItem => "#FEE2E2",// Rojo suave
+        DiscrepancyType.Overage => "#FEF3C7",    // Ámbar suave
+        DiscrepancyType.UnexpectedItem => "#FEF3C7", // Ámbar suave
+        DiscrepancyType.RevueltoCandidate => "#F3E8FF", // Púrpura suave
+        DiscrepancyType.DamageOnly => "#FFE4E6", // Rosa/Rojo suave
+        DiscrepancyType.CartonMismatchOnly => "#E0F2FE", // Azul cielo suave
+        _ => "#F1F5F9"
+    };
+
+    /// <summary>Color de texto semántico para el badge del tipo de discrepancia.</summary>
+    public string BadgeForegroundColor => DiscrepancyType switch
+    {
+        DiscrepancyType.ExactMatch => "#15803D", // Verde fuerte
+        DiscrepancyType.Shortage => "#B91C1C",   // Rojo fuerte
+        DiscrepancyType.MissingItem => "#B91C1C",// Rojo fuerte
+        DiscrepancyType.Overage => "#B45309",    // Ámbar fuerte
+        DiscrepancyType.UnexpectedItem => "#B45309", // Ámbar fuerte
+        DiscrepancyType.RevueltoCandidate => "#7E22CE", // Púrpura fuerte
+        DiscrepancyType.DamageOnly => "#BE123C", // Rosa/Rojo fuerte
+        DiscrepancyType.CartonMismatchOnly => "#0369A1", // Azul fuerte
+        _ => "#334155"
+    };
+
+    /// <summary>Color del borde semántico de 1px para el badge.</summary>
+    public string BadgeBorderColor => DiscrepancyType switch
+    {
+        DiscrepancyType.ExactMatch => "#86EFAC",
+        DiscrepancyType.Shortage => "#FCA5A5",
+        DiscrepancyType.MissingItem => "#FCA5A5",
+        DiscrepancyType.Overage => "#FCD34D",
+        DiscrepancyType.UnexpectedItem => "#FCD34D",
+        DiscrepancyType.RevueltoCandidate => "#D8B4FE",
+        DiscrepancyType.DamageOnly => "#FDA4AF",
+        DiscrepancyType.CartonMismatchOnly => "#BAE6FD",
+        _ => "#CBD5E1"
+    };
+
+    /// <summary>Color de texto para la celda de Diferencia de Unidades (Verde si 0, Rojo si negativo, Ámbar si positivo).</summary>
+    public string DeltaUnitsColor => DifferenceUnits switch
+    {
+        0 => "#16A34A",
+        < 0 => "#DC2626",
+        > 0 => "#D97706"
+    };
+
+    /// <summary>Color de texto para la celda de Diferencia de Bultos.</summary>
+    public string DeltaCartonsColor => DifferenceCartons switch
+    {
+        0 => "#16A34A",
+        < 0 => "#DC2626",
+        > 0 => "#D97706"
+    };
+
+    /// <summary>Color de texto para unidades dañadas.</summary>
+    public string DamagedUnitsColor => DamagedUnits > 0 ? "#E11D48" : "#94A3B8";
+
+    /// <summary>Color de fondo sutil para resaltar toda la fila cuando hay discrepancia crítica.</summary>
+    public string RowBackgroundColor => DiscrepancyType switch
+    {
+        DiscrepancyType.ExactMatch => "#FFFFFF",
+        DiscrepancyType.Shortage or DiscrepancyType.MissingItem => "#FFF5F5",
+        DiscrepancyType.Overage or DiscrepancyType.UnexpectedItem => "#FFFBEB",
+        DiscrepancyType.RevueltoCandidate => "#FAF5FF",
+        DiscrepancyType.DamageOnly => "#FFF1F2",
+        DiscrepancyType.CartonMismatchOnly => "#F0F9FF",
+        _ => "#FFFFFF"
+    };
 }
 
 /// <summary>

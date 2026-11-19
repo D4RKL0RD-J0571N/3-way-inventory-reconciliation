@@ -134,31 +134,60 @@
                         </Grid>
                     </Border>
 
-                    <!-- Discrepancy DataGrid with Hyperlink to SAP Diagnostic Guide -->
+                    <!-- Discrepancy DataGrid with Semantic Colorization & Hyperlink to SAP Diagnostic Guide -->
                     <DataGrid Grid.Row="1" ItemsSource="{Binding Discrepancies}" SelectedItem="{Binding SelectedDiscrepancy}" 
                               AutoGenerateColumns="False" IsReadOnly="True" 
-                              Background="White" GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="30"
+                              Background="White" GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="32"
                               BorderBrush="#E2E8F0" BorderThickness="1">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="{Binding RowBackgroundColor}"/>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Material" Binding="{Binding MaterialCode}" Width="105"/>
+                            <DataGridTextColumn Header="Material" Binding="{Binding MaterialCode}" Width="105" FontWeight="SemiBold"/>
                             <DataGridTextColumn Header="Descripción" Binding="{Binding Description}" Width="160"/>
                             <DataGridTextColumn Header="Categoría" Binding="{Binding Category}" Width="100"/>
                             <DataGridTextColumn Header="U. Facturadas" Binding="{Binding DeclaredUnits, StringFormat={}{0:N0}}" Width="90"/>
-                            <DataGridTextColumn Header="U. Físicas" Binding="{Binding PhysicalUnits, StringFormat={}{0:N0}}" Width="90"/>
-                            <DataGridTextColumn Header="Diferencia U." Binding="{Binding DifferenceUnits, StringFormat={}{0:N0}}" Width="90"/>
+                            <DataGridTextColumn Header="U. Físicas" Binding="{Binding PhysicalUnits, StringFormat={}{0:N0}}" Width="90" FontWeight="SemiBold"/>
+                            
+                            <!-- Diferencia Unidades con color semántico -->
+                            <DataGridTemplateColumn Header="Diferencia U." Width="95">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DifferenceUnits, StringFormat={}{0:N0}}" 
+                                                   Foreground="{Binding DeltaUnitsColor}" 
+                                                   FontWeight="Bold" VerticalAlignment="Center" Margin="4,0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
                             <DataGridTextColumn Header="Bultos Fact." Binding="{Binding DeclaredCartons, StringFormat={}{0:N0}}" Width="80"/>
                             <DataGridTextColumn Header="Bultos Físicos" Binding="{Binding PhysicalCartons, StringFormat={}{0:N0}}" Width="85"/>
-                            <DataGridTextColumn Header="Dañados" Binding="{Binding DamagedUnits, StringFormat={}{0:N0}}" Width="70"/>
                             
-                            <!-- Discrepancy Type with Interactive Diagnostic Button in Spanish -->
-                            <DataGridTemplateColumn Header="Tipo Discrepancia / Diagnóstico" Width="180">
+                            <!-- Dañados con alerta roja si es mayor a 0 -->
+                            <DataGridTemplateColumn Header="Dañados" Width="75">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DamagedUnits, StringFormat={}{0:N0}}" 
+                                                   Foreground="{Binding DamagedUnitsColor}" 
+                                                   FontWeight="Bold" VerticalAlignment="Center" Margin="4,0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            
+                            <!-- Discrepancy Type with Semantic Badge & Diagnostic Button -->
+                            <DataGridTemplateColumn Header="Tipo Discrepancia / Diagnóstico" Width="195">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Content="{Binding DiscrepancyTypeDescription}" 
                                                 Command="{Binding DataContext.OpenDiagnosticGuideForDiscrepancyCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
                                                 CommandParameter="{Binding}"
-                                                Padding="6,2" Margin="2"
-                                                Background="#E0F2FE" Foreground="#0369A1" BorderBrush="#BAE6FD" FontWeight="SemiBold"
+                                                Padding="8,3" Margin="2"
+                                                Background="{Binding BadgeBackgroundColor}" 
+                                                Foreground="{Binding BadgeForegroundColor}" 
+                                                BorderBrush="{Binding BadgeBorderColor}" 
+                                                FontWeight="Bold" FontSize="11"
                                                 ToolTip="Haga clic para abrir la Guía de Diagnóstico SAP correspondiente"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -195,14 +224,19 @@
 
                     <DataGrid Grid.Row="1" ItemsSource="{Binding BultosItems}" SelectedItem="{Binding SelectedBultoItem}"
                               AutoGenerateColumns="False" IsReadOnly="True"
-                              Background="White" GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="28"
+                              Background="White" GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="30"
                               BorderBrush="#E2E8F0" BorderThickness="1">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Background" Value="{Binding RowBackgroundColor}"/>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Fila Cierre" Binding="{Binding CierreRow}" Width="75"/>
                             <DataGridTextColumn Header="Categoría (Col B)" Binding="{Binding Category}" Width="100"/>
-                            <DataGridTextColumn Header="Bultos Muelle (Col C)" Binding="{Binding PhysicalCartons, StringFormat={}{0:N0}}" Width="95"/>
-                            <DataGridTextColumn Header="Unidades Muelle (Col D)" Binding="{Binding PhysicalUnits, StringFormat={}{0:N0}}" Width="100"/>
-                            <DataGridTextColumn Header="Material SAP (Col E)" Binding="{Binding MaterialCode}" Width="105"/>
+                            <DataGridTextColumn Header="Bultos Muelle (Col C)" Binding="{Binding PhysicalCartons, StringFormat={}{0:N0}}" Width="95" FontWeight="SemiBold"/>
+                            <DataGridTextColumn Header="Unidades Muelle (Col D)" Binding="{Binding PhysicalUnits, StringFormat={}{0:N0}}" Width="100" FontWeight="SemiBold"/>
+                            <DataGridTextColumn Header="Material SAP (Col E)" Binding="{Binding MaterialCode}" Width="105" FontWeight="SemiBold"/>
                             <DataGridTextColumn Header="Recibido Real (Col F)" Binding="{Binding ReceivedUnits, StringFormat={}{0:N0}}" Width="95"/>
                             <DataGridTextColumn Header="Curva (Col G)" Binding="{Binding Curve}" Width="65"/>
                             <DataGridTextColumn Header="UM (Col H)" Binding="{Binding Uom}" Width="55"/>
@@ -212,7 +246,18 @@
                             <DataGridTextColumn Header="Bultos Picos" Binding="{Binding ComplementCartons, StringFormat={}{0:N0}}" Width="80"/>
                             <DataGridTextColumn Header="Unid/Pico" Binding="{Binding UnitsInComplement, StringFormat={}{0:N0}}" Width="70"/>
                             <DataGridTextColumn Header="Bultos Fact." Binding="{Binding DeclaredCartons, StringFormat={}{0:N0}}" Width="75"/>
-                            <DataGridTextColumn Header="Dif. Bultos" Binding="{Binding DifferenceCartons, StringFormat={}{0:N0}}" Width="75"/>
+                            
+                            <!-- Dif Bultos con color semántico -->
+                            <DataGridTemplateColumn Header="Dif. Bultos" Width="85">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding DifferenceCartons, StringFormat={}{0:N0}}" 
+                                                   Foreground="{Binding DifferenceCartonsColor}" 
+                                                   FontWeight="Bold" VerticalAlignment="Center" Margin="4,0"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
                             <DataGridTextColumn Header="Descripción (Col I)" Binding="{Binding Description}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>

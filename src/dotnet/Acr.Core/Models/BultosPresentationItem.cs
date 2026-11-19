@@ -58,6 +58,17 @@ public sealed record BultosPresentationItem
     /// <summary>Diferencia de Bultos (Físicos Muelle - Packing List).</summary>
     public int DifferenceCartons => PhysicalCartons - DeclaredCartons;
 
+    /// <summary>Color para resaltar diferencias de bultos (Verde si 0, Rojo si negativo, Ámbar si positivo).</summary>
+    public string DifferenceCartonsColor => DifferenceCartons switch
+    {
+        0 => "#16A34A",
+        < 0 => "#DC2626",
+        > 0 => "#D97706"
+    };
+
+    /// <summary>Color de fondo para la fila de bultos si hay descuadre.</summary>
+    public string RowBackgroundColor => DifferenceCartons == 0 ? "#FFFFFF" : "#FFFBEB";
+
     /// <summary>Observaciones del muelle o notas de empaque.</summary>
     public string Observation { get; init; } = "";
 }
