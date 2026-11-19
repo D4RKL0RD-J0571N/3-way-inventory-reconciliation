@@ -188,61 +188,72 @@ public sealed record DiscrepancyItem
     /// <summary>Concise Spanish explanation of the discrepancy.</summary>
     public string Explanation { get; init; } = "";
 
+    /// <summary>Indica si el material no tiene movimiento en absoluto (0 declaradas, 0 físicas, 0 bultos).</summary>
+    public bool IsZeroTotal => DeclaredUnits == 0 && PhysicalUnits == 0 && DeclaredCartons == 0 && PhysicalCartons == 0 && DamagedUnits == 0;
+
     /// <summary>Texto en español del tipo de discrepancia basado en los términos de CIERRE RECEP.</summary>
-    public string DiscrepancyTypeDescription => DiscrepancyType switch
-    {
-        DiscrepancyType.ExactMatch => "CUADRADO (0 DIF)",
-        DiscrepancyType.Shortage => "FALTANTE",
-        DiscrepancyType.Overage => "SOBRANTE",
-        DiscrepancyType.RevueltoCandidate => "REVUELTO",
-        DiscrepancyType.CartonMismatchOnly => "DIF. BULTOS",
-        DiscrepancyType.DamageOnly => "DAÑADO",
-        DiscrepancyType.UnexpectedItem => "SOBRANTE (NO FACTURADO)",
-        DiscrepancyType.MissingItem => "FALTANTE TOTAL",
-        _ => DiscrepancyType.ToString()
-    };
+    public string DiscrepancyTypeDescription => IsZeroTotal
+        ? "SIN MOVIMIENTO (0 TOTAL)"
+        : DiscrepancyType switch
+        {
+            DiscrepancyType.ExactMatch => "CUADRADO (0 DIF)",
+            DiscrepancyType.Shortage => "FALTANTE",
+            DiscrepancyType.Overage => "SOBRANTE",
+            DiscrepancyType.RevueltoCandidate => "REVUELTO",
+            DiscrepancyType.CartonMismatchOnly => "DIF. BULTOS",
+            DiscrepancyType.DamageOnly => "DAÑADO",
+            DiscrepancyType.UnexpectedItem => "SOBRANTE (NO FACTURADO)",
+            DiscrepancyType.MissingItem => "FALTANTE TOTAL",
+            _ => DiscrepancyType.ToString()
+        };
 
     /// <summary>Color de fondo semántico para el badge del tipo de discrepancia (Hex RGBA).</summary>
-    public string BadgeBackgroundColor => DiscrepancyType switch
-    {
-        DiscrepancyType.ExactMatch => "#DCFCE7", // Verde suave
-        DiscrepancyType.Shortage => "#FEE2E2",   // Rojo suave
-        DiscrepancyType.MissingItem => "#FEE2E2",// Rojo suave
-        DiscrepancyType.Overage => "#FEF3C7",    // Ámbar suave
-        DiscrepancyType.UnexpectedItem => "#FEF3C7", // Ámbar suave
-        DiscrepancyType.RevueltoCandidate => "#F3E8FF", // Púrpura suave
-        DiscrepancyType.DamageOnly => "#FFE4E6", // Rosa/Rojo suave
-        DiscrepancyType.CartonMismatchOnly => "#E0F2FE", // Azul cielo suave
-        _ => "#F1F5F9"
-    };
+    public string BadgeBackgroundColor => IsZeroTotal
+        ? "#F1F5F9" // Gris pizarra muy suave
+        : DiscrepancyType switch
+        {
+            DiscrepancyType.ExactMatch => "#DCFCE7", // Verde suave
+            DiscrepancyType.Shortage => "#FEE2E2",   // Rojo suave
+            DiscrepancyType.MissingItem => "#FEE2E2",// Rojo suave
+            DiscrepancyType.Overage => "#FEF3C7",    // Ámbar suave
+            DiscrepancyType.UnexpectedItem => "#FEF3C7", // Ámbar suave
+            DiscrepancyType.RevueltoCandidate => "#F3E8FF", // Púrpura suave
+            DiscrepancyType.DamageOnly => "#FFE4E6", // Rosa/Rojo suave
+            DiscrepancyType.CartonMismatchOnly => "#E0F2FE", // Azul cielo suave
+            _ => "#F1F5F9"
+        };
 
     /// <summary>Color de texto semántico para el badge del tipo de discrepancia.</summary>
-    public string BadgeForegroundColor => DiscrepancyType switch
-    {
-        DiscrepancyType.ExactMatch => "#15803D", // Verde fuerte
-        DiscrepancyType.Shortage => "#B91C1C",   // Rojo fuerte
-        DiscrepancyType.MissingItem => "#B91C1C",// Rojo fuerte
-        DiscrepancyType.Overage => "#B45309",    // Ámbar fuerte
-        DiscrepancyType.UnexpectedItem => "#B45309", // Ámbar fuerte
-        DiscrepancyType.RevueltoCandidate => "#7E22CE", // Púrpura fuerte
-        DiscrepancyType.DamageOnly => "#BE123C", // Rosa/Rojo fuerte
-        DiscrepancyType.CartonMismatchOnly => "#0369A1", // Azul fuerte
-        _ => "#334155"
-    };
+    public string BadgeForegroundColor => IsZeroTotal
+        ? "#64748B" // Pizarra neutro
+        : DiscrepancyType switch
+        {
+            DiscrepancyType.ExactMatch => "#15803D", // Verde fuerte
+            DiscrepancyType.Shortage => "#B91C1C",   // Rojo fuerte
+            DiscrepancyType.MissingItem => "#B91C1C",// Rojo fuerte
+            DiscrepancyType.Overage => "#B45309",    // Ámbar fuerte
+            DiscrepancyType.UnexpectedItem => "#B45309", // Ámbar fuerte
+            DiscrepancyType.RevueltoCandidate => "#7E22CE", // Púrpura fuerte
+            DiscrepancyType.DamageOnly => "#BE123C", // Rosa/Rojo fuerte
+            DiscrepancyType.CartonMismatchOnly => "#0369A1", // Azul fuerte
+            _ => "#334155"
+        };
 
     /// <summary>Color del borde semántico de 1px para el badge.</summary>
-    public string BadgeBorderColor => DiscrepancyType switch
-    {
-        DiscrepancyType.ExactMatch => "#86EFAC",
-        DiscrepancyType.Shortage => "#FCA5A5",
-        DiscrepancyType.MissingItem => "#FCA5A5",
-        DiscrepancyType.Overage => "#FCD34D",
-        DiscrepancyType.UnexpectedItem => "#FCD34D",
-        DiscrepancyType.RevueltoCandidate => "#D8B4FE",
-        DiscrepancyType.DamageOnly => "#FDA4AF",
-        DiscrepancyType.CartonMismatchOnly => "#BAE6FD",
-        _ => "#CBD5E1"
-    };
+    public string BadgeBorderColor => IsZeroTotal
+        ? "#CBD5E1"
+        : DiscrepancyType switch
+        {
+            DiscrepancyType.ExactMatch => "#86EFAC",
+            DiscrepancyType.Shortage => "#FCA5A5",
+            DiscrepancyType.MissingItem => "#FCA5A5",
+            DiscrepancyType.Overage => "#FCD34D",
+            DiscrepancyType.UnexpectedItem => "#FCD34D",
+            DiscrepancyType.RevueltoCandidate => "#D8B4FE",
+            DiscrepancyType.DamageOnly => "#FDA4AF",
+            DiscrepancyType.CartonMismatchOnly => "#BAE6FD",
+            _ => "#CBD5E1"
+        };
 
     /// <summary>Color de texto para la celda de Diferencia de Unidades (Verde si 0, Rojo si negativo, Ámbar si positivo).</summary>
     public string DeltaUnitsColor => DifferenceUnits switch
@@ -264,16 +275,18 @@ public sealed record DiscrepancyItem
     public string DamagedUnitsColor => DamagedUnits > 0 ? "#E11D48" : "#94A3B8";
 
     /// <summary>Color de fondo sutil para resaltar toda la fila cuando hay discrepancia crítica.</summary>
-    public string RowBackgroundColor => DiscrepancyType switch
-    {
-        DiscrepancyType.ExactMatch => "#FFFFFF",
-        DiscrepancyType.Shortage or DiscrepancyType.MissingItem => "#FFF5F5",
-        DiscrepancyType.Overage or DiscrepancyType.UnexpectedItem => "#FFFBEB",
-        DiscrepancyType.RevueltoCandidate => "#FAF5FF",
-        DiscrepancyType.DamageOnly => "#FFF1F2",
-        DiscrepancyType.CartonMismatchOnly => "#F0F9FF",
-        _ => "#FFFFFF"
-    };
+    public string RowBackgroundColor => IsZeroTotal
+        ? "#F8FAFC" // Fondo neutro claro para filas en cero
+        : DiscrepancyType switch
+        {
+            DiscrepancyType.ExactMatch => "#FFFFFF",
+            DiscrepancyType.Shortage or DiscrepancyType.MissingItem => "#FFF5F5",
+            DiscrepancyType.Overage or DiscrepancyType.UnexpectedItem => "#FFFBEB",
+            DiscrepancyType.RevueltoCandidate => "#FAF5FF",
+            DiscrepancyType.DamageOnly => "#FFF1F2",
+            DiscrepancyType.CartonMismatchOnly => "#F0F9FF",
+            _ => "#FFFFFF"
+        };
 }
 
 /// <summary>
@@ -343,6 +356,12 @@ public sealed record ComparisonSummary
 
     /// <summary>Count of paired revuelto candidates detected.</summary>
     public int RevueltoPairsCount { get; init; }
+
+    /// <summary>Cantidad de estilos reales activos (con unidades o bultos > 0 en alguna fuente).</summary>
+    public int ActiveStylesCount => Items.Count(i => !i.IsZeroTotal);
+
+    /// <summary>Cantidad de materiales en cero / plantilla sin movimiento.</summary>
+    public int ZeroTotalMaterialsCount => Items.Count(i => i.IsZeroTotal);
 
     /// <summary>Material-level discrepancy comparison items ordered by material code.</summary>
     public IReadOnlyList<DiscrepancyItem> Items { get; init; } = Array.Empty<DiscrepancyItem>();

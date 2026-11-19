@@ -35,6 +35,9 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _isBusy;
 
     [ObservableProperty]
+    private bool _hideZeroTotalItems = true;
+
+    [ObservableProperty]
     private ReceivingPipelineResult? _lastReconciliationResult;
 
     [ObservableProperty]
@@ -360,38 +363,12 @@ public sealed partial class MainViewModel : ObservableObject
             ReceivingPipelineResult result = await Task.Run(() => ReceivingPipeline.Execute(options));
             LastReconciliationResult = result;
 
-            Discrepancies.Clear();
-            foreach (var item in result.Comparison.Items)
-            {
-                Discrepancies.Add(item);
-            }
-
-            BultosItems.Clear();
-            foreach (var b in result.BultosItems)
-            {
-                BultosItems.Add(b);
-            }
+            UpdatePresentedCollections(result);
 
             Tira1AsAtText = result.Tira1AsAtTsv;
             Tira2AwAyText = result.Tira2AwAyTsv;
 
-            // Actualizar KPIs de cabecera
-            KpiContainerId = result.ContainerId;
-            KpiPoNumber = result.DeclaredItems.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.OrderPo43))?.OrderPo43 ?? "-";
-            KpiPedidoNumber = result.Comparison.Items.FirstOrDefault()?.OrderPo43 ?? "-";
-            KpiTotalStyles = result.Comparison.Items.Count;
-            KpiCleanStyles = result.Comparison.CleanMaterialsCount;
-            KpiDiscrepantStyles = result.Comparison.DiscrepantMaterialsCount;
-            KpiDeclaredUnits = result.Comparison.TotalDeclaredUnits;
-            KpiPhysicalUnits = result.Comparison.TotalPhysicalUnits;
-            KpiDeltaUnits = result.Comparison.NetUnitDifference;
-            KpiDeclaredCartons = result.Comparison.TotalDeclaredCartons;
-            KpiPhysicalCartons = result.Comparison.TotalPhysicalCartons;
-            KpiDeltaCartons = result.Comparison.NetCartonDifference;
-            KpiRevueltoPairs = result.Comparison.RevueltoPairsCount;
-            KpiDamagedUnits = result.Comparison.TotalDamagedUnits;
-
-            StatusMessage = $"Reconciliación exitosa. Total líneas: {result.Comparison.Items.Count}, Discrepancias: {result.Comparison.DiscrepantMaterialsCount}. Guardado en: {exportPath}";
+            StatusMessage = $"Reconciliación exitosa. Total estilos activos: {result.Comparison.ActiveStylesCount} (en cero: {result.Comparison.ZeroTotalMaterialsCount}), Discrepancias: {result.Comparison.DiscrepantMaterialsCount}. Guardado en: {exportPath}";
         }
         catch (Exception ex)
         {
@@ -401,6 +378,49 @@ public sealed partial class MainViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    partial void OnHideZeroTotalItemsChanged(bool value)
+    {
+        if (LastReconciliationResult is not null)
+        {
+            UpdatePresentedCollections(LastReconciliationResult);
+        }
+    }
+
+    private void UpdatePresentedCollections(ReceivingPipelineResult result)
+    {
+        Discrepancies.Clear();
+        foreach (var item in result.Comparison.Items)
+        {
+            if (HideZeroTotalItems && item.IsZeroTotal)
+                continue;
+            Discrepancies.Add(item);
+        }
+
+        BultosItems.Clear();
+        foreach (var b in result.BultosItems)
+        {
+            if (HideZeroTotalItems && b.IsZeroTotal)
+                continue;
+            BultosItems.Add(b);
+        }
+
+        // Actualizar KPIs de cabecera con estilos activos reales
+        KpiContainerId = result.ContainerId;
+        KpiPoNumber = result.DeclaredItems.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.OrderPo43))?.OrderPo43 ?? "-";
+        KpiPedidoNumber = result.Comparison.Items.FirstOrDefault()?.OrderPo43 ?? "-";
+        KpiTotalStyles = result.Comparison.ActiveStylesCount;
+        KpiCleanStyles = result.Comparison.CleanMaterialsCount;
+        KpiDiscrepantStyles = result.Comparison.DiscrepantMaterialsCount;
+        KpiDeclaredUnits = result.Comparison.TotalDeclaredUnits;
+        KpiPhysicalUnits = result.Comparison.TotalPhysicalUnits;
+        KpiDeltaUnits = result.Comparison.NetUnitDifference;
+        KpiDeclaredCartons = result.Comparison.TotalDeclaredCartons;
+        KpiPhysicalCartons = result.Comparison.TotalPhysicalCartons;
+        KpiDeltaCartons = result.Comparison.NetCartonDifference;
+        KpiRevueltoPairs = result.Comparison.RevueltoPairsCount;
+        KpiDamagedUnits = result.Comparison.TotalDamagedUnits;
     }
 
     [RelayCommand]

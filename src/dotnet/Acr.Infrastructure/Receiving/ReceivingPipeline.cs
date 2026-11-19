@@ -166,13 +166,19 @@ public static class ReceivingPipeline
                 ? rc
                 : (qcItem?.CurveSystem is > 0 ? qcItem.CurveSystem.Value : (qcItem?.CurvePhysical ?? 1));
 
-            string empaque = curve > 1 ? curve.ToString(System.Globalization.CultureInfo.InvariantCulture) : "1";
+            int fullCartons = qcItem?.FullCartons ?? (qcItem?.CalculationResult?.FullCartonsUsed ?? (curve > 0 ? physUnits / curve : physCartons));
+            int unitsPerFull = qcItem?.UnitsPerFullCarton ?? (qcItem?.CalculationResult?.UnitsPerFullCartonUsed ?? curve);
+            int compCartons = qcItem?.ComplementCartons ?? (qcItem?.CalculationResult?.ComplementCartonsUsed ?? 0);
+            int unitsInComp = qcItem?.UnitsInComplement ?? (qcItem?.CalculationResult?.ComplementUnits ?? 0);
 
-            // En caso de bulto cero / entrega diferida
-            if (physUnits == 0 && declUnits == 0)
-            {
-                empaque = "0";
-            }
+            string empaque = QuantityEngine.FormatPackagingExpression(
+                fullCartons,
+                unitsPerFull,
+                compCartons,
+                unitsInComp,
+                curve,
+                totalUnits: physUnits != 0 ? physUnits : declUnits,
+                totalCartons: physCartons != 0 ? physCartons : declCartons);
 
             var bultoItem = new BultosPresentationItem
             {
@@ -186,11 +192,12 @@ public static class ReceivingPipeline
                 Curve = curve,
                 Uom = decl.Uom ?? qcItem?.Uom ?? "UN",
                 PackagingExpression = empaque,
-                FullCartons = qcItem?.FullCartons ?? (curve > 0 ? physUnits / curve : physCartons),
-                UnitsPerFullCarton = qcItem?.UnitsPerFullCarton ?? curve,
-                ComplementCartons = qcItem?.ComplementCartons ?? 0,
-                UnitsInComplement = qcItem?.UnitsInComplement ?? 0,
+                FullCartons = fullCartons,
+                UnitsPerFullCarton = unitsPerFull,
+                ComplementCartons = compCartons,
+                UnitsInComplement = unitsInComp,
                 DeclaredCartons = declCartons,
+                DeclaredUnits = declUnits,
                 Observation = qcItem?.Observation ?? ""
             };
             bultosList.Add(bultoItem);

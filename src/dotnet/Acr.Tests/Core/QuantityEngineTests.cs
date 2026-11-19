@@ -465,4 +465,81 @@ public sealed class QuantityEngineTests
         Assert.Equal(0, varianteFlagOnly.CalculatedCartons);
         Assert.Contains(QuantityEngineFlags.FlagVarianteSueltaRow, varianteFlagOnly.Flags);
     }
+
+    [Fact]
+    public void FormatPackagingExpression_ExactUserCompoundCase_FormatsAsNxMKxP()
+    {
+        // 9 bultos: 8 enteros de 48 unidades y 1 complemento de 36 unidades -> "8*48 1*36"
+        string res = QuantityEngine.FormatPackagingExpression(
+            fullCartons: 8,
+            unitsPerFull: 48,
+            compCartons: 1,
+            unitsInComp: 36,
+            curve: 48,
+            totalUnits: 420,
+            totalCartons: 9);
+
+        Assert.Equal("8*48 1*36", res);
+    }
+
+    [Fact]
+    public void FormatPackagingExpression_ComplementCartonsEmpty_InfersOneComplementCarton()
+    {
+        // Bultos complementos = 0 / null pero unidades complemento = 36 y totalCartons = 9 (8+1) -> "8*48 1*36"
+        string res = QuantityEngine.FormatPackagingExpression(
+            fullCartons: 8,
+            unitsPerFull: 48,
+            compCartons: 0,
+            unitsInComp: 36,
+            curve: 48,
+            totalUnits: 420,
+            totalCartons: 9);
+
+        Assert.Equal("8*48 1*36", res);
+    }
+
+    [Fact]
+    public void FormatPackagingExpression_MultipleComplements_FormatsBothCorrectly()
+    {
+        string res = QuantityEngine.FormatPackagingExpression(
+            fullCartons: 10,
+            unitsPerFull: 50,
+            compCartons: 2,
+            unitsInComp: 25,
+            curve: 50,
+            totalUnits: 550,
+            totalCartons: 12);
+
+        Assert.Equal("10*50 2*25", res);
+    }
+
+    [Fact]
+    public void FormatPackagingExpression_StandardSingleCartonType_FormatsUnitsPerFull()
+    {
+        string res = QuantityEngine.FormatPackagingExpression(
+            fullCartons: 42,
+            unitsPerFull: 60,
+            compCartons: 0,
+            unitsInComp: 0,
+            curve: 6,
+            totalUnits: 2520,
+            totalCartons: 42);
+
+        Assert.Equal("60", res);
+    }
+
+    [Fact]
+    public void FormatPackagingExpression_ZeroTotal_FormatsZero()
+    {
+        string res = QuantityEngine.FormatPackagingExpression(
+            fullCartons: 0,
+            unitsPerFull: 0,
+            compCartons: 0,
+            unitsInComp: 0,
+            curve: 12,
+            totalUnits: 0,
+            totalCartons: 0);
+
+        Assert.Equal("0", res);
+    }
 }

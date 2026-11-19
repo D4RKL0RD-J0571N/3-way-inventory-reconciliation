@@ -239,4 +239,48 @@ public sealed class DiscrepancyClassifierTests
             ],
             []));
     }
+
+    [Fact]
+    public void CompareMerchandise_ZeroTotalMaterials_AreClassifiedAsZeroTotalAndExcludedFromActiveKpis()
+    {
+        var declared = new List<DeclaredItem>
+        {
+            new() { MaterialCode = "5033282", Description = "ESFERAS 25 PCS 6 CM C1", DeclaredUnits = 0, DeclaredCartons = 0 },
+            new() { MaterialCode = "5033283", Description = "SET DE ESFERAS 25 PCS 6 CM C2", DeclaredUnits = 0, DeclaredCartons = 0 },
+            new() { MaterialCode = "5033292", Description = "ESFERAS 16 PCS 8 CM C1", DeclaredUnits = 600, DeclaredCartons = 50 }
+        };
+        var physical = new List<PhysicalItem>
+        {
+            new() { MaterialCode = "5033282", Description = "ESFERAS 25 PCS 6 CM C1", PhysicalUnits = 0, PhysicalCartons = 0 },
+            new() { MaterialCode = "5033283", Description = "SET DE ESFERAS 25 PCS 6 CM C2", PhysicalUnits = 95, PhysicalCartons = 5 },
+            new() { MaterialCode = "5033292", Description = "ESFERAS 16 PCS 8 CM C1", PhysicalUnits = 600, PhysicalCartons = 50 }
+        };
+
+        ComparisonSummary summary = DiscrepancyClassifier.CompareMerchandise(declared, physical);
+
+        // 5033282 is zero total (0 declared, 0 physical)
+        DiscrepancyItem itemZero = summary.Items.First(i => i.MaterialCode == "5033282");
+        Assert.True(itemZero.IsZeroTotal);
+        Assert.Equal("SIN MOVIMIENTO (0 TOTAL)", itemZero.DiscrepancyTypeDescription);
+        Assert.Equal("#F1F5F9", itemZero.BadgeBackgroundColor);
+        Assert.Equal("#64748B", itemZero.BadgeForegroundColor);
+
+        // 5033283 has 95 physical units -> NOT zero total, is UnexpectedItem
+        DiscrepancyItem itemSobrante = summary.Items.First(i => i.MaterialCode == "5033283");
+        Assert.False(itemSobrante.IsZeroTotal);
+        Assert.Equal(DiscrepancyType.UnexpectedItem, itemSobrante.DiscrepancyType);
+        Assert.Equal("SOBRANTE (NO FACTURADO)", itemSobrante.DiscrepancyTypeDescription);
+
+        // 5033292 is an exact match (600 vs 600) -> active clean style
+        DiscrepancyItem itemCuadrado = summary.Items.First(i => i.MaterialCode == "5033292");
+        Assert.False(itemCuadrado.IsZeroTotal);
+        Assert.Equal(DiscrepancyType.ExactMatch, itemCuadrado.DiscrepancyType);
+
+        // KPIs: Total items is 3, but ActiveStylesCount is 2 (5033283 and 5033292)
+        Assert.Equal(3, summary.Items.Count);
+        Assert.Equal(2, summary.ActiveStylesCount);
+        Assert.Equal(1, summary.ZeroTotalMaterialsCount);
+        Assert.Equal(1, summary.CleanMaterialsCount);
+        Assert.Equal(1, summary.DiscrepantMaterialsCount);
+    }
 }
