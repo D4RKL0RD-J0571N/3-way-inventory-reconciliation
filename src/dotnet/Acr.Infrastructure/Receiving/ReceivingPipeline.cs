@@ -28,6 +28,9 @@ public sealed record ReceivingPipelineOptions
 
     /// <summary>Optional operational safety guard enforcing Development, Testing, or Production access rules.</summary>
     public OperationalSafetyGuard? SafetyGuard { get; init; }
+
+    /// <summary>Indica si se deben omitir materiales en cero (sin movimiento) de las tiras y hoja Bultos al pegar en Excel.</summary>
+    public bool ExcludeZeroTotalFromStripsAndBultos { get; init; } = true;
 }
 
 /// <summary>
@@ -100,7 +103,7 @@ public static class ReceivingPipeline
         ClosureExportResult? exportResult = ExportIfRequested(options, summary, qcReport);
         List<string> warnings = CollectWarnings(templateData, exportResult);
         (IReadOnlyList<BultosPresentationItem> bultosItems, string tira1Tsv, string tira2Tsv) =
-            BuildBultosAndPasteStrips(templateData, qcReport, summary);
+            BuildBultosAndPasteStrips(templateData, qcReport, summary, options.ExcludeZeroTotalFromStripsAndBultos);
         ProcessingReport report = BuildProcessingReport(containerId, qcReport, templateData, summary, exportResult, warnings);
 
         string? savedReportPath = SaveReportIfRequested(options, report);
@@ -127,7 +130,8 @@ public static class ReceivingPipeline
     private static (IReadOnlyList<BultosPresentationItem> Items, string Tira1Tsv, string Tira2Tsv) BuildBultosAndPasteStrips(
         ClosureTemplateData templateData,
         QcInspectionReport qcReport,
-        ComparisonSummary summary)
+        ComparisonSummary summary,
+        bool excludeZeroTotal = true)
     {
         var bultosList = new List<BultosPresentationItem>();
         var tira1Sb = new System.Text.StringBuilder();
@@ -162,6 +166,14 @@ public static class ReceivingPipeline
             int physCartons = discItem?.PhysicalCartons ?? (qcItem?.CalculationResult?.CalculatedCartons ?? 0);
             int declCartons = decl.DeclaredCartons;
             int declUnits = decl.DeclaredUnits;
+
+            bool isZeroTotal = physUnits == 0 && declUnits == 0 && physCartons == 0 && declCartons == 0;
+            if (isZeroTotal && excludeZeroTotal)
+            {
+                // Al pegar en Excel se ocultan o eliminan materiales que tienen 0: no se incluyen en las tiras ni en bultos
+                continue;
+            }
+
             int curve = templateData.RowCurves.TryGetValue(decl.SourceRow ?? 0, out int rc) && rc > 0
                 ? rc
                 : (qcItem?.CurveSystem is > 0 ? qcItem.CurveSystem.Value : (qcItem?.CurvePhysical ?? 1));
