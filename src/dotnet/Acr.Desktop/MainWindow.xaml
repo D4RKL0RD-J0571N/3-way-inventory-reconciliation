@@ -4,9 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:Acr.Desktop.ViewModels"
+        xmlns:models="clr-namespace:Acr.Core.Models;assembly=Acr.Core"
         mc:Ignorable="d"
         Title="ACR — Asistente de Cierre de Recepción (Almacema C001)" 
-        Height="720" Width="1100"
+        Height="780" Width="1160"
         WindowStartupLocation="CenterScreen"
         Background="#F4F5F7">
 
@@ -33,7 +34,7 @@
         </Border>
 
         <!-- Main Workspace Tabs -->
-        <TabControl Grid.Row="1" Margin="12" Background="White" BorderBrush="#E2E8F0">
+        <TabControl Grid.Row="1" Margin="12" Background="White" BorderBrush="#E2E8F0" SelectedIndex="{Binding SelectedTabIndex}">
             
             <!-- TAB 1: RECONCILIACIÓN Y EXPORTACIÓN -->
             <TabItem Header=" Conciliación y Cierre ">
@@ -43,7 +44,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <!-- File Pickers & Action -->
+                    <!-- File Pickers with OpenFileDialog Native Buttons -->
                     <Border Grid.Row="0" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,12">
                         <Grid>
                             <Grid.RowDefinitions>
@@ -52,99 +53,187 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="190"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="100"/>
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Archivo Control Calidad (QC):" VerticalAlignment="Center" Margin="0,4" FontWeight="Medium"/>
-                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding QcFilePath, UpdateSourceTrigger=PropertyChanged}" Margin="0,4" Padding="6,4"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding QcFilePath, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,8,4" Padding="6,4"/>
+                            <Button Grid.Row="0" Grid.Column="2" Content="Examinar..." Command="{Binding BrowseQcFileCommand}" Margin="0,4" Padding="8,4"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="Plantilla de Cierre (Master):" VerticalAlignment="Center" Margin="0,4" FontWeight="Medium"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ClosureTemplatePath, UpdateSourceTrigger=PropertyChanged}" Margin="0,4" Padding="6,4"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ClosureTemplatePath, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,8,4" Padding="6,4"/>
+                            <Button Grid.Row="1" Grid.Column="2" Content="Examinar..." Command="{Binding BrowseClosureTemplateCommand}" Margin="0,4" Padding="8,4"/>
 
-                            <Button Grid.Row="2" Grid.Column="1" Content="Ejecutar Conciliación y Generar Cierre .XLSM" 
+                            <Button Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Content="Ejecutar Conciliación y Generar Cierre .XLSM" 
                                     Command="{Binding RunReconciliationCommand}" 
-                                    HorizontalAlignment="Right" Padding="16,8" Margin="0,8,0,0"
+                                    HorizontalAlignment="Right" Padding="18,8" Margin="0,10,0,0"
                                     Background="#0284C7" Foreground="White" FontWeight="SemiBold" BorderThickness="0"/>
                         </Grid>
                     </Border>
 
-                    <!-- Discrepancy DataGrid -->
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding Discrepancies}" AutoGenerateColumns="False" IsReadOnly="True" 
-                              Background="White" GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="28"
+                    <!-- Discrepancy DataGrid with Hyperlink to SAP Diagnostic Guide -->
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Discrepancies}" SelectedItem="{Binding SelectedDiscrepancy}" 
+                              AutoGenerateColumns="False" IsReadOnly="True" 
+                              Background="White" GridLinesVisibility="Horizontal" HeadersVisibility="Column" RowHeight="30"
                               BorderBrush="#E2E8F0" BorderThickness="1">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Material" Binding="{Binding MaterialCode}" Width="120"/>
-                            <DataGridTextColumn Header="U. Declaradas" Binding="{Binding DeclaredUnits}" Width="100"/>
-                            <DataGridTextColumn Header="U. Físicas" Binding="{Binding PhysicalUnits}" Width="100"/>
-                            <DataGridTextColumn Header="Diferencia U." Binding="{Binding DeltaUnits}" Width="100"/>
-                            <DataGridTextColumn Header="Bultos Decl." Binding="{Binding DeclaredCartons}" Width="90"/>
-                            <DataGridTextColumn Header="Bultos Fís." Binding="{Binding PhysicalCartons}" Width="90"/>
-                            <DataGridTextColumn Header="Tipo Discrepancia" Binding="{Binding DiscrepancyType}" Width="140"/>
-                            <DataGridTextColumn Header="Pareja Revuelto" Binding="{Binding RevueltoPartner}" Width="130"/>
+                            <DataGridTextColumn Header="Material" Binding="{Binding MaterialCode}" Width="110"/>
+                            <DataGridTextColumn Header="U. Declaradas" Binding="{Binding DeclaredUnits}" Width="95"/>
+                            <DataGridTextColumn Header="U. Físicas" Binding="{Binding PhysicalUnits}" Width="95"/>
+                            <DataGridTextColumn Header="Diferencia U." Binding="{Binding DeltaUnits}" Width="95"/>
+                            <DataGridTextColumn Header="Bultos Decl." Binding="{Binding DeclaredCartons}" Width="85"/>
+                            <DataGridTextColumn Header="Bultos Fís." Binding="{Binding PhysicalCartons}" Width="85"/>
+                            
+                            <!-- Discrepancy Type with Interactive Diagnostic Button -->
+                            <DataGridTemplateColumn Header="Tipo Discrepancia / Diagnóstico" Width="180">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding DiscrepancyType}" 
+                                                Command="{Binding DataContext.OpenDiagnosticGuideForDiscrepancyCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding}"
+                                                Padding="6,2" Margin="2"
+                                                Background="#E0F2FE" Foreground="#0369A1" BorderBrush="#BAE6FD" FontWeight="Medium"
+                                                ToolTip="Haga clic para abrir la Guía de Diagnóstico SAP correspondiente"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Pareja Revuelto" Binding="{Binding RevueltoPartner}" Width="120"/>
                             <DataGridTextColumn Header="Evidencia / Notas" Binding="{Binding RevueltoEvidence}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
             </TabItem>
 
-            <!-- TAB 2: CONTROL DIARIO Y NOTIFICACIÓN SAP -->
+            <!-- TAB 2: CONTROL DIARIO, 6 ETAPAS AUDITADAS Y FÓRMULAS O/R -->
             <TabItem Header=" Control Diario y Notificaciones ">
-                <Grid Margin="16">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <Grid Margin="16">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="Registro de Contenedor y Notificación de Descarga" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,12"/>
+                        <TextBlock Grid.Row="0" Text="Registro Operativo de Contenedores y Validación de 6 Etapas" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,12"/>
 
-                    <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4" Padding="14">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="130"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="130"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                        <!-- Data Inputs -->
+                        <Border Grid.Row="1" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4" Padding="14">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="130"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Contenedor:" VerticalAlignment="Center" Margin="4"/>
-                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ContainerId, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
+                                <TextBlock Grid.Row="0" Grid.Column="0" Text="Contenedor:" VerticalAlignment="Center" Margin="4"/>
+                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ContainerId, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
 
-                            <TextBlock Grid.Row="0" Grid.Column="2" Text="PO (43...):" VerticalAlignment="Center" Margin="4"/>
-                            <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding Po43Number, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
+                                <TextBlock Grid.Row="0" Grid.Column="2" Text="PO (43...):" VerticalAlignment="Center" Margin="4"/>
+                                <TextBox Grid.Row="0" Grid.Column="3" Text="{Binding Po43Number, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
 
-                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Pedido (41...):" VerticalAlignment="Center" Margin="4"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Pedido41Number, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
+                                <TextBlock Grid.Row="1" Grid.Column="0" Text="Pedido (41...):" VerticalAlignment="Center" Margin="4"/>
+                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Pedido41Number, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
 
-                            <TextBlock Grid.Row="1" Grid.Column="2" Text="Entrega (18...):" VerticalAlignment="Center" Margin="4"/>
-                            <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding Entrega18Number, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
+                                <TextBlock Grid.Row="1" Grid.Column="2" Text="Entrega (18...):" VerticalAlignment="Center" Margin="4"/>
+                                <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding Entrega18Number, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
 
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Tarea EWM:" VerticalAlignment="Center" Margin="4"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding EwmTaskNumber, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
+                                <TextBlock Grid.Row="2" Grid.Column="0" Text="Tarea EWM:" VerticalAlignment="Center" Margin="4"/>
+                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding EwmTaskNumber, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
 
-                            <TextBlock Grid.Row="2" Grid.Column="2" Text="Handling Unit (HU):" VerticalAlignment="Center" Margin="4"/>
-                            <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding HandlingUnit, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
+                                <TextBlock Grid.Row="2" Grid.Column="2" Text="Handling Unit (HU):" VerticalAlignment="Center" Margin="4"/>
+                                <TextBox Grid.Row="2" Grid.Column="3" Text="{Binding HandlingUnit, UpdateSourceTrigger=PropertyChanged}" Margin="4" Padding="4"/>
+                            </Grid>
+                        </Border>
 
-                            <Button Grid.Row="3" Grid.Column="2" Grid.ColumnSpan="2" 
-                                    Content="Copiar Resumen para Notificación SAP"
+                        <!-- 6-Stage Dropdown Selectors & Formula Visualizers -->
+                        <Border Grid.Row="2" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="4" Padding="14" Margin="0,14,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Transiciones de Ciclo de Vida (6 Etapas Auditadas del Maestro de Contenedores):" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,10"/>
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="220"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Stage 1 & 2 -->
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Etapa 1 (DUA / Aduanas - Col I):" VerticalAlignment="Center" Margin="4"/>
+                                    <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding Stage1Options}" SelectedItem="{Binding Stage1Customs}" Margin="4"/>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Etapa 2 (Ingreso SAP/EWM - Col J):" VerticalAlignment="Center" Margin="4"/>
+                                    <ComboBox Grid.Row="0" Grid.Column="3" ItemsSource="{Binding Stage2Options}" SelectedItem="{Binding Stage2SapIntake}" Margin="4"/>
+
+                                    <!-- Stage 3 & 4 -->
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Etapa 3 (Montado a Ciegas - Col K):" VerticalAlignment="Center" Margin="4"/>
+                                    <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Stage3Options}" SelectedItem="{Binding Stage3BlindSetup}" Margin="4"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="Etapa 4 (Control Calidad - Col L):" VerticalAlignment="Center" Margin="4"/>
+                                    <ComboBox Grid.Row="1" Grid.Column="3" ItemsSource="{Binding Stage4Options}" SelectedItem="{Binding Stage4QualityControl}" Margin="4"/>
+
+                                    <!-- Stage 5 & 6 -->
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Etapa 5 (Cierre Recep. 101 - Col M):" VerticalAlignment="Center" Margin="4"/>
+                                    <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Stage5Options}" SelectedItem="{Binding Stage5ReceptionClosure}" Margin="4"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="Etapa 6 (Cierre Desp. 641 - Col N):" VerticalAlignment="Center" Margin="4"/>
+                                    <ComboBox Grid.Row="2" Grid.Column="3" ItemsSource="{Binding Stage6Options}" SelectedItem="{Binding Stage6DispatchClosure}" Margin="4"/>
+
+                                    <!-- Saludo for Column R -->
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Saludo Notificación (Col Q):" VerticalAlignment="Center" Margin="4"/>
+                                    <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding SaludoOptions}" SelectedItem="{Binding SelectedSaludo}" Margin="4"/>
+                                </Grid>
+
+                                <!-- Computed Formula Results Banner (Column O & Column R) -->
+                                <Border Background="#FEF3C7" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,14,0,0">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="220"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Estado Maestro (Columna O):" FontWeight="Bold" Foreground="#92400E" VerticalAlignment="Center" Margin="2"/>
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ComputedColumnO}" FontWeight="Bold" FontSize="13" Foreground="#B45309" VerticalAlignment="Center" Margin="2"/>
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Notificación SAP (Columna R):" FontWeight="Bold" Foreground="#92400E" VerticalAlignment="Center" Margin="2,6,2,2"/>
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ComputedColumnR}" TextWrapping="Wrap" Foreground="#78350F" VerticalAlignment="Center" Margin="2,6,2,2"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Copy to Clipboard Action -->
+                        <StackPanel Grid.Row="3" Margin="0,14,0,0">
+                            <Button Content="Copiar Resumen y Notificación SAP al Portapapeles"
                                     Command="{Binding GenerateSapClipboardNotificationCommand}"
-                                    HorizontalAlignment="Right" Padding="14,6" Margin="4,10,4,0"
-                                    Background="#0F766E" Foreground="White" FontWeight="Medium" BorderThickness="0"/>
-                        </Grid>
-                    </Border>
+                                    HorizontalAlignment="Right" Padding="16,8"
+                                    Background="#0F766E" Foreground="White" FontWeight="SemiBold" BorderThickness="0"/>
 
-                    <StackPanel Grid.Row="2" Margin="0,16,0,0">
-                        <TextBlock Text="Vista Previa de la Notificación Copiada:" FontWeight="Medium" Margin="0,0,0,6"/>
-                        <TextBox Text="{Binding ClipboardSummary}" IsReadOnly="True" Height="100" TextWrapping="Wrap" Background="#F1F5F9" Padding="8"/>
-                    </StackPanel>
-                </Grid>
+                            <TextBlock Text="Vista previa del texto generado:" FontWeight="Medium" Margin="0,8,0,4"/>
+                            <TextBox Text="{Binding ClipboardSummary}" IsReadOnly="True" Height="75" TextWrapping="Wrap" Background="#F1F5F9" Padding="6"/>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
             </TabItem>
 
             <!-- TAB 3: CONSULTA SAP Y DIAGNÓSTICO OPERATIVO -->
@@ -184,6 +273,23 @@
                     <!-- Right: Selected Transaction Detail & Troubleshooting Guides -->
                     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
+                            <!-- Selected Guide Highlight if directed from Discrepancy Button -->
+                            <Border Background="#F0FDF4" BorderBrush="#86EFAC" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,12">
+                                <StackPanel DataContext="{Binding SelectedDiagnosticGuide}">
+                                    <TextBlock Text="Guía de Diagnóstico Seleccionada:" FontSize="11" FontWeight="Bold" Foreground="#15803D"/>
+                                    <TextBlock Text="{Binding Title, FallbackValue='(Seleccione una guía o haga clic en una discrepancia)'}" FontSize="16" FontWeight="Bold" Foreground="#166534" Margin="0,2,0,6"/>
+                                    <TextBlock Text="{Binding ProblemSummaryAndAffectedObjects.Summary}" TextWrapping="Wrap" Foreground="#14532D" Margin="0,0,0,6"/>
+                                    <TextBlock Text="Pasos de Investigación:" FontWeight="Bold" FontSize="12" Foreground="#166534" Margin="0,4,0,2"/>
+                                    <ItemsControl ItemsSource="{Binding InvestigationSteps}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding}" TextWrapping="Wrap" FontSize="12" Margin="0,2" Foreground="#166534"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
                             <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4" Padding="14" Margin="0,0,0,12">
                                 <StackPanel DataContext="{Binding SelectedSapTransaction}">
                                     <TextBlock Text="{Binding Code, FallbackValue='(Seleccione una transacción o tabla)'}" FontSize="18" FontWeight="Bold" Foreground="#1E293B"/>
@@ -200,7 +306,7 @@
                                 </StackPanel>
                             </Border>
 
-                            <TextBlock Text="Guías Rápidas de Diagnóstico Operativo:" FontWeight="SemiBold" FontSize="14" Margin="0,8,0,6"/>
+                            <TextBlock Text="Catálogo Completo de Guías de Diagnóstico Operativo:" FontWeight="SemiBold" FontSize="14" Margin="0,8,0,6"/>
                             <ItemsControl ItemsSource="{Binding DiagnosticGuides}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>

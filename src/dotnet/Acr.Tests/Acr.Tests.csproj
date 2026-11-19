@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Acr.Core\Acr.Core.csproj" />
     <ProjectReference Include="..\Acr.Infrastructure\Acr.Infrastructure.csproj" />
+    <ProjectReference Include="..\Acr.Desktop\Acr.Desktop.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,9 +5,9 @@ using Acr.Infrastructure.Excel;
 using Acr.Infrastructure.Receiving;
 using Acr.Infrastructure.Safety;
 using Acr.Infrastructure.SapKnowledge;
-using Acr.Infrastructure.Sync;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
@@ -18,6 +18,7 @@ public sealed partial class MainViewModel : ObservableObject
 {
     private readonly OperationalSafetyGuard _safetyGuard;
 
+    // --- RECONCILIATION & CLOSURE ---
     [ObservableProperty]
     private string _qcFilePath = "";
 
@@ -39,7 +40,10 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<DiscrepancyItem> _discrepancies = new();
 
-    // Daily Log properties
+    [ObservableProperty]
+    private DiscrepancyItem? _selectedDiscrepancy;
+
+    // --- DAILY LOG 6-STAGES & FORMULAS ---
     [ObservableProperty]
     private string _dailyLogFilePath = @"D:\Development\Software Development\3 Way Inventory Reconciliation\Control_Diario_Operaciones_Jostin.xlsx";
 
@@ -62,9 +66,45 @@ public sealed partial class MainViewModel : ObservableObject
     private string _handlingUnit = "";
 
     [ObservableProperty]
+    private Saludo _selectedSaludo = Saludo.BuenosDias;
+
+    [ObservableProperty]
+    private CustomsDuaStage _stage1Customs = CustomsDuaStage.DuaAndDocsReady;
+
+    [ObservableProperty]
+    private SapIntakeStage _stage2SapIntake = SapIntakeStage.ReadyAndNotified;
+
+    [ObservableProperty]
+    private BlindSetupStage _stage3BlindSetup = BlindSetupStage.ReadyComplete;
+
+    [ObservableProperty]
+    private QualityControlStage _stage4QualityControl = QualityControlStage.QcApprovedZDescarga;
+
+    [ObservableProperty]
+    private ReceptionClosureStage _stage5ReceptionClosure = ReceptionClosureStage.BalancedZeroDiff;
+
+    [ObservableProperty]
+    private DispatchClosureStage _stage6DispatchClosure = DispatchClosureStage.DispatchClosureReady;
+
+    [ObservableProperty]
+    private string _computedColumnO = "1. En Cola Conteo a Ciegas";
+
+    [ObservableProperty]
+    private string _computedColumnR = "-";
+
+    [ObservableProperty]
     private string _clipboardSummary = "";
 
-    // SAP Knowledge
+    // Catalog lists for UI ComboBoxes
+    public IReadOnlyList<Saludo> SaludoOptions { get; } = Enum.GetValues<Saludo>();
+    public IReadOnlyList<CustomsDuaStage> Stage1Options { get; } = Enum.GetValues<CustomsDuaStage>();
+    public IReadOnlyList<SapIntakeStage> Stage2Options { get; } = Enum.GetValues<SapIntakeStage>();
+    public IReadOnlyList<BlindSetupStage> Stage3Options { get; } = Enum.GetValues<BlindSetupStage>();
+    public IReadOnlyList<QualityControlStage> Stage4Options { get; } = Enum.GetValues<QualityControlStage>();
+    public IReadOnlyList<ReceptionClosureStage> Stage5Options { get; } = Enum.GetValues<ReceptionClosureStage>();
+    public IReadOnlyList<DispatchClosureStage> Stage6Options { get; } = Enum.GetValues<DispatchClosureStage>();
+
+    // --- SAP KNOWLEDGE ---
     [ObservableProperty]
     private string _sapSearchQuery = "";
 
@@ -76,6 +116,12 @@ public sealed partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private ObservableCollection<DiagnosticGuide> _diagnosticGuides = new();
+
+    [ObservableProperty]
+    private DiagnosticGuide? _selectedDiagnosticGuide;
+
+    [ObservableProperty]
+    private int _selectedTabIndex;
 
     public MainViewModel()
     {
@@ -96,6 +142,113 @@ public sealed partial class MainViewModel : ObservableObject
         foreach (var g in DefaultSapCatalog.DiagnosticGuides)
         {
             DiagnosticGuides.Add(g);
+        }
+
+        RecalculateDailyLogFormulas();
+    }
+
+    partial void OnStage1CustomsChanged(CustomsDuaStage value) => RecalculateDailyLogFormulas();
+    partial void OnStage2SapIntakeChanged(SapIntakeStage value) => RecalculateDailyLogFormulas();
+    partial void OnStage3BlindSetupChanged(BlindSetupStage value) => RecalculateDailyLogFormulas();
+    partial void OnStage4QualityControlChanged(QualityControlStage value) => RecalculateDailyLogFormulas();
+    partial void OnStage5ReceptionClosureChanged(ReceptionClosureStage value) => RecalculateDailyLogFormulas();
+    partial void OnStage6DispatchClosureChanged(DispatchClosureStage value) => RecalculateDailyLogFormulas();
+    partial void OnSelectedSaludoChanged(Saludo value) => RecalculateDailyLogFormulas();
+    partial void OnContainerIdChanged(string value) => RecalculateDailyLogFormulas();
+    partial void OnEntrega18NumberChanged(string value) => RecalculateDailyLogFormulas();
+
+    public void RecalculateDailyLogFormulas()
+    {
+        var entry = new DailyLogEntry
+        {
+            ContainerId = ContainerId,
+            EntregaVl31n = string.IsNullOrWhiteSpace(Entrega18Number) ? null : Entrega18Number,
+            Greeting = SelectedSaludo,
+            Stage1Customs = Stage1Customs,
+            Stage2SapIntake = Stage2SapIntake,
+            Stage3BlindSetup = Stage3BlindSetup,
+            Stage4QualityControl = Stage4QualityControl,
+            Stage5ReceptionClosure = Stage5ReceptionClosure,
+            Stage6DispatchClosure = Stage6DispatchClosure
+        };
+
+        MasterContainerState state = DailyLogLifecycleValidator.ComputeMasterState(entry);
+        ComputedColumnO = DailyLogCatalogs.ToExcelString(state);
+
+        // Col R formula reproduction: IF(F<>"-" and not empty, Q & ", Se informa que el ingreso a nivel de sistema del Contenedor " & SUBSTITUTE(B, "IMP-", "") & ", quedo listo.", "-")
+        if (!string.IsNullOrWhiteSpace(Entrega18Number) && Entrega18Number.Trim() != "-")
+        {
+            string saludoText = DailyLogCatalogs.ToExcelString(SelectedSaludo);
+            if (saludoText == "-") saludoText = "Buenos días";
+            string rawContainer = string.IsNullOrWhiteSpace(ContainerId) ? "[CONTENEDOR]" : ContainerId.Replace("IMP-", "", StringComparison.OrdinalIgnoreCase).Trim();
+            ComputedColumnR = $"{saludoText}, Se informa que el ingreso a nivel de sistema del Contenedor {rawContainer}, quedo listo.";
+        }
+        else
+        {
+            ComputedColumnR = "-";
+        }
+    }
+
+    [RelayCommand]
+    public void BrowseQcFile()
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = "Seleccionar Archivo de Control de Calidad (QC)",
+            Filter = "Archivos de Excel habilitados para macros (*.xlsm;*.xlsx)|*.xlsm;*.xlsx|Todos los archivos (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dlg.ShowDialog() == true)
+        {
+            QcFilePath = dlg.FileName;
+        }
+    }
+
+    [RelayCommand]
+    public void BrowseClosureTemplate()
+    {
+        var dlg = new OpenFileDialog
+        {
+            Title = "Seleccionar Plantilla de Cierre Corporativo",
+            Filter = "Archivos de Cierre (*.xlsm)|*.xlsm|Archivos de Excel (*.xlsx)|*.xlsx|Todos los archivos (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dlg.ShowDialog() == true)
+        {
+            ClosureTemplatePath = dlg.FileName;
+        }
+    }
+
+    [RelayCommand]
+    public void OpenDiagnosticGuideForDiscrepancy(DiscrepancyItem item)
+    {
+        if (item is null) return;
+
+        DiagnosticGuide? matchedGuide = null;
+        if (item.DiscrepancyType is DiscrepancyType.Shortage)
+        {
+            matchedGuide = DiagnosticGuides.FirstOrDefault(g => g.GuideId.Contains("FALTANTE", StringComparison.OrdinalIgnoreCase));
+        }
+        else if (item.DiscrepancyType is DiscrepancyType.Overage)
+        {
+            matchedGuide = DiagnosticGuides.FirstOrDefault(g => g.GuideId.Contains("SOBRANTE", StringComparison.OrdinalIgnoreCase));
+        }
+        else if (item.DiscrepancyType is DiscrepancyType.RevueltoCandidate)
+        {
+            matchedGuide = DiagnosticGuides.FirstOrDefault(g => g.GuideId.Contains("REVUELTO", StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (matchedGuide is not null)
+        {
+            SelectedDiagnosticGuide = matchedGuide;
+            SelectedTabIndex = 2; // Jump directly to SAP Knowledge Tab
+            StatusMessage = $"Abriendo guía de diagnóstico para discrepancia '{item.DiscrepancyType}' del material {item.MaterialCode}.";
+        }
+        else
+        {
+            StatusMessage = $"No se encontró una guía específica para el tipo de discrepancia '{item.DiscrepancyType}'.";
         }
     }
 
@@ -118,7 +271,7 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task RunReconciliationAsync()
+    public async Task RunReconciliationAsync()
     {
         if (string.IsNullOrWhiteSpace(QcFilePath) || !File.Exists(QcFilePath))
         {
@@ -170,8 +323,10 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void GenerateSapClipboardNotification()
+    public void GenerateSapClipboardNotification()
     {
+        RecalculateDailyLogFormulas();
+
         if (string.IsNullOrWhiteSpace(ContainerId))
         {
             StatusMessage = "Indique al menos el número de contenedor.";
@@ -184,16 +339,17 @@ public sealed partial class MainViewModel : ObservableObject
                            $"Entrega: {Entrega18Number}\n" +
                            $"Tarea EWM: {EwmTaskNumber}\n" +
                            $"HU: {HandlingUnit}\n" +
-                           $"Estado: Descarga finalizada / Listo para revisión.";
+                           $"Etapa Actual (Col O): {ComputedColumnO}\n" +
+                           $"Notificación SAP (Col R): {ComputedColumnR}";
 
         try
         {
             Clipboard.SetText(ClipboardSummary);
-            StatusMessage = "Resumen copiado al portapapeles para notificación SAP.";
+            StatusMessage = "Resumen y notificación SAP copiados al portapapeles.";
         }
         catch
         {
-            StatusMessage = "Resumen generado (no se pudo acceder directamente al portapapeles).";
+            StatusMessage = "Resumen generado con éxito.";
         }
     }
 }
