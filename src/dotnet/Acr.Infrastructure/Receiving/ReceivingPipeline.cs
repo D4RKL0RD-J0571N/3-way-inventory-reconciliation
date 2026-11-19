@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Acr.Core.Models;
 using Acr.Core.Services;
 using Acr.Infrastructure.Excel;
@@ -94,14 +95,102 @@ public static class ReceivingPipeline
         ArgumentException.ThrowIfNullOrWhiteSpace(options.QcFilePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(options.ClosureTemplatePath);
 
-        QcInspectionReport qcReport = QcReader.Read(options.QcFilePath, options.SafetyGuard);
-        ClosureTemplateData templateData = ClosureTemplateReader.ReadDeclaredItems(options.ClosureTemplatePath, options.SafetyGuard);
+        string qcPath = options.QcFilePath;
+        string closurePath = options.ClosureTemplatePath;
+
+        // Auto-detect swapped workbooks or hybrid workbooks using internal sheet signatures
+        try
+        {
+            WorkbookSignature sigQc = WorkbookSignatureScanner.Inspect(qcPath, options.SafetyGuard);
+            WorkbookSignature sigClosure = WorkbookSignatureScanner.Inspect(closurePath, options.SafetyGuard);
+
+            if (sigQc.Kind == WorkbookKind.ReceivingClosure && sigClosure.Kind == WorkbookKind.QcInspection)
+            {
+                qcPath = options.ClosureTemplatePath;
+                closurePath = options.QcFilePath;
+            }
+            else if (sigQc.Kind == WorkbookKind.HybridQcAndClosure && !File.Exists(closurePath))
+            {
+                closurePath = qcPath;
+            }
+            else if (sigClosure.Kind == WorkbookKind.HybridQcAndClosure && !File.Exists(qcPath))
+            {
+                qcPath = closurePath;
+            }
+        }
+        catch
+        {
+            // Fallback to configured paths on any inspection anomaly
+        }
+
+        QcInspectionReport qcReport = QcReader.Read(qcPath, options.SafetyGuard);
+        ClosureTemplateData templateData = ClosureTemplateReader.ReadDeclaredItems(closurePath, options.SafetyGuard);
         IReadOnlyList<PhysicalItem> physicalItems = MapPhysicalItems(qcReport);
         ComparisonSummary summary = DiscrepancyClassifier.CompareMerchandise(templateData.DeclaredItems, physicalItems);
+
+        // Enrich discrepancy items with BOM proportional child SKU distribution, canonical packaging, and curves
+        var declMap = templateData.DeclaredItems.ToDictionary(d => OpenXmlCellHelper.NormalizeMaterialCode(d.MaterialCode), StringComparer.OrdinalIgnoreCase);
+        var qcMap = qcReport.Items.Where(q => !q.IsChildSku).ToDictionary(q => OpenXmlCellHelper.NormalizeMaterialCode(q.MaterialCode), StringComparer.OrdinalIgnoreCase);
+        var enrichedItems = new List<DiscrepancyItem>(summary.Items.Count);
+
+        foreach (var item in summary.Items)
+        {
+            declMap.TryGetValue(item.MaterialCode, out DeclaredItem? decl);
+            qcMap.TryGetValue(item.MaterialCode, out QcInspectionItem? qc);
+
+            int sourceRow = decl?.SourceRow ?? qc?.RowIndex ?? 0;
+            decimal unitCost = decl?.UnitCost ?? 0m;
+            int curve = templateData.RowCurves.TryGetValue(sourceRow, out int rc) && rc > 0
+                ? rc
+                : (qc?.CurveSystem is > 0 ? qc.CurveSystem.Value : (qc?.CurvePhysical ?? 12));
+
+            int fullCartons = qc?.FullCartons ?? (qc?.CalculationResult?.FullCartonsUsed ?? (curve > 0 ? item.PhysicalUnits / curve : item.PhysicalCartons));
+            int unitsPerFull = qc?.UnitsPerFullCarton ?? (qc?.CalculationResult?.UnitsPerFullCartonUsed ?? curve);
+            int compCartons = qc?.ComplementCartons ?? (qc?.CalculationResult?.ComplementCartonsUsed ?? 0);
+            int unitsInComp = qc?.UnitsInComplement ?? (qc?.CalculationResult?.ComplementUnits ?? 0);
+
+            string canonicalPack = QuantityEngine.FormatPackagingExpression(
+                fullCartons,
+                unitsPerFull,
+                compCartons,
+                unitsInComp,
+                curve,
+                totalUnits: item.PhysicalUnits != 0 ? item.PhysicalUnits : item.DeclaredUnits,
+                totalCartons: item.PhysicalCartons != 0 ? item.PhysicalCartons : item.DeclaredCartons);
+
+            IReadOnlyList<ChildSkuItem> children = Array.Empty<ChildSkuItem>();
+            if (qcReport.BomsByParent.TryGetValue(item.MaterialCode, out var bomDef) && bomDef.Count > 0)
+            {
+                int ped41Prk = curve > 0 ? item.DeclaredUnits / curve : 0;
+                children = BomAllocationService.AllocateChildSkus(
+                    bomDef,
+                    item.DeclaredUnits,
+                    item.PhysicalUnits,
+                    ped41Prk,
+                    curve,
+                    item.Description,
+                    unitCost,
+                    qcReport.ChildDescriptions);
+            }
+
+            enrichedItems.Add(item with
+            {
+                SourceRow = sourceRow,
+                UnitCost = unitCost,
+                Curve = curve,
+                ContainerPart = qcReport.DetectedParts.Count > 0 ? qcReport.DetectedParts[0] : null,
+                CanonicalPackaging = canonicalPack,
+                Children = children
+            });
+        }
+
+        summary = summary with { Items = enrichedItems };
         string containerId = ResolveContainerId(templateData, qcReport);
 
         ClosureExportResult? exportResult = ExportIfRequested(options, summary, qcReport);
         List<string> warnings = CollectWarnings(templateData, exportResult);
+        warnings.AddRange(qcReport.Warnings);
+
         (IReadOnlyList<BultosPresentationItem> bultosItems, string tira1Tsv, string tira2Tsv) =
             BuildBultosAndPasteStrips(templateData, qcReport, summary, options.ExcludeZeroTotalFromStripsAndBultos);
         ProcessingReport report = BuildProcessingReport(containerId, qcReport, templateData, summary, exportResult, warnings);
@@ -251,12 +340,33 @@ public static class ReceivingPipeline
 
     private static string ResolveContainerId(ClosureTemplateData templateData, QcInspectionReport qcReport)
     {
+        if (!string.IsNullOrWhiteSpace(templateData.ContainerId) && !IsPureNumeric(templateData.ContainerId))
+            return templateData.ContainerId.Trim();
+        if (!string.IsNullOrWhiteSpace(qcReport.ContainerId) && !IsPureNumeric(qcReport.ContainerId))
+            return qcReport.ContainerId.Trim();
+
+        // Check fallback from template filename
+        string fileName = Path.GetFileName(templateData.FilePath);
+        Match m = Regex.Match(fileName, @"\b(IMP)[\s\-_]*([0-9]+[A-Z0-9\-]*)(?=[_\s.\-]|$|\b)", RegexOptions.IgnoreCase);
+        if (m.Success)
+            return $"IMP-{m.Groups[2].Value.ToUpperInvariant()}";
+
+        // Check fallback from QC filename
+        string qcName = Path.GetFileName(qcReport.FilePath);
+        Match mQc = Regex.Match(qcName, @"\b(IMP)[\s\-_]*([0-9]+[A-Z0-9\-]*)(?=[_\s.\-]|$|\b)", RegexOptions.IgnoreCase);
+        if (mQc.Success)
+            return $"IMP-{mQc.Groups[2].Value.ToUpperInvariant()}";
+
         if (!string.IsNullOrWhiteSpace(templateData.ContainerId))
             return templateData.ContainerId.Trim();
         if (!string.IsNullOrWhiteSpace(qcReport.ContainerId))
             return qcReport.ContainerId.Trim();
+
         return Path.GetFileNameWithoutExtension(templateData.FilePath);
     }
+
+    private static bool IsPureNumeric(string? val) =>
+        !string.IsNullOrWhiteSpace(val) && val.Trim().All(char.IsDigit);
 
     private static ClosureExportResult? ExportIfRequested(
         ReceivingPipelineOptions options,

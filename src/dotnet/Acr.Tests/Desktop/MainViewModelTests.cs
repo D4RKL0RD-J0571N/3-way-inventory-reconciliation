@@ -75,7 +75,83 @@ public sealed class MainViewModelTests
 
         Assert.NotNull(vm.SelectedDiagnosticGuide);
         Assert.Contains("FALTANTE", vm.SelectedDiagnosticGuide.GuideId);
-        Assert.Equal(1, vm.SelectedTabIndex); // Switched to Tab 2 (Index 1)
+        Assert.Equal(7, vm.SelectedTabIndex); // Switched to Tab 8 (Index 7: SAP & Wiki)
+        Assert.Equal(1, vm.WikiSubTab);        // Jumped to Guías sub-tab
+    }
+
+    [Fact]
+    public void MainViewModel_CartonCalculator_CalculatesCanonicalExpressions()
+    {
+        var vm = new MainViewModel();
+
+        // 1. Standard compound: 420 units, box 48, odd 36 -> 8*48 1*36 (9 boxes)
+        vm.CalcUnits = 420;
+        vm.CalcStdBox = 48;
+        vm.CalcOddUnits = 36;
+        vm.CalcHasOdds = true;
+        vm.CalcOddModeIsLoose = false;
+
+        Assert.Equal("8*48 1*36", vm.CalcPkgStr);
+        Assert.Equal(9, vm.CalcTotalBoxes);
+        Assert.Equal(8, vm.CalcBoxesFull);
+        Assert.Equal(1, vm.CalcBoxesComp);
+
+        // 2. Loose units mode: 8*48 +36 (8 boxes, +36 sueltas)
+        vm.CalcOddModeIsLoose = true;
+        Assert.Equal("8*48 +36", vm.CalcPkgStr);
+        Assert.Equal(8, vm.CalcTotalBoxes);
+        Assert.Equal(8, vm.CalcBoxesFull);
+        Assert.Equal(0, vm.CalcBoxesComp);
+
+        // 3. Exact full boxes: 480 units, box 48, no odds -> "48" (10 boxes)
+        vm.CalcUnits = 480;
+        vm.CalcHasOdds = false;
+        Assert.Equal("48", vm.CalcPkgStr);
+        Assert.Equal(10, vm.CalcTotalBoxes);
+    }
+
+    [Fact]
+    public void MainViewModel_SapClipboardSanitizer_LoadsAndSanitizesGrid()
+    {
+        var vm = new MainViewModel();
+        vm.LoadSapSampleCommand.Execute(null);
+
+        Assert.NotEmpty(vm.SapRawPasteText);
+        Assert.Contains("000000001455102001", vm.SapRawPasteText);
+
+        vm.SanitizeSapClipboardCommand.Execute(null);
+
+        Assert.NotNull(vm.SanitizedTable);
+        Assert.Equal(4, vm.SapSanitizedHeaders.Count);
+        Assert.Equal(4, vm.SapSanitizedRows.Count);
+        Assert.Equal("1455102001", vm.SapSanitizedRows[0][0]);
+        Assert.Equal("1E2", vm.SapSanitizedRows[3][0]); // Alphanumeric preserved
+        Assert.Equal("-50", vm.SapSanitizedRows[3][2]); // Preserved negative dollar sign
+    }
+
+    [Fact]
+    public void MainViewModel_Checklist_TracksProgressAndDynamicLabels()
+    {
+        var vm = new MainViewModel
+        {
+            KpiContainerId = "IMP-207",
+            KpiDeclaredUnits = 10000,
+            KpiPhysicalUnits = 9940
+        };
+
+        vm.UpdateChecklistDynamicLabels();
+
+        Assert.Contains("IMP-207", vm.Checklist1Text);
+        Assert.Contains("10,000", vm.Checklist2Text);
+        Assert.Contains("9,940", vm.Checklist3Text);
+        Assert.Equal(100, vm.ChecklistProgress);
+        Assert.True(vm.ChecklistIsComplete);
+
+        // Uncheck one item
+        vm.Checklist7Dua = false;
+        Assert.Equal(6, vm.ChecklistCompletedCount);
+        Assert.False(vm.ChecklistIsComplete);
+        Assert.Equal(86, vm.ChecklistProgress);
     }
 
     [Fact]

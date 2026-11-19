@@ -74,7 +74,7 @@ function findQcSheetName(wb: XLSX.WorkBook): string | undefined {
 
 function extractImportIdFromFileName(name?: string): string | null {
   if (!name) return null;
-  const m = name.match(/\b(IMP)[\s\-_]*(\d+[A-Z0-9\-]*)\b/i);
+  const m = name.match(/\b(IMP)[\s\-_]*([0-9]+[A-Z0-9\-]*)(?=[_\s.\-]|$|\b)/i);
   if (m) {
     return `IMP-${m[2].toUpperCase()}`;
   }

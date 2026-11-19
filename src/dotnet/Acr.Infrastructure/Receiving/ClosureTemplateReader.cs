@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Acr.Core.Models;
 using Acr.Core.Services;
 using Acr.Infrastructure.Excel;
@@ -33,6 +34,13 @@ public sealed record ClosureTemplateData(
 /// </summary>
 public static class ClosureTemplateReader
 {
+    private static readonly string[] ImportIdExcludeTokens =
+    [
+        "IMPORTADORA", "FALTANTE", "DAÑAD", "DANAD", "SOBRANT", "REVUELT",
+        "TOTAL", "BULTO", "VALOR", "COSTO", "UNIDAD", "FECHA", "DIFERENCIA",
+        "NCR", "RECLAMO", "AVERI", "MONEDA", "MONTO", "CANTIDAD", "ESTADO"
+    ];
+
     private static readonly Dictionary<string, int> DefaultColumns = new(StringComparer.Ordinal)
     {
         ["po43"] = 0,
@@ -68,20 +76,52 @@ public static class ClosureTemplateReader
             ?? throw new InvalidDataException($"Workbook '{resolved}' does not contain required 'CIERRE RECEP' worksheet.");
 
         List<string> sharedStrings = OpenXmlCellHelper.ReadSharedStrings(wbPart);
-        return StreamCierreRecep(resolved, wsPart, sharedStrings);
+
+        string? containerId = null;
+        string? pedido41 = null;
+        WorksheetPart? dgPart = OpenXmlCellHelper.FindWorksheetPart(wbPart, "DATOS GENERALES", allowContains: true);
+        if (dgPart is not null)
+        {
+            ExtractDatosGeneralesMetadata(dgPart, sharedStrings, ref containerId, ref pedido41);
+        }
+
+        return StreamCierreRecep(resolved, wsPart, sharedStrings, containerId, pedido41);
+    }
+
+    private static void ExtractDatosGeneralesMetadata(
+        WorksheetPart dgPart,
+        IReadOnlyList<string> sharedStrings,
+        ref string? containerId,
+        ref string? pedido41)
+    {
+        using OpenXmlReader reader = OpenXmlReader.Create(dgPart);
+        while (reader.Read())
+        {
+            if (reader.ElementType != typeof(Row) || reader.LoadCurrentElement() is not Row rowEl)
+                continue;
+
+            int rowIdx = (int)(rowEl.RowIndex?.Value ?? 0);
+            if (rowIdx > 35)
+                break;
+
+            Dictionary<int, string> cells = ExtractRowCells(rowEl, sharedStrings);
+            ExtractHeaderMetadata(cells, ref containerId, ref pedido41);
+        }
     }
 
     private static ClosureTemplateData StreamCierreRecep(
         string resolvedPath,
         WorksheetPart wsPart,
-        IReadOnlyList<string> sharedStrings)
+        IReadOnlyList<string> sharedStrings,
+        string? initialContainerId,
+        string? initialPedido41)
     {
         var colMap = new Dictionary<string, int>(DefaultColumns, StringComparer.Ordinal);
         var items = new List<DeclaredItem>();
         var rowCurves = new Dictionary<int, int>();
         var warnings = new List<string>();
-        string? containerId = null;
-        string? pedido41 = null;
+        string? containerId = initialContainerId;
+        string? pedido41 = initialPedido41;
         int lastRow = 0;
         int emptyRows = 0;
 
@@ -100,6 +140,22 @@ public static class ClosureTemplateReader
                 emptyRows = 0;
             else if (rowIdx >= 13 && ++emptyRows >= 20)
                 break;
+        }
+
+        // Fallback to filename if containerId is null or suspiciously pure-numeric without IMP prefix (IMP-207 -> 288 fix)
+        string fileName = Path.GetFileName(resolvedPath);
+        Match m = Regex.Match(fileName, @"\b(IMP)[\s\-_]*([0-9]+[A-Z0-9\-]*)(?=[_\s.\-]|$|\b)", RegexOptions.IgnoreCase);
+        if (m.Success)
+        {
+            string fileImp = $"IMP-{m.Groups[2].Value.ToUpperInvariant()}";
+            if (string.IsNullOrWhiteSpace(containerId) || IsPureNumeric(containerId) || !containerId.StartsWith("IMP-", StringComparison.OrdinalIgnoreCase))
+            {
+                containerId = fileImp;
+            }
+        }
+        else if (IsPureNumeric(containerId) && containerId != "0")
+        {
+            containerId = $"IMP-{containerId}";
         }
 
         return new ClosureTemplateData(resolvedPath, containerId, pedido41, items, rowCurves, warnings);
@@ -175,15 +231,48 @@ public static class ClosureTemplateReader
             if (nextVal.Length == 0)
                 continue;
 
-            if (containerId is null && label.Contains("CONTENEDOR", StringComparison.Ordinal))
-                containerId = nextVal;
+            // 1. Strictly exclude Discrepancy/Summary rows like "Faltante Importación" = 288 (IMP-207 -> 288 fix)
+            bool isImportLabel =
+                (label.Contains("CONTENEDOR", StringComparison.Ordinal) ||
+                 label.Contains("IMPORTACI", StringComparison.Ordinal) ||
+                 label == "IMP" ||
+                 label.StartsWith("NO. IMP", StringComparison.Ordinal) ||
+                 label.StartsWith("# IMP", StringComparison.Ordinal)) &&
+                !ImportIdExcludeTokens.Any(tok => label.Contains(tok, StringComparison.Ordinal));
+
+            if (isImportLabel && nextVal.Length > 0 && nextVal != "0")
+            {
+                string normalized = NormalizeImportIdValue(nextVal);
+                bool candidateHasImp = normalized.StartsWith("IMP-", StringComparison.OrdinalIgnoreCase);
+
+                if (string.IsNullOrWhiteSpace(containerId) ||
+                    (candidateHasImp && !containerId.StartsWith("IMP-", StringComparison.OrdinalIgnoreCase)))
+                {
+                    containerId = normalized;
+                }
+            }
             else if (pedido41 is null &&
                 (label.Contains("PEDIDO 41", StringComparison.Ordinal) ||
-                 label.Contains("PED/NAC", StringComparison.Ordinal)))
+                 label.Contains("PED/NAC", StringComparison.Ordinal) ||
+                 label.Contains("NACIONALIZACI", StringComparison.Ordinal)))
             {
                 pedido41 = nextVal;
             }
         }
+    }
+
+    private static string NormalizeImportIdValue(string raw)
+    {
+        string trimmed = raw.Trim();
+        Match m = Regex.Match(trimmed, @"^IMP[\s\-_]*(\d+[A-Z0-9\-]*)$", RegexOptions.IgnoreCase);
+        return m.Success ? $"IMP-{m.Groups[1].Value.ToUpperInvariant()}" : trimmed;
+    }
+
+    private static bool IsPureNumeric(string? val)
+    {
+        if (string.IsNullOrWhiteSpace(val)) return false;
+        string t = val.Trim();
+        return t.All(char.IsDigit);
     }
 
     private static void RefineColumnMap(Dictionary<int, string> row12Cells, Dictionary<string, int> colMap)

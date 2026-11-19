@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using Acr.Core.Models;
 using Acr.Core.Services;
 using Acr.Infrastructure.Safety;
@@ -115,6 +116,18 @@ public sealed record QcInspectionReport
 
     /// <summary>Subset of <see cref="Items"/> that emitted calculation audit flags.</summary>
     public IReadOnlyList<QcInspectionItem> FlaggedItems { get; init; } = Array.Empty<QcInspectionItem>();
+
+    /// <summary>BOM definition entries keyed by parent material code.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<BomDefinitionEntry>> BomsByParent { get; init; } = new Dictionary<string, IReadOnlyList<BomDefinitionEntry>>();
+
+    /// <summary>Child SKU descriptions discovered in BOM master data.</summary>
+    public IReadOnlyDictionary<string, string> ChildDescriptions { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>Detected genuine container parts (e.g. "A", "B") strictly ignoring ESQUEMA/ALISTO sheets.</summary>
+    public IReadOnlyList<string> DetectedParts { get; init; } = Array.Empty<string>();
+
+    /// <summary>Extraction warnings (such as Layout #4 mathematical rescue notification).</summary>
+    public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>
@@ -166,10 +179,14 @@ public static class QcReader
         WorksheetPart wsPart = ResolveQcWorksheetPart(wbPart);
         IReadOnlyList<string> sharedStrings = ReadSharedStrings(wbPart);
 
+        var warnings = new List<string>();
+        IReadOnlyList<string> detectedParts = DetectParts(wbPart);
+        var (boms, childDescs) = ReadBomDatabase(wbPart, sharedStrings);
+
         var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
         var items = new List<QcInspectionItem>();
         var flagged = new List<QcInspectionItem>();
-        StreamQcSheet(wsPart, sharedStrings, metadata, items, flagged);
+        StreamQcSheet(wsPart, sharedStrings, metadata, items, flagged, warnings);
 
         string containerId = metadata.TryGetValue("container_id", out string? metaContainer) && !string.IsNullOrEmpty(metaContainer)
             ? metaContainer
@@ -186,7 +203,11 @@ public static class QcReader
             TotalCalculatedCartons = calcC,
             TotalReportedUnits = repU,
             TotalReportedCartons = repC,
-            FlaggedItems = flagged
+            FlaggedItems = flagged,
+            BomsByParent = boms,
+            ChildDescriptions = childDescs,
+            DetectedParts = detectedParts,
+            Warnings = warnings
         };
     }
 
@@ -351,7 +372,8 @@ public static class QcReader
         IReadOnlyList<string> sharedStrings,
         Dictionary<string, string> metadata,
         List<QcInspectionItem> items,
-        List<QcInspectionItem> flagged)
+        List<QcInspectionItem> flagged,
+        List<string> warnings)
     {
         Dictionary<string, int>? mapping = null;
         int? headerRow = null;
@@ -378,7 +400,7 @@ public static class QcReader
             }
 
             emptyCount = 0;
-            ProcessNonEmptyRow(rowIndex, cells, metadata, ref headerRow, ref mapping, ref lastParent, items, flagged);
+            ProcessNonEmptyRow(rowIndex, cells, metadata, ref headerRow, ref mapping, ref lastParent, items, flagged, warnings);
         }
     }
 
@@ -403,7 +425,8 @@ public static class QcReader
         ref Dictionary<string, int>? mapping,
         ref string? lastParent,
         List<QcInspectionItem> items,
-        List<QcInspectionItem> flagged)
+        List<QcInspectionItem> flagged,
+        List<string> warnings)
     {
         if (rowIndex <= 5)
         {
@@ -417,6 +440,10 @@ public static class QcReader
             {
                 headerRow = rowIndex;
                 mapping = BuildColumnMapping(cells.ToDictionary(kv => kv.Key, kv => kv.Value.Text));
+                if (!mapping.ContainsKey("comp_cartons") && mapping.ContainsKey("units_comp"))
+                {
+                    warnings.Add("Detectado Formato QC Layout #4 (sin columna 'Bultos Complementos'): se activó la regla de rescate matemático de complementos/sueltas.");
+                }
             }
             return;
         }
@@ -549,7 +576,7 @@ public static class QcReader
                                                     cleaned.Contains("CONFRIMA", StringComparison.Ordinal)))
                     continue;
 
-                if (fieldName == "comp_cartons" && cleaned.Contains("UNIDADES", StringComparison.Ordinal))
+                if (fieldName == "comp_cartons" && (cleaned.Contains("UNIDADES", StringComparison.Ordinal) || cleaned.Contains("UNID", StringComparison.Ordinal)))
                     continue;
 
                 if (fieldName == "full_cartons" && cleaned.Contains("UNIDADES", StringComparison.Ordinal))
@@ -719,5 +746,109 @@ public static class QcReader
         }
 
         return (calcU, calcC, repU, repC);
+    }
+
+    private static IReadOnlyList<string> DetectParts(WorkbookPart wbPart)
+    {
+        var detectedParts = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (wbPart.Workbook?.Sheets == null)
+            return Array.Empty<string>();
+
+        foreach (Sheet sheet in wbPart.Workbook.Sheets.Elements<Sheet>())
+        {
+            string sName = sheet.Name?.Value ?? "";
+            string sUpper = sName.ToUpperInvariant();
+
+            // CRITICAL: Ignore "ESQUEMA ALISTO" sheets when detecting multi-part containers (prevents 21 false PENDIENTE_PARTE_B on IMP-207!)
+            if (sUpper.Contains("ESQUEMA", StringComparison.Ordinal) || sUpper.Contains("ALISTO", StringComparison.Ordinal))
+                continue;
+
+            Match m = Regex.Match(sName, @"PARTE\s+([A-Z0-9]+)", RegexOptions.IgnoreCase);
+            if (m.Success)
+            {
+                detectedParts.Add(m.Groups[1].Value.ToUpperInvariant());
+            }
+        }
+
+        return detectedParts.ToList();
+    }
+
+    private static (Dictionary<string, IReadOnlyList<BomDefinitionEntry>> Boms, Dictionary<string, string> ChildDescriptions) ReadBomDatabase(
+        WorkbookPart wbPart,
+        IReadOnlyList<string> sharedStrings)
+    {
+        var boms = new Dictionary<string, IReadOnlyList<BomDefinitionEntry>>(StringComparer.OrdinalIgnoreCase);
+        var bomsMutable = new Dictionary<string, List<BomDefinitionEntry>>(StringComparer.OrdinalIgnoreCase);
+        var childDescs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        WorksheetPart? bdPart = OpenXmlCellHelper.FindWorksheetPart(wbPart, "BASE DE DATOS", allowContains: true) ??
+                                OpenXmlCellHelper.FindWorksheetPart(wbPart, "BOM", allowContains: true) ??
+                                OpenXmlCellHelper.FindWorksheetPart(wbPart, "CURVAS", allowContains: true);
+        if (bdPart is null)
+            return (boms, childDescs);
+
+        using OpenXmlReader reader = OpenXmlReader.Create(bdPart);
+        string? currentParent = null;
+        int emptyStreak = 0;
+
+        while (reader.Read())
+        {
+            if (reader.ElementType != typeof(Row) || reader.LoadCurrentElement() is not Row rowEl)
+                continue;
+
+            int rowIdx = (int)(rowEl.RowIndex?.Value ?? 0);
+            if (rowIdx < 4)
+                continue;
+
+            var cells = new Dictionary<int, string>();
+            int fallbackCol = 0;
+            foreach (Cell cell in rowEl.Elements<Cell>())
+            {
+                int colIdx = ParseColumnIndex(cell.CellReference?.Value, ref fallbackCol);
+                string text = OpenXmlCellHelper.DecodeCellText(cell, sharedStrings);
+                if (text.Length > 0)
+                    cells[colIdx] = text;
+            }
+
+            if (cells.Count == 0)
+            {
+                if (++emptyStreak > 35) break;
+                continue;
+            }
+
+            // Col E (idx 4) = BOM ID / indicator, Col I/F (idx 8 or 5) = Material, Col J/G (idx 9 or 6) = Ratio, Col K (idx 10) = UOM, Col L/M (idx 11/12) = Description
+            string bomId = cells.TryGetValue(4, out string? bId) ? bId.Trim() : "";
+            string matRaw = cells.TryGetValue(8, out string? m8) ? m8 : (cells.TryGetValue(5, out string? m5) ? m5 : "");
+            string matClean = OpenXmlCellHelper.NormalizeMaterialCode(matRaw);
+            string ratioRaw = cells.TryGetValue(9, out string? r9) ? r9 : (cells.TryGetValue(6, out string? r6) ? r6 : "1");
+            string umRaw = cells.TryGetValue(10, out string? u10) ? u10.Trim().ToUpperInvariant() : "";
+            string descRaw = cells.TryGetValue(11, out string? d11) ? d11.Trim() : (cells.TryGetValue(12, out string? d12) ? d12.Trim() : "");
+
+            if (string.IsNullOrWhiteSpace(bomId) && string.IsNullOrWhiteSpace(matClean))
+            {
+                if (++emptyStreak > 35) break;
+                continue;
+            }
+            emptyStreak = 0;
+
+            if (umRaw == "PRK" || bomId.StartsWith("BOM", StringComparison.OrdinalIgnoreCase) || (!string.IsNullOrEmpty(bomId) && bomId.Contains(matClean)))
+            {
+                currentParent = matClean;
+                if (!bomsMutable.ContainsKey(currentParent))
+                    bomsMutable[currentParent] = new List<BomDefinitionEntry>();
+            }
+            else if (!string.IsNullOrEmpty(currentParent) && !string.IsNullOrEmpty(matClean) && !matClean.Equals(currentParent, StringComparison.OrdinalIgnoreCase))
+            {
+                int ratio = int.TryParse(ratioRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int rVal) && rVal > 0 ? rVal : 1;
+                bomsMutable[currentParent].Add(new BomDefinitionEntry { ChildMaterialCode = matClean, Ratio = ratio });
+                if (!string.IsNullOrWhiteSpace(descRaw) && !childDescs.ContainsKey(matClean))
+                    childDescs[matClean] = descRaw;
+            }
+        }
+
+        foreach (var kvp in bomsMutable)
+            boms[kvp.Key] = kvp.Value;
+
+        return (boms, childDescs);
     }
 }

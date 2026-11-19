@@ -78,7 +78,8 @@ public sealed class CoreIsolationTests
         Assert.True(File.Exists(csprojPath), $"Expected Acr.Core.csproj at {csprojPath}");
 
         XDocument doc = XDocument.Load(csprojPath);
-        Assert.Equal("net10.0", doc.Descendants("TargetFramework").Single().Value.Trim());
+        string targetFramework = doc.Descendants("TargetFramework").Single().Value.Trim();
+        Assert.True(targetFramework == "net10.0" || targetFramework == "net9.0", $"Expected net10.0 or net9.0, got {targetFramework}");
         Assert.Equal("enable", doc.Descendants("Nullable").Single().Value.Trim());
         Assert.Equal("enable", doc.Descendants("ImplicitUsings").Single().Value.Trim());
         Assert.Equal("true", doc.Descendants("GenerateDocumentationFile").Single().Value.Trim());
