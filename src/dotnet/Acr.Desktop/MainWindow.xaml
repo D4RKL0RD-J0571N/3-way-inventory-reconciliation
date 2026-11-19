@@ -6,10 +6,14 @@
         xmlns:vm="clr-namespace:Acr.Desktop.ViewModels"
         xmlns:models="clr-namespace:Acr.Core.Models;assembly=Acr.Core"
         mc:Ignorable="d"
-        Title="ACR — Asistente de Cierre de Recepción (Almacema C001)" 
-        Height="850" Width="1240"
+        Title="ACR — Asistente de Cierre de Recepción (Almacén C001)" 
+        Height="870" Width="1280"
+        MinHeight="720" MinWidth="1100"
         WindowStartupLocation="CenterScreen"
-        Background="#F1F5F9">
+        Background="#F1F5F9"
+        ToolTipService.InitialShowDelay="150"
+        ToolTipService.BetweenShowDelay="100"
+        ToolTipService.ShowDuration="12000">
 
     <Window.DataContext>
         <vm:MainViewModel />
@@ -17,12 +21,183 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
-        
+
+        <!-- ========================================== -->
+        <!-- VECTOR ICON GEOMETRIES (No Emojis)         -->
+        <!-- ========================================== -->
+        <StreamGeometry x:Key="GeoFolderOpen">M2,6 C2,4.9 2.9,4 4,4 L8,4 L10,6 L20,6 C21.1,6 22,6.9 22,8 L22,9 C22,10.1 21.1,11 20,11 L4,11 C2.9,11 2,10.1 2,9 Z M2,11 L22,11 L20,20 C19.8,20.6 19.3,21 18.7,21 L5.3,21 C4.7,21 4.2,20.6 4,20 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoPlayReconcile">M5,3 L19,12 L5,21 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoZap">M13,2 L3,14 L12,14 L11,22 L21,10 L12,10 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoFileCheck">M14,2 L6,2 C4.9,2 4,2.9 4,4 L4,20 C4,21.1 4.9,22 6,22 L18,22 C19.1,22 20,21.1 20,20 L20,8 Z M14,2 L14,8 L20,8 M9,15 L11,17 L16,12</StreamGeometry>
+        <StreamGeometry x:Key="GeoFileSpreadsheet">M14,2 L6,2 C4.9,2 4,2.9 4,4 L4,20 C4,21.1 4.9,22 6,22 L18,22 C19.1,22 20,21.1 20,20 L20,8 Z M14,2 L14,8 L20,8 M8,13 L16,13 M8,17 L16,17 M8,9 L11,9</StreamGeometry>
+        <StreamGeometry x:Key="GeoPackage">M12,2 L2,7 L12,12 L22,7 Z M2,17 L12,22 L22,17 M2,12 L12,17 L22,12</StreamGeometry>
+        <StreamGeometry x:Key="GeoSearch">M11,4 C7.1,4 4,7.1 4,11 C4,14.9 7.1,18 11,18 C12.6,18 14.1,17.5 15.3,16.6 L19.7,21 L21,19.7 L16.6,15.3 C17.5,14.1 18,12.6 18,11 C18,7.1 14.9,4 11,4 Z M11,6 C13.8,6 16,8.2 16,11 C16,13.8 13.8,16 11,16 C8.2,16 6,13.8 6,11 C6,8.2 8.2,6 11,6 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoTraffic">M8,3 L16,3 C17.1,3 18,3.9 18,5 L18,19 C18,20.1 17.1,21 16,21 L8,21 C6.9,21 6,20.1 6,19 L6,5 C6,3.9 6.9,3 8,3 Z M12,5.5 C10.9,5.5 10,6.4 10,7.5 C10,8.6 10.9,9.5 12,9.5 C13.1,9.5 14,8.6 14,7.5 C14,6.4 13.1,5.5 12,5.5 Z M12,10.5 C10.9,10.5 10,11.4 10,12.5 C10,13.6 10.9,14.5 12,14.5 C13.1,14.5 14,13.6 14,12.5 C14,11.4 13.1,10.5 12,10.5 Z M12,15.5 C10.9,15.5 10,16.4 10,17.5 C10,18.6 10.9,19.5 12,19.5 C13.1,19.5 14,18.6 14,17.5 C14,16.4 13.1,15.5 12,15.5 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoBom">M12,3 L12,9 M12,9 L6,9 C4.9,9 4,9.9 4,11 L4,17 M12,9 L18,9 C19.1,9 20,9.9 20,11 L20,17 M4,17 C4,18.1 4.9,19 6,19 C7.1,19 8,18.1 8,17 C8,15.9 7.1,15 6,15 C4.9,15 4,15.9 4,17 Z M18,17 C18,18.1 18.9,19 20,19 C21.1,19 22,18.1 22,17 C22,15.9 21.1,15 20,15 C18.9,15 18,15.9 18,17 Z M10,3 C10,4.1 10.9,5 12,5 C13.1,5 14,4.1 14,3 C14,1.9 13.1,1 12,1 C10.9,1 10,1.9 10,3 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoClipboard">M16,4 L18,4 C19.1,4 20,4.9 20,6 L20,20 C20,21.1 19.1,22 18,22 L6,22 C4.9,22 4,21.1 4,20 L4,6 C4,4.9 4.9,4 6,4 L8,4 M9,2 L15,2 C15.6,2 16,2.4 16,3 L16,5 C16,5.6 15.6,6 15,6 L9,6 C8.4,6 8,5.6 8,5 L8,3 C8,2.4 8.4,2 9,2 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoExcelExport">M14,2 L6,2 C4.9,2 4,2.9 4,4 L4,20 C4,21.1 4.9,22 6,22 L18,22 C19.1,22 20,21.1 20,20 L20,8 Z M14,2 L14,8 L20,8 M12,11 L12,17 M9,14 L15,14</StreamGeometry>
+        <StreamGeometry x:Key="GeoChecklist">M9,11 L12,14 L22,4 M21,12 L21,19 C21,20.1 20.1,21 19,21 L5,21 C3.9,21 3,20.1 3,19 L3,5 C3,3.9 3.9,3 5,3 L16,3</StreamGeometry>
+        <StreamGeometry x:Key="GeoWiki">M4,19.5 C4,18.1 5.1,17 6.5,17 L20,17 M4,4.5 C4,3.1 5.1,2 6.5,2 L20,2 L20,22 L6.5,22 C5.1,22 4,20.9 4,19.5 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoCopy">M8,4 L16,4 C17.1,4 18,4.9 18,6 L18,16 C18,17.1 17.1,18 16,18 L8,18 C6.9,18 6,17.1 6,16 L6,6 C6,4.9 6.9,4 8,4 Z M4,8 L6,8 L6,20 L16,20 L16,22 L6,22 C4.9,22 4,21.1 4,20 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoCalculator">M4,2 L20,2 C21.1,2 22,2.9 22,4 L22,20 C22,21.1 21.1,22 20,22 L4,22 C2.9,22 2,21.1 2,20 L2,4 C2,2.9 2.9,2 4,2 Z M6,6 L18,6 L18,9 L6,9 Z M7,12 L9,12 L9,14 L7,14 Z M11,12 L13,12 L13,14 L11,14 Z M15,12 L17,12 L17,14 L15,14 Z M7,16 L9,16 L9,18 L7,18 Z M11,16 L13,16 L13,18 L11,18 Z M15,16 L17,16 L17,18 L15,18 Z</StreamGeometry>
+        <StreamGeometry x:Key="GeoShieldCheck">M12,2 L4,5 L4,11 C4,16.5 7.4,20.7 12,22 C16.6,20.7 20,16.5 20,11 L20,5 Z M9,12 L11,14 L15,10</StreamGeometry>
+
+        <!-- ========================================== -->
+        <!-- GLOBAL TOOLTIP STYLE                       -->
+        <!-- ========================================== -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="#0F172A"/>
+            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="9,6"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="MaxWidth" Value="380"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <TextBlock Text="{TemplateBinding Content}" TextWrapping="Wrap" Foreground="{TemplateBinding Foreground}" FontSize="{TemplateBinding FontSize}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ========================================== -->
+        <!-- BUTTON STYLES                              -->
+        <!-- ========================================== -->
+        <!-- Modern Outlined Browse Button -->
+        <Style x:Key="BrowseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="#334155"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#E2E8F0"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#94A3B8"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#CBD5E1"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Primary High-Impact Button (Sky Blue) -->
+        <Style x:Key="PrimaryActionBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#0284C7"/>
+            <Setter Property="BorderBrush" Value="#0369A1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0369A1"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#075985"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#075985"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Dark Action Button (Slate 900) -->
+        <Style x:Key="DarkActionBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#0F172A"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#1E293B"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#475569"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#334155"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Green Success Button -->
+        <Style x:Key="GreenActionBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#16A34A"/>
+            <Setter Property="BorderBrush" Value="#15803D"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#15803D"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#166534"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#166534"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- TabItem Clean Corporate Style -->
         <Style TargetType="TabItem">
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="Padding" Value="12,8"/>
             <Setter Property="Foreground" Value="#475569"/>
         </Style>
 
@@ -64,11 +239,12 @@
                     <TextBlock DockPanel.Dock="Right" Text=".NET / WPF | Paridad Total Web &amp; ERP" VerticalAlignment="Center" Foreground="#94A3B8" FontSize="11"/>
                 </DockPanel>
 
-                <!-- Executive Single-Row KPI Strip -->
+                <!-- Executive Single-Row KPI Strip with Operational Spanish Tooltips -->
                 <Border Grid.Row="1" Background="#0F172A" BorderBrush="#334155" BorderThickness="1" CornerRadius="4" Padding="10,6" Margin="0,8,0,0">
                     <WrapPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- Case & PO -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0"
+                                    ToolTip="Contenedor activo y orden de compra maestra detectados en la plantilla de cierre.">
                             <TextBlock Text="CONTENEDOR: " FontWeight="Bold" FontSize="11" Foreground="#94A3B8"/>
                             <TextBlock Text="{Binding KpiContainerId}" FontWeight="Bold" FontSize="11" Foreground="#38BDF8"/>
                             <TextBlock Text=" | PO: " FontWeight="Bold" FontSize="11" Foreground="#94A3B8" Margin="8,0,0,0"/>
@@ -76,7 +252,8 @@
                         </StackPanel>
 
                         <!-- Estilos -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0"
+                                    ToolTip="Total de materiales/estilos analizados: Cuadrados (físico y factura coinciden exactamente) vs Discrepantes (con diferencia de unidades, bultos o avería).">
                             <TextBlock Text="ESTILOS: " FontWeight="Bold" FontSize="11" Foreground="#94A3B8"/>
                             <TextBlock Text="{Binding KpiTotalStyles}" FontWeight="Bold" FontSize="11" Foreground="#F8FAFC"/>
                             <TextBlock Text=" (Cuadrados: " FontSize="11" Foreground="#94A3B8"/>
@@ -87,7 +264,8 @@
                         </StackPanel>
 
                         <!-- Unidades -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0"
+                                    ToolTip="Balance de unidades: Facturadas en Pedido 41 vs Contadas en Físico por Control de Calidad en muelle (Dif = Físico - Facturado).">
                             <TextBlock Text="UNIDADES: " FontWeight="Bold" FontSize="11" Foreground="#94A3B8"/>
                             <TextBlock Text="{Binding KpiDeclaredUnits, StringFormat={}{0:N0}}" FontSize="11" Foreground="#CBD5E1"/>
                             <TextBlock Text=" Fact. / " FontSize="11" Foreground="#94A3B8"/>
@@ -98,7 +276,8 @@
                         </StackPanel>
 
                         <!-- Bultos -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0"
+                                    ToolTip="Balance de cajas: Bultos declarados en Packing List (AW) vs Bultos físicos calculados en descarga (AS).">
                             <TextBlock Text="BULTOS: " FontWeight="Bold" FontSize="11" Foreground="#94A3B8"/>
                             <TextBlock Text="{Binding KpiDeclaredCartons, StringFormat={}{0:N0}}" FontSize="11" Foreground="#CBD5E1"/>
                             <TextBlock Text=" Fact. / " FontSize="11" Foreground="#94A3B8"/>
@@ -109,7 +288,8 @@
                         </StackPanel>
 
                         <!-- Revueltos -->
-                        <StackPanel Orientation="Horizontal">
+                        <StackPanel Orientation="Horizontal"
+                                    ToolTip="Pares de materiales con cruce de mercancía detectado (un estilo con faltante compensado con sobrante equivalente en el mismo contenedor).">
                             <TextBlock Text="REVUELTOS: " FontWeight="Bold" FontSize="11" Foreground="#94A3B8"/>
                             <TextBlock Text="{Binding KpiRevueltoPairs}" FontWeight="Bold" FontSize="11" Foreground="#C084FC"/>
                         </StackPanel>
@@ -119,28 +299,80 @@
         </Border>
 
         <!-- ========================================== -->
-        <!-- FILE LOADER TOOLBAR                        -->
+        <!-- FILE LOADER TOOLBAR (FIXED INDEPENDENT COLUMNS) -->
         <!-- ========================================== -->
-        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="14,8">
+        <Border Grid.Row="1" Background="#FFFFFF" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="14,10">
             <Grid>
                 <Grid.ColumnDefinitions>
+                    <!-- Col 0: QC Label -->
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
+                    <!-- Col 1: QC TextBox -->
+                    <ColumnDefinition Width="*" MinWidth="180"/>
+                    <!-- Col 2: QC Browse Button -->
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
+                    <!-- Col 3: Spacer -->
+                    <ColumnDefinition Width="16"/>
+                    <!-- Col 4: Cierre Label -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Col 5: Cierre TextBox -->
+                    <ColumnDefinition Width="*" MinWidth="180"/>
+                    <!-- Col 6: Cierre Browse Button -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Col 7: Spacer -->
+                    <ColumnDefinition Width="16"/>
+                    <!-- Col 8: Execute Action Button -->
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock Grid.Column="0" Text="Control Calidad (QC):" VerticalAlignment="Center" FontWeight="Medium" FontSize="11" Margin="0,0,6,0"/>
-                <TextBox Grid.Column="1" Text="{Binding QcFilePath, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" FontSize="11" Padding="4,3" Margin="0,0,4,0"/>
-                <Button Grid.Column="2" Content="Examinar..." Command="{Binding BrowseQcFileCommand}" VerticalAlignment="Center" FontSize="11" Padding="6,3" Margin="0,0,12,0"/>
+                <!-- QC File Section -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <Path Data="{StaticResource GeoFileCheck}" Width="14" Height="14" Stretch="Uniform" Fill="#0284C7" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Control Calidad (QC):" FontWeight="SemiBold" FontSize="11" Foreground="#334155" VerticalAlignment="Center"/>
+                </StackPanel>
 
-                <TextBlock Grid.Column="3" Text="Plantilla Cierre (Master):" VerticalAlignment="Center" FontWeight="Medium" FontSize="11" Margin="0,0,6,0"/>
-                <TextBox Grid.Column="3" Text="{Binding ClosureTemplatePath, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Center" FontSize="11" Padding="4,3" Margin="140,0,4,0"/>
-                <Button Grid.Column="4" Content="Examinar..." Command="{Binding BrowseClosureTemplateCommand}" VerticalAlignment="Center" FontSize="11" Padding="6,3" Margin="0,0,10,0"/>
+                <TextBox Grid.Column="1" Text="{Binding QcFilePath, UpdateSourceTrigger=PropertyChanged}" 
+                         VerticalAlignment="Center" FontSize="11" Padding="6,4" BorderBrush="#CBD5E1"
+                         ToolTip="Ruta del libro Excel de Control de Calidad (.xlsm / .xlsx) con conteo físico de tarimas y bultos de muelle."/>
 
-                <Button Grid.Column="4" Content="Ejecutar Conciliación 3-Way" Command="{Binding ExecuteReconciliationCommand}" 
-                        Background="#0284C7" Foreground="White" FontWeight="Bold" FontSize="11" Padding="12,5" BorderThickness="0" Margin="95,0,0,0"/>
+                <Button Grid.Column="2" Command="{Binding BrowseQcFileCommand}" 
+                        Style="{StaticResource BrowseButtonStyle}"
+                        Margin="4,0,0,0"
+                        ToolTip="Examinar en el equipo para seleccionar el archivo de Control de Calidad (QC).">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource GeoFolderOpen}" Width="13" Height="13" Stretch="Uniform" Fill="#475569" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Examinar..." FontSize="11" FontWeight="Medium" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Plantilla Cierre Section -->
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <Path Data="{StaticResource GeoFileSpreadsheet}" Width="14" Height="14" Stretch="Uniform" Fill="#16A34A" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="Plantilla Cierre (Master):" FontWeight="SemiBold" FontSize="11" Foreground="#334155" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <TextBox Grid.Column="5" Text="{Binding ClosureTemplatePath, UpdateSourceTrigger=PropertyChanged}" 
+                         VerticalAlignment="Center" FontSize="11" Padding="6,4" BorderBrush="#CBD5E1"
+                         ToolTip="Ruta de la plantilla corporativa oficial de Cierre de Recepción (.xlsm / .xlsx) que contiene los Pedidos 41 y 43."/>
+
+                <Button Grid.Column="6" Command="{Binding BrowseClosureTemplateCommand}" 
+                        Style="{StaticResource BrowseButtonStyle}"
+                        Margin="4,0,0,0"
+                        ToolTip="Examinar en el equipo para seleccionar la plantilla maestra oficial de Cierre de Recepción.">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource GeoFolderOpen}" Width="13" Height="13" Stretch="Uniform" Fill="#475569" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Examinar..." FontSize="11" FontWeight="Medium" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <!-- Execute Reconciliation Action Button -->
+                <Button Grid.Column="8" Command="{Binding ExecuteReconciliationCommand}" 
+                        Style="{StaticResource PrimaryActionBtnStyle}"
+                        ToolTip="Ejecutar el motor de triple conciliación (Físico Muelle vs Factura Pedido 41 vs Sistema Pedido 43).">
+                    <StackPanel Orientation="Horizontal">
+                        <Path Data="{StaticResource GeoPlayReconcile}" Width="12" Height="12" Stretch="Uniform" Fill="White" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Ejecutar Conciliación 3-Way" FontSize="11" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </Grid>
         </Border>
 
@@ -152,7 +384,13 @@
             <!-- ========================================== -->
             <!-- TAB 1: CUADRE & BULTOS                     -->
             <!-- ========================================== -->
-            <TabItem Header="Cuadre &amp; Bultos">
+            <TabItem ToolTip="Conciliación de bultos enteros y complementarios entre conteo de muelle y Packing List.">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource GeoPackage}" Width="14" Height="14" Stretch="Uniform" Stroke="#0284C7" StrokeThickness="1.4" Fill="Transparent" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Cuadre &amp; Bultos" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -169,21 +407,35 @@
                             </Grid.ColumnDefinitions>
 
                             <WrapPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <CheckBox Content="Modo Estricto Aduanero" IsChecked="{Binding StrictCustomsMode}" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                                <CheckBox Content="Ocultar en cero (0 total)" IsChecked="{Binding HideZeroTotalItems}" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Bultos Descarga (AS): " FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,2,0" VerticalAlignment="Center"/>
+                                <CheckBox Content="Modo Estricto Aduanero" IsChecked="{Binding StrictCustomsMode}" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center"
+                                          ToolTip="Exige coincidencia idéntica en bultos enteros y complementarios (fórmula canónica estricta), sin compensar cajas entre líneas."/>
+                                <CheckBox Content="Ocultar en cero (0 total)" IsChecked="{Binding HideZeroTotalItems}" FontWeight="SemiBold" Margin="0,0,16,0" VerticalAlignment="Center"
+                                          ToolTip="Oculta materiales sin movimiento físico ni facturado (0 Total) para enfocar la auditoría en discrepancias activas."/>
+                                <TextBlock Text="Bultos Descarga (AS): " FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,2,0" VerticalAlignment="Center"
+                                           ToolTip="Total de bultos físicos registrados durante la descarga en muelle."/>
                                 <TextBlock Text="{Binding TotalBultosDescarga}" FontSize="11" FontWeight="Bold" Foreground="#0284C7" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Bultos PL (AW): " FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,2,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Bultos PL (AW): " FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,2,0" VerticalAlignment="Center"
+                                           ToolTip="Total de bultos declarados en factura y Packing List (columna AW)."/>
                                 <TextBlock Text="{Binding TotalBultosPl}" FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Diferencia: " FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,2,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Diferencia: " FontSize="11" FontWeight="Bold" Foreground="#475569" Margin="0,0,2,0" VerticalAlignment="Center"
+                                           ToolTip="Diferencia total de bultos entre muelle y Packing List."/>
                                 <TextBlock Text="{Binding DifBultos}" FontSize="11" FontWeight="Bold" Foreground="#D97706" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Enteros: " FontSize="11" Foreground="#64748B" Margin="0,0,2,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Enteros: " FontSize="11" Foreground="#64748B" Margin="0,0,2,0" VerticalAlignment="Center"
+                                           ToolTip="Suma de cajas completas estándar."/>
                                 <TextBlock Text="{Binding TotalBultosEnteros}" FontSize="11" FontWeight="SemiBold" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Complementos: " FontSize="11" Foreground="#64748B" Margin="0,0,2,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Complementos: " FontSize="11" Foreground="#64748B" Margin="0,0,2,0" VerticalAlignment="Center"
+                                           ToolTip="Suma de cajas con contenido parcial o picos."/>
                                 <TextBlock Text="{Binding TotalBultosComplementos}" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             </WrapPanel>
 
-                            <Button Grid.Column="1" Content="Copiar Tira 1 (AS:AT)" Command="{Binding CopyTira1AsAtCommand}" Padding="10,4" Margin="6,0,0,0" Background="#0F172A" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"/>
+                            <Button Grid.Column="1" Command="{Binding CopyTira1AsAtCommand}" 
+                                    Style="{StaticResource DarkActionBtnStyle}"
+                                    ToolTip="Copiar al portapapeles las columnas AS:AT (Bultos y Unidades Descarga) listas para pegar en el libro oficial.">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="{StaticResource GeoCopy}" Width="12" Height="12" Stretch="Uniform" Fill="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Copiar Tira 1 (AS:AT)" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </Grid>
                     </Border>
 
@@ -195,7 +447,10 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="0" Text="CALCULADORA INTERACTIVA DE BULTOS / SUELTAS" FontWeight="Bold" FontSize="12" Foreground="#0284C7" Margin="0,0,0,8"/>
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+                                <Path Data="{StaticResource GeoCalculator}" Width="13" Height="13" Stretch="Uniform" Fill="#0284C7" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="CALCULADORA INTERACTIVA DE BULTOS / SUELTAS" FontWeight="Bold" FontSize="12" Foreground="#0284C7" VerticalAlignment="Center"/>
+                            </StackPanel>
 
                             <Grid Grid.Row="1">
                                 <Grid.ColumnDefinitions>
@@ -209,30 +464,36 @@
 
                                 <StackPanel Grid.Column="0" Margin="0,0,8,0">
                                     <TextBlock Text="Unidades a empacar:" FontSize="10" Foreground="#64748B"/>
-                                    <TextBox Text="{Binding CalcUnits, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" FontWeight="SemiBold"/>
+                                    <TextBox Text="{Binding CalcUnits, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11" FontWeight="SemiBold"
+                                             ToolTip="Cantidad total de unidades a simular en empaque canónico."/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Margin="0,0,8,0">
                                     <TextBlock Text="Curva Prepack:" FontSize="10" Foreground="#64748B"/>
-                                    <TextBox Text="{Binding CalcCurve, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11"/>
+                                    <TextBox Text="{Binding CalcCurve, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11"
+                                             ToolTip="Factor de curva o piezas por ratio de prepack."/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="2" Margin="0,0,8,0">
                                     <TextBlock Text="Unidades/Bulto Entero:" FontSize="10" Foreground="#64748B"/>
-                                    <TextBox Text="{Binding CalcStdBox, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11"/>
+                                    <TextBox Text="{Binding CalcStdBox, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11"
+                                             ToolTip="Capacidad estándar de unidades contenidas en cada bulto entero."/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="3" Margin="0,0,8,0">
                                     <TextBlock Text="¿Tiene pico / compl.?" FontSize="10" Foreground="#64748B"/>
-                                    <CheckBox Content="Incluir pico" IsChecked="{Binding CalcHasOdds}" VerticalAlignment="Center" Margin="0,4,0,0" FontSize="11"/>
+                                    <CheckBox Content="Incluir pico" IsChecked="{Binding CalcHasOdds}" VerticalAlignment="Center" Margin="0,4,0,0" FontSize="11"
+                                              ToolTip="Marcar si las unidades sobrantes forman una caja complementaria física o quedan como piezas sueltas."/>
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="4" Margin="0,0,8,0">
                                     <TextBlock Text="Unidades en pico:" FontSize="10" Foreground="#64748B"/>
-                                    <TextBox Text="{Binding CalcOddUnits, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11"/>
+                                    <TextBox Text="{Binding CalcOddUnits, UpdateSourceTrigger=PropertyChanged}" Padding="4,2" FontSize="11"
+                                             ToolTip="Cantidad de unidades contenidas en el bulto complementario o pico."/>
                                 </StackPanel>
 
-                                <Border Grid.Column="5" Background="#1E293B" CornerRadius="4" Padding="8,4">
+                                <Border Grid.Column="5" Background="#1E293B" CornerRadius="4" Padding="8,4"
+                                        ToolTip="Empaque canónico: NxM +K (piezas sueltas) o NxM 1xK (con caja complementaria).">
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="EMPAQUE CANÓNICO CALCULADO:" FontSize="9" Foreground="#94A3B8" FontWeight="Bold"/>
                                         <TextBlock Text="{Binding CalcPkgStr}" FontSize="13" Foreground="#38BDF8" FontWeight="Bold" Margin="0,1"/>
@@ -270,7 +531,13 @@
             <!-- ========================================== -->
             <!-- TAB 2: FICHA 360° MATERIAL                 -->
             <!-- ========================================== -->
-            <TabItem Header="Ficha 360° Material">
+            <TabItem ToolTip="Auditoría integral, ficha técnica y desglose BOM proporcional por código de material.">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource GeoSearch}" Width="13" Height="13" Stretch="Uniform" Fill="#0284C7" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Ficha 360° Material" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -290,21 +557,25 @@
 
                             <StackPanel Grid.Column="0" Margin="0,0,12,0">
                                 <TextBlock Text="Buscar material / estilo / PO:" FontSize="10" Foreground="#64748B" FontWeight="SemiBold"/>
-                                <TextBox Text="{Binding InspectorSearchQuery, UpdateSourceTrigger=PropertyChanged}" Padding="6,3" FontSize="11"/>
+                                <TextBox Text="{Binding InspectorSearchQuery, UpdateSourceTrigger=PropertyChanged}" Padding="6,3" FontSize="11"
+                                         ToolTip="Escriba el código SAP, referencia de proveedor o número de pedido 43."/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="0,0,12,0">
                                 <TextBlock Text="Seleccionar Estilo (Material Padre):" FontSize="10" Foreground="#64748B" FontWeight="SemiBold"/>
-                                <ComboBox ItemsSource="{Binding FilteredInspectorItems}" SelectedItem="{Binding SelectedInspectorItem}" DisplayMemberPath="MaterialCode" FontSize="11" Padding="6,3"/>
+                                <ComboBox ItemsSource="{Binding FilteredInspectorItems}" SelectedItem="{Binding SelectedInspectorItem}" DisplayMemberPath="MaterialCode" FontSize="11" Padding="6,3"
+                                          ToolTip="Seleccione un material para inspeccionar sus 4 dimensiones de auditoría y desglose de curvas BOM."/>
                             </StackPanel>
 
-                            <CheckBox Grid.Column="2" Content="Ocultar en cero" IsChecked="{Binding HideZeroTotalItems}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            <CheckBox Grid.Column="2" Content="Ocultar en cero" IsChecked="{Binding HideZeroTotalItems}" VerticalAlignment="Center" FontWeight="SemiBold"
+                                      ToolTip="Ocultar ítems que no tengan unidades físicas ni facturadas."/>
                         </Grid>
                     </Border>
 
                     <!-- Status Banner -->
                     <Border Grid.Row="1" Background="{Binding SelectedInspectorItem.BadgeBackgroundColor}" 
-                            BorderBrush="{Binding SelectedInspectorItem.BadgeBorderColor}" BorderThickness="1,1,1,3" CornerRadius="4" Padding="12,8" Margin="0,0,0,10">
+                            BorderBrush="{Binding SelectedInspectorItem.BadgeBorderColor}" BorderThickness="1,1,1,3" CornerRadius="4" Padding="12,8" Margin="0,0,0,10"
+                            ToolTip="Diagnóstico de discrepancia según la Regla Cardinal de Inventarios (sin compensaciones ilegítimas).">
                         <DockPanel LastChildFill="False">
                             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="ESTADO: " FontWeight="Bold" FontSize="11" Foreground="#475569"/>
@@ -330,7 +601,8 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- Card 1: Identificación -->
-                        <Border Grid.Column="0" Style="{StaticResource DashboardCard}" BorderBrush="#0284C7" Margin="0,0,8,0">
+                        <Border Grid.Column="0" Style="{StaticResource DashboardCard}" BorderBrush="#0284C7" Margin="0,0,8,0"
+                                ToolTip="Datos de catálogo, proveedor y fila física en la plantilla Excel.">
                             <StackPanel>
                                 <TextBlock Text="1. IDENTIFICACIÓN" FontWeight="Bold" FontSize="11" Foreground="#0284C7" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding SelectedInspectorItem.SourceRow, StringFormat='Fila Excel: {0}'}" FontSize="11" Margin="0,2"/>
@@ -342,7 +614,8 @@
                         </Border>
 
                         <!-- Card 2: Empaque & PO 43 -->
-                        <Border Grid.Column="1" Style="{StaticResource DashboardCard}" BorderBrush="#0284C7" Margin="0,0,8,0">
+                        <Border Grid.Column="1" Style="{StaticResource DashboardCard}" BorderBrush="#0284C7" Margin="0,0,8,0"
+                                ToolTip="Parámetros de empaque canónico y bultos asociados a la orden de compra.">
                             <StackPanel>
                                 <TextBlock Text="2. EMPAQUE &amp; PO 43" FontWeight="Bold" FontSize="11" Foreground="#0284C7" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding SelectedInspectorItem.CanonicalPackaging, StringFormat='Empaque Canónico: {0}'}" FontWeight="Bold" Foreground="#0284C7" FontSize="11" Margin="0,2"/>
@@ -354,7 +627,8 @@
                         </Border>
 
                         <!-- Card 3: Factura 41 & Físico -->
-                        <Border Grid.Column="2" Style="{StaticResource DashboardCard}" BorderBrush="#0284C7" Margin="0,0,8,0">
+                        <Border Grid.Column="2" Style="{StaticResource DashboardCard}" BorderBrush="#0284C7" Margin="0,0,8,0"
+                                ToolTip="Comparación cuantitativa y valoración económica según pedido 41.">
                             <StackPanel>
                                 <TextBlock Text="3. FACTURA 41 &amp; FÍSICO" FontWeight="Bold" FontSize="11" Foreground="#0284C7" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding SelectedInspectorItem.DeclaredUnits, StringFormat='Facturado 41: {0:N0} UN'}" FontSize="11" Margin="0,2"/>
@@ -365,7 +639,8 @@
                         </Border>
 
                         <!-- Card 4: Balances & Revuelto -->
-                        <Border Grid.Column="3" Style="{StaticResource DashboardCard}" BorderBrush="#0284C7">
+                        <Border Grid.Column="3" Style="{StaticResource DashboardCard}" BorderBrush="#0284C7"
+                                ToolTip="Averías, materiales revueltos emparejados y monto estimado para reclamo NCR.">
                             <StackPanel>
                                 <TextBlock Text="4. BALANCES &amp; REVUELTO" FontWeight="Bold" FontSize="11" Foreground="#0284C7" Margin="0,0,0,8"/>
                                 <TextBlock Text="{Binding SelectedInspectorItem.DamagedUnits, StringFormat='Dañado / Avería: {0} UN'}" FontSize="11" Margin="0,2"/>
@@ -377,7 +652,8 @@
                     </Grid>
 
                     <!-- Child SKUs Table -->
-                    <GroupBox Grid.Row="3" Header="Desglose de Tallas Hijas BOM (Reparto Proporcional Largest-Remainder)" FontWeight="Bold" FontSize="11">
+                    <GroupBox Grid.Row="3" Header="Desglose de Tallas Hijas BOM (Reparto Proporcional Largest-Remainder)" FontWeight="Bold" FontSize="11"
+                              ToolTip="Distribución matemática determinista de unidades físicas entre tallas hijas preservando la suma exacta.">
                         <DataGrid ItemsSource="{Binding SelectedInspectorItem.Children}" AutoGenerateColumns="False" IsReadOnly="True" GridLinesVisibility="Horizontal" RowHeight="26" Margin="4">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Código SKU (Hijo)" Binding="{Binding MaterialCode}" Width="120" FontWeight="SemiBold"/>
@@ -396,7 +672,13 @@
             <!-- ========================================== -->
             <!-- TAB 3: TABLA SEMÁFORO                      -->
             <!-- ========================================== -->
-            <TabItem Header="Tabla Semáforo">
+            <TabItem ToolTip="Matriz global de discrepancias categorizadas por semáforo y regla cardinal de inventario.">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource GeoTraffic}" Width="13" Height="13" Stretch="Uniform" Fill="#EAB308" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Tabla Semáforo" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -413,12 +695,14 @@
 
                             <StackPanel Grid.Column="0" Margin="0,0,12,0">
                                 <TextBlock Text="Filtrar por texto / código:" FontSize="10" Foreground="#64748B"/>
-                                <TextBox Text="{Binding SemaforoSearchQuery, UpdateSourceTrigger=PropertyChanged}" Padding="6,3" FontSize="11"/>
+                                <TextBox Text="{Binding SemaforoSearchQuery, UpdateSourceTrigger=PropertyChanged}" Padding="6,3" FontSize="11"
+                                         ToolTip="Escriba código de material o descripción para filtrar la tabla en tiempo real."/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="0,0,12,0">
                                 <TextBlock Text="Clasificación de Discrepancia:" FontSize="10" Foreground="#64748B"/>
-                                <ComboBox SelectedValue="{Binding SemaforoStatusFilter}" SelectedValuePath="Content" FontSize="11" Padding="6,3">
+                                <ComboBox SelectedValue="{Binding SemaforoStatusFilter}" SelectedValuePath="Content" FontSize="11" Padding="6,3"
+                                          ToolTip="Filtre los materiales por categoría de discrepancia operativa.">
                                     <ComboBoxItem Content="ALL" IsSelected="True"/>
                                     <ComboBoxItem Content="CUADRADO"/>
                                     <ComboBoxItem Content="FALTANTE"/>
@@ -429,7 +713,8 @@
                                 </ComboBox>
                             </StackPanel>
 
-                            <CheckBox Grid.Column="2" Content="Ocultar en cero" IsChecked="{Binding HideZeroTotalItems}" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            <CheckBox Grid.Column="2" Content="Ocultar en cero" IsChecked="{Binding HideZeroTotalItems}" VerticalAlignment="Center" FontWeight="SemiBold"
+                                      ToolTip="Oculta materiales sin unidades facturadas ni físicas (0 Total)."/>
                         </Grid>
                     </Border>
 
@@ -489,10 +774,17 @@
 
                             <DataGridTextColumn Header="Monto NCR" Binding="{Binding NcrAmount, StringFormat='${0:N2}'}" Width="90" Foreground="#DC2626" FontWeight="Bold"/>
 
-                            <DataGridTemplateColumn Header="Acción" Width="80">
+                            <DataGridTemplateColumn Header="Acción" Width="95">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="Guía SAP" Command="{Binding DataContext.OpenDiagnosticGuideForDiscrepancyCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" FontSize="10" Padding="4,2"/>
+                                        <Button Command="{Binding DataContext.OpenDiagnosticGuideForDiscrepancyCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" 
+                                                Style="{StaticResource BrowseButtonStyle}" Padding="6,2" FontSize="10"
+                                                ToolTip="Ver protocolo de investigación y procedimiento en SAP para este tipo de discrepancia.">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Path Data="{StaticResource GeoWiki}" Width="11" Height="11" Stretch="Uniform" Fill="#0284C7" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Guía SAP" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -504,7 +796,13 @@
             <!-- ========================================== -->
             <!-- TAB 4: EXPLOSIÓN CURVAS (BOM)             -->
             <!-- ========================================== -->
-            <TabItem Header="Explosión Curvas (BOM)">
+            <TabItem ToolTip="Reparto proporcional matemático de prepacks por talla aplicando largest-remainder.">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource GeoBom}" Width="13" Height="13" Stretch="Uniform" Stroke="#0284C7" StrokeThickness="1.4" Fill="Transparent" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Explosión Curvas (BOM)" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -515,7 +813,8 @@
                     <Border Grid.Row="0" Style="{StaticResource DashboardCard}" Margin="0,0,0,10">
                         <StackPanel>
                             <TextBlock Text="Seleccionar Prepack (Material Padre con Curva):" FontSize="11" Foreground="#64748B" FontWeight="SemiBold"/>
-                            <ComboBox ItemsSource="{Binding PrepacksWithBom}" SelectedItem="{Binding SelectedBomPrepack}" DisplayMemberPath="MaterialCode" FontSize="12" FontWeight="SemiBold" Padding="6,4" Margin="0,4,0,0"/>
+                            <ComboBox ItemsSource="{Binding PrepacksWithBom}" SelectedItem="{Binding SelectedBomPrepack}" DisplayMemberPath="MaterialCode" FontSize="12" FontWeight="SemiBold" Padding="6,4" Margin="0,4,0,0"
+                                      ToolTip="Seleccione el prepack para visualizar la explosión y reparto proporcional a cada talla hija."/>
                         </StackPanel>
                     </Border>
 
@@ -528,28 +827,32 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Style="{StaticResource DashboardCard}" Margin="0,0,8,0">
+                        <Border Grid.Column="0" Style="{StaticResource DashboardCard}" Margin="0,0,8,0"
+                                ToolTip="Cantidad de cajas/prepacks facturados según pedido 41.">
                             <StackPanel>
                                 <TextBlock Text="PREPACKS FACTURADOS" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
                                 <TextBlock Text="{Binding SelectedBomPrepack.DeclaredUnits, StringFormat='{}{0:N0} UN'}" FontSize="16" FontWeight="Bold" Foreground="#0284C7" Margin="0,2"/>
                             </StackPanel>
                         </Border>
 
-                        <Border Grid.Column="1" Style="{StaticResource DashboardCard}" Margin="0,0,8,0">
+                        <Border Grid.Column="1" Style="{StaticResource DashboardCard}" Margin="0,0,8,0"
+                                ToolTip="Total de piezas contenidas en una curva de prepack.">
                             <StackPanel>
                                 <TextBlock Text="CURVA PREPACK (UN/PRK)" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
                                 <TextBlock Text="{Binding SelectedBomPrepack.Curve, StringFormat='{}{0} UN/PRK'}" FontSize="16" FontWeight="Bold" Foreground="#1E293B" Margin="0,2"/>
                             </StackPanel>
                         </Border>
 
-                        <Border Grid.Column="2" Style="{StaticResource DashboardCard}" Margin="0,0,8,0">
+                        <Border Grid.Column="2" Style="{StaticResource DashboardCard}" Margin="0,0,8,0"
+                                ToolTip="Unidades físicas contadas en muelle para este material prepack.">
                             <StackPanel>
                                 <TextBlock Text="TOTAL PIEZAS FÍSICAS" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
                                 <TextBlock Text="{Binding SelectedBomPrepack.PhysicalUnits, StringFormat='{}{0:N0} UN'}" FontSize="16" FontWeight="Bold" Foreground="#16A34A" Margin="0,2"/>
                             </StackPanel>
                         </Border>
 
-                        <Border Grid.Column="3" Style="{StaticResource DashboardCard}">
+                        <Border Grid.Column="3" Style="{StaticResource DashboardCard}"
+                                ToolTip="Estado de conciliación global del estilo padre.">
                             <StackPanel>
                                 <TextBlock Text="ESTADO LÍNEA" FontSize="10" FontWeight="Bold" Foreground="#64748B"/>
                                 <TextBlock Text="{Binding SelectedBomPrepack.DiscrepancyTypeDescription}" FontSize="14" FontWeight="Bold" Foreground="{Binding SelectedBomPrepack.BadgeForegroundColor}" Margin="0,2"/>
@@ -574,7 +877,13 @@
             <!-- ========================================== -->
             <!-- TAB 5: VALIDADOR SAP (PORTAPAPELES)        -->
             <!-- ========================================== -->
-            <TabItem Header="Validador SAP (Portapapeles)">
+            <TabItem ToolTip="Sanitizador y conversor de tablas crudas de SAP a TSV limpio para Excel.">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource GeoClipboard}" Width="13" Height="13" Stretch="Uniform" Fill="#0284C7" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Validador SAP (Portapapeles)" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -585,17 +894,39 @@
 
                     <TextBlock Grid.Row="0" Text="Pegue tablas crudas de SAP (ME80FN, MB51, SE16N) con tabulaciones, barras (|), puntos y comas o comas:" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,6"/>
 
-                    <TextBox Grid.Row="1" Text="{Binding SapRawPasteText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="11" Padding="6" BorderBrush="#CBD5E1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                    <TextBox Grid.Row="1" Text="{Binding SapRawPasteText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="Consolas" FontSize="11" Padding="6" BorderBrush="#CBD5E1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                             ToolTip="Pegue directamente aquí el texto copiado de SAP (Ctrl+V)."/>
 
                     <!-- Action Bar -->
                     <DockPanel Grid.Row="2" Margin="0,8" LastChildFill="False">
-                        <Button DockPanel.Dock="Left" Content="Cargar Muestra SAP" Command="{Binding LoadSapSampleCommand}" Padding="8,4" Margin="0,0,8,0" FontSize="11"/>
-                        <Button DockPanel.Dock="Left" Content="Sanitizar Tabla SAP" Command="{Binding SanitizeSapClipboardCommand}" Background="#0284C7" Foreground="White" FontWeight="Bold" Padding="12,4" Margin="0,0,8,0" FontSize="11" BorderThickness="0"/>
-                        <Border DockPanel.Dock="Left" Background="#F1F5F9" CornerRadius="3" Padding="8,4" Margin="0,0,8,0">
+                        <Button DockPanel.Dock="Left" Command="{Binding LoadSapSampleCommand}" 
+                                Style="{StaticResource BrowseButtonStyle}" Margin="0,0,8,0"
+                                ToolTip="Carga un conjunto de datos de prueba representativo con formato típico de SAP.">
+                            <TextBlock Text="Cargar Muestra SAP" FontSize="11" FontWeight="Medium"/>
+                        </Button>
+
+                        <Button DockPanel.Dock="Left" Command="{Binding SanitizeSapClipboardCommand}" 
+                                Style="{StaticResource PrimaryActionBtnStyle}" Margin="0,0,8,0"
+                                ToolTip="Limpia ceros a la izquierda sin alterar notación científica (1E2) y normaliza signos contables.">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource GeoZap}" Width="12" Height="12" Stretch="Uniform" Fill="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Sanitizar Tabla SAP" FontSize="11" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Border DockPanel.Dock="Left" Background="#F1F5F9" CornerRadius="3" Padding="8,4" Margin="0,0,8,0"
+                                ToolTip="Delimitador detectado automáticamente en la tabla pegada.">
                             <TextBlock Text="{Binding SapDelimiterLabel, StringFormat='Delimitador: {0}'}" FontSize="11" FontWeight="Medium"/>
                         </Border>
 
-                        <Button DockPanel.Dock="Right" Content="Copiar TSV Limpio (Ctrl+C)" Command="{Binding CopyCleanTsvCommand}" Background="#0F172A" Foreground="White" FontWeight="Bold" Padding="12,4" FontSize="11" BorderThickness="0"/>
+                        <Button DockPanel.Dock="Right" Command="{Binding CopyCleanTsvCommand}" 
+                                Style="{StaticResource DarkActionBtnStyle}"
+                                ToolTip="Copia la tabla normalizada al portapapeles en formato TSV limpio para Excel.">
+                            <StackPanel Orientation="Horizontal">
+                                <Path Data="{StaticResource GeoCopy}" Width="12" Height="12" Stretch="Uniform" Fill="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Copiar TSV Limpio (Ctrl+C)" FontSize="11" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
                     </DockPanel>
 
                     <!-- Sanitized Grid View -->
@@ -606,7 +937,13 @@
             <!-- ========================================== -->
             <!-- TAB 6: COPIAR A EXCEL & EXPORTAR           -->
             <!-- ========================================== -->
-            <TabItem Header="Copiar a Excel &amp; Exportar">
+            <TabItem ToolTip="Generación de tiras de pegado directo a Excel y exportación de libro oficial .xlsm Macro-Safe.">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource GeoExcelExport}" Width="13" Height="13" Stretch="Uniform" Fill="#16A34A" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Copiar a Excel &amp; Exportar" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -623,12 +960,22 @@
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                <TextBlock Text="EXPORTACIÓN MACRO-SAFE (.XLSM)" FontWeight="Bold" FontSize="12" Foreground="#0284C7"/>
-                                <TextBlock Text="Exporta el libro de cierre oficial preservando el proyecto VBA intacto y auditando hashes SHA-256." FontSize="11" Foreground="#64748B"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="{StaticResource GeoShieldCheck}" Width="14" Height="14" Stretch="Uniform" Fill="#0284C7" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="EXPORTACIÓN MACRO-SAFE (.XLSM)" FontWeight="Bold" FontSize="12" Foreground="#0284C7" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBlock Text="Exporta el libro de cierre oficial preservando el proyecto VBA intacto y auditando hashes SHA-256." FontSize="11" Foreground="#64748B" Margin="0,2,0,0"/>
                                 <TextBlock Text="{Binding XlsmVbaSha256Result, StringFormat='Hash VBA SHA-256 Verificado: {0}'}" FontSize="10" FontFamily="Consolas" Foreground="#0284C7" Margin="0,2,0,0"/>
                             </StackPanel>
 
-                            <Button Grid.Column="1" Content="Exportar .XLSM Macro-Safe" Command="{Binding ExportMacroSafeXlsmCommand}" Background="#16A34A" Foreground="White" FontWeight="Bold" FontSize="11" Padding="14,6" BorderThickness="0"/>
+                            <Button Grid.Column="1" Command="{Binding ExportMacroSafeXlsmCommand}" 
+                                    Style="{StaticResource GreenActionBtnStyle}"
+                                    ToolTip="Exportar el archivo .xlsm oficial garantizando la integridad de macros y fórmulas.">
+                                <StackPanel Orientation="Horizontal">
+                                    <Path Data="{StaticResource GeoExcelExport}" Width="13" Height="13" Stretch="Uniform" Fill="White" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Exportar .XLSM Macro-Safe" FontSize="11" FontWeight="Bold" Foreground="White" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                         </Grid>
                     </Border>
 
@@ -648,8 +995,16 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Text="TIRA 1: BULTOS &amp; UNIDADES DESCARGA (AS:AT)" FontWeight="Bold" FontSize="11" Margin="0,0,0,4"/>
-                                <TextBox Grid.Row="1" Text="{Binding Tira1AsAtText}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas" FontSize="10" VerticalScrollBarVisibility="Auto"/>
-                                <Button Grid.Row="2" Content="Copiar Tira 1 (AS:AT)" Command="{Binding CopyTira1AsAtCommand}" Margin="0,6,0,0" Padding="8,4" Background="#0284C7" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"/>
+                                <TextBox Grid.Row="1" Text="{Binding Tira1AsAtText}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas" FontSize="10" VerticalScrollBarVisibility="Auto"
+                                         ToolTip="Valores de Bultos Descarga (AS) y Unidades Físicas (AT) listos para copiar."/>
+                                <Button Grid.Row="2" Command="{Binding CopyTira1AsAtCommand}" 
+                                        Style="{StaticResource PrimaryActionBtnStyle}" Margin="0,6,0,0"
+                                        ToolTip="Copiar columnas AS:AT al portapapeles para pegar en la fila 13 de CIERRE RECEP.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource GeoCopy}" Width="12" Height="12" Stretch="Uniform" Fill="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Copiar Tira 1 (AS:AT)" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </Grid>
                         </Border>
 
@@ -662,8 +1017,16 @@
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Text="TIRA 2: BULTOS PL &amp; EMPAQUE CANÓNICO (AW:AY)" FontWeight="Bold" FontSize="11" Margin="0,0,0,4"/>
-                                <TextBox Grid.Row="1" Text="{Binding Tira2AwAyText}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas" FontSize="10" VerticalScrollBarVisibility="Auto"/>
-                                <Button Grid.Row="2" Content="Copiar Tira 2 (AW:AY)" Command="{Binding CopyTira2AwAyCommand}" Margin="0,6,0,0" Padding="8,4" Background="#0284C7" Foreground="White" FontWeight="SemiBold" FontSize="11" BorderThickness="0"/>
+                                <TextBox Grid.Row="1" Text="{Binding Tira2AwAyText}" IsReadOnly="True" AcceptsReturn="True" FontFamily="Consolas" FontSize="10" VerticalScrollBarVisibility="Auto"
+                                         ToolTip="Valores de Bultos Packing List (AW), Unidades Declaradas (AX) y Empaque Canónico (AY)."/>
+                                <Button Grid.Row="2" Command="{Binding CopyTira2AwAyCommand}" 
+                                        Style="{StaticResource PrimaryActionBtnStyle}" Margin="0,6,0,0"
+                                        ToolTip="Copiar columnas AW:AY al portapapeles para pegar en la fila 13 de CIERRE RECEP.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource GeoCopy}" Width="12" Height="12" Stretch="Uniform" Fill="White" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Copiar Tira 2 (AW:AY)" FontSize="11" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </Grid>
                         </Border>
                     </Grid>
@@ -689,7 +1052,13 @@
             <!-- ========================================== -->
             <!-- TAB 7: CHECKLIST DE EXPEDIENTE FÍSICO      -->
             <!-- ========================================== -->
-            <TabItem Header="Checklist de Expediente Físico">
+            <TabItem ToolTip="Verificación de los 7 documentos reglamentarios del expediente físico para contabilidad.">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource GeoChecklist}" Width="13" Height="13" Stretch="Uniform" Fill="#0284C7" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Checklist de Expediente Físico" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -703,7 +1072,8 @@
                     </StackPanel>
 
                     <!-- Progress Bar -->
-                    <Border Grid.Row="1" Style="{StaticResource DashboardCard}" Margin="0,0,0,14">
+                    <Border Grid.Row="1" Style="{StaticResource DashboardCard}" Margin="0,0,0,14"
+                            ToolTip="Porcentaje de avance en la integración del expediente físico.">
                         <StackPanel>
                             <DockPanel LastChildFill="False" Margin="0,0,0,6">
                                 <TextBlock Text="{Binding ChecklistCompletedCount, StringFormat='Progreso: {0} de 7 verificados'}" FontWeight="Bold" FontSize="11" Foreground="#0284C7"/>
@@ -713,15 +1083,22 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- 7 Dynamic Checkboxes -->
+                    <!-- 7 Dynamic Checkboxes with Spanish Tooltips -->
                     <StackPanel Grid.Row="2">
-                        <CheckBox IsChecked="{Binding Checklist1Portada}" Margin="0,6" Content="{Binding Checklist1Text}" FontSize="12" FontWeight="SemiBold"/>
-                        <CheckBox IsChecked="{Binding Checklist2DatosGenerales}" Margin="0,6" Content="{Binding Checklist2Text}" FontSize="12" FontWeight="SemiBold"/>
-                        <CheckBox IsChecked="{Binding Checklist3CierreRecep}" Margin="0,6" Content="{Binding Checklist3Text}" FontSize="12" FontWeight="SemiBold"/>
-                        <CheckBox IsChecked="{Binding Checklist4NotaCredito}" Margin="0,6" Content="{Binding Checklist4Text}" FontSize="12" FontWeight="SemiBold"/>
-                        <CheckBox IsChecked="{Binding Checklist5Mb51}" Margin="0,6" Content="{Binding Checklist5Text}" FontSize="12" FontWeight="SemiBold"/>
-                        <CheckBox IsChecked="{Binding Checklist6Bultos}" Margin="0,6" Content="{Binding Checklist6Text}" FontSize="12" FontWeight="SemiBold"/>
-                        <CheckBox IsChecked="{Binding Checklist7Dua}" Margin="0,6" Content="{Binding Checklist7Text}" FontSize="12" FontWeight="SemiBold"/>
+                        <CheckBox IsChecked="{Binding Checklist1Portada}" Margin="0,6" Content="{Binding Checklist1Text}" FontSize="12" FontWeight="SemiBold"
+                                  ToolTip="Hoja de portada del contenedor con datos generales de recepción e importación."/>
+                        <CheckBox IsChecked="{Binding Checklist2DatosGenerales}" Margin="0,6" Content="{Binding Checklist2Text}" FontSize="12" FontWeight="SemiBold"
+                                  ToolTip="Hoja 'DATOS GENERALES' con firmas y sellos autorizados."/>
+                        <CheckBox IsChecked="{Binding Checklist3CierreRecep}" Margin="0,6" Content="{Binding Checklist3Text}" FontSize="12" FontWeight="SemiBold"
+                                  ToolTip="Hoja principal 'CIERRE RECEP' con conciliación de unidades y bultos."/>
+                        <CheckBox IsChecked="{Binding Checklist4NotaCredito}" Margin="0,6" Content="{Binding Checklist4Text}" FontSize="12" FontWeight="SemiBold"
+                                  ToolTip="Formulario oficial de Nota de Crédito por diferencias de importación."/>
+                        <CheckBox IsChecked="{Binding Checklist5Mb51}" Margin="0,6" Content="{Binding Checklist5Text}" FontSize="12" FontWeight="SemiBold"
+                                  ToolTip="Reporte de movimientos de mercancía MB51 de SAP verificado."/>
+                        <CheckBox IsChecked="{Binding Checklist6Bultos}" Margin="0,6" Content="{Binding Checklist6Text}" FontSize="12" FontWeight="SemiBold"
+                                  ToolTip="Hoja de control de bultos y tarimas de descarga en muelle."/>
+                        <CheckBox IsChecked="{Binding Checklist7Dua}" Margin="0,6" Content="{Binding Checklist7Text}" FontSize="12" FontWeight="SemiBold"
+                                  ToolTip="Declaración Única Aduanera (DUA) y comprobantes de nacionalización."/>
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -729,7 +1106,13 @@
             <!-- ========================================== -->
             <!-- TAB 8: SAP & WIKI                          -->
             <!-- ========================================== -->
-            <TabItem Header="SAP &amp; Wiki">
+            <TabItem ToolTip="Catálogo de transacciones SAP, manual de procedimientos SOP y guías de investigación de discrepancias.">
+                <TabItem.Header>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource GeoWiki}" Width="13" Height="13" Stretch="Uniform" Fill="#0284C7" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="SAP &amp; Wiki" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </TabItem.Header>
                 <Grid Margin="12">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -745,14 +1128,25 @@
 
                             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="Buscar T-Code o Tabla SAP:" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBox Text="{Binding SapSearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="220" Padding="4,2" FontSize="11"/>
-                                <Button Content="Buscar" Command="{Binding SearchSapCommand}" Margin="6,0,0,0" Padding="8,2" FontSize="11"/>
+                                <TextBox Text="{Binding SapSearchQuery, UpdateSourceTrigger=PropertyChanged}" Width="220" Padding="4,2" FontSize="11"
+                                         ToolTip="Escriba código de transacción (MB51, MIGO, ME23N) o nombre de tabla (EKPO, MSEG)."/>
+                                <Button Command="{Binding SearchSapCommand}" 
+                                        Style="{StaticResource BrowseButtonStyle}" Margin="6,0,0,0" Padding="8,3"
+                                        ToolTip="Ejecutar búsqueda en el catálogo SAP integrado.">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Data="{StaticResource GeoSearch}" Width="11" Height="11" Stretch="Uniform" Fill="#0284C7" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="Buscar" FontSize="11" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <RadioButton Content="Transacciones SAP" IsChecked="{Binding WikiSubTab, ConverterParameter=0}" GroupName="WikiTabs" Margin="0,0,10,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                <RadioButton Content="Guías Diagnósticas" IsChecked="{Binding WikiSubTab, ConverterParameter=1}" GroupName="WikiTabs" Margin="0,0,10,0" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                <RadioButton Content="Manual Operativo SOP" IsChecked="{Binding WikiSubTab, ConverterParameter=2}" GroupName="WikiTabs" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <RadioButton Content="Transacciones SAP" IsChecked="{Binding WikiSubTab, ConverterParameter=0}" GroupName="WikiTabs" Margin="0,0,10,0" FontWeight="SemiBold" VerticalAlignment="Center"
+                                             ToolTip="Ver catálogo de transacciones y tablas estándar de SAP ERP."/>
+                                <RadioButton Content="Guías Diagnósticas" IsChecked="{Binding WikiSubTab, ConverterParameter=1}" GroupName="WikiTabs" Margin="0,0,10,0" FontWeight="SemiBold" VerticalAlignment="Center"
+                                             ToolTip="Protocolos de investigación paso a paso para cada discrepancia."/>
+                                <RadioButton Content="Manual Operativo SOP" IsChecked="{Binding WikiSubTab, ConverterParameter=2}" GroupName="WikiTabs" FontWeight="SemiBold" VerticalAlignment="Center"
+                                             ToolTip="Procedimiento operativo estándar de recepción en almacén."/>
                             </StackPanel>
                         </Grid>
                     </Border>
