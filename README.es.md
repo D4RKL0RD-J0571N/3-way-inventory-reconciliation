@@ -1,30 +1,30 @@
-# 🛡️ ReconcileAI — Conciliación de Inventarios 3-Way & Auditoría de Recepción
-### Copiloto Inteligente para Logística, Control de Calidad y Cierres de Importación
+# 🛡️ ACR — Asistente de Cierre de Recepción & Conciliador de Inventarios
+### Aplicación de Escritorio Empresarial (.NET 10 LTS Win-x64) para Cadena de Suministro y Cierres de Importación
 
 **Español** | [**English**](README.md) | [**Wiki Operativa & Tutorial**](docs/WIKI.md) | [**Notas de la Versión**](docs/RELEASE_NOTES_DEMO.md) | [**SOP Recepción SAP**](docs/SOP_RECEPCION_SAP.md) | [**Auditoría de Bultos & VBA**](docs/CONOCIMIENTO_EMPIRICO_BULTOS_MACROS.md) | [**Arquitectura de Despacho**](docs/AUDITORIA_DESPACHO_MACRO.md)
 
 ---
 
-## 🌟 Edición Portable Independiente (v1.2.0)
+## 🌟 Edición Portable de Escritorio (.NET 10 LTS)
 
 > [!TIP]
-> **Cero Instalación:** ReconcileAI se distribuye como un **paquete ejecutable portable** (`ReconcileAI_Portable.zip`, 134 MB). Funciona de inmediato en Windows 10/11 **sin requerir instalación previa de Python ni permisos de Administrador**.
+> **Cero Instalación:** ACR se distribuye como un **único archivo ejecutable nativo de Windows** (`dist/ACR_Release/Acr.Desktop.exe`, Win-x64). Funciona de inmediato **sin requerir instalación de .NET Runtime ni Python, y sin permisos de Administrador**.
 
-Un motor de cálculo y copiloto interactivo de nivel empresarial para la **Conciliación 3-Way de Inventarios y Cierres de Importación**. Diseñado para eliminar el cruce manual entre Órdenes de Compra (PO), Facturas Comerciales/DUA, Conteos Físicos de Calidad en Muelle y Movimientos Contables ERP (`Mov 101` de Recepción y `Mov 641` de Despacho/Traslado).
+Un motor de cálculo y asistente de auditoría interactivo de nivel empresarial para la **Conciliación 3-Way de Inventarios y Cierres de Importación**. Diseñado para eliminar el cruce manual entre Órdenes de Compra (PO), Facturas Comerciales/DUA, Conteos Físicos de Calidad en Muelle y Movimientos Contables ERP (`Mov 101` de Recepción y `Mov 641` de Despacho/Traslado).
 
 ```mermaid
 flowchart LR
-    A["Compras ERP (PO 43)"] --> D["Copiloto ReconcileAI"]
+    A["Compras ERP (PO 43)"] --> D["Asistente ACR (.NET 10)"]
     B["Factura Comercial (Ped 41)"] --> D
-    C["Descarga Física y Curvas QC"] --> D
+    C["Descarga Física y Empaque QC"] --> D
     
-    D --> E["📦 Cuadre & Desglose de Bultos"]
-    D --> F["🔍 Ficha 360° del Material"]
-    D --> G["🚦 Grilla Semáforo por Estado"]
-    D --> H["⚡ Tiras de Pegado Rápido (AS:AZ)"]
-    D --> I["💾 Descarga Libro Oficial .xlsm"]
+    D --> E["📦 Franja Ejecutiva de KPIs & Grilla"]
+    D --> F["📋 Proyección Oficial Hoja Bultos (1 a 1)"]
+    D --> G["⚡ Tiras de Pegado Rápido (AS:AT / AW:AY)"]
+    D --> H["📖 Enciclopedia SAP & Diagnóstico Operativo"]
+    D --> I["💾 Generación de Cierre .XLSM con Macros"]
     
-    H -->|"Pegado en 10 seg"| J["Libro Oficial (.xlsm)"]
+    G -->|"Pegado en 10 seg"| J["Libro Oficial (.xlsm)"]
     I -->|"Descarga Directa"| J
     J --> K["Cierre 100% Cuadrado a Cero Diferencias"]
 ```
@@ -39,42 +39,38 @@ En la logística de distribución internacional y centros de distribución, el c
 3. **Capa Contable:** Ingresos a almacén en ERP (`SAP Mov 101` para Recepción y `SAP Mov 641` para Despacho a Tiendas).
 
 ### Los 3 Niveles Numéricos Independientes en la Cadena de Suministro
-ReconcileAI impone una estricta segregación matemática entre los tres niveles de inventario:
+ACR impone una estricta segregación matemática entre los tres niveles de inventario:
 * **Nivel 1 — Bultos Físicos (Cartones/Cajas):** Cajas físicas descargadas en muelle (Col `AS`), bultos del Packing List del proveedor (Col `AW`), y conteo de Control de Calidad (`Bultos Enteros` + `Complementos`).
 * **Nivel 2 — Prepacks / Curvas Comerciales (PRK / Curva):** Unidad de compra en pedidos mayoristas (Cols `BD` y `BE` en PRKs, Col `BB` proporción de curva, Col `BC` unidad de medida).
 * **Nivel 3 — Unidades Totales (Prendas/Piezas):** Unidades facturadas, nacionalizadas y recibidas prenda por prenda (Cols `F`, `G`, `H`, `AT`, `AX`).
 
 ### Capacidades Operativas Clave
-- **Parseo de Empaque Compuesto:** Interpreta números escalares (`42`) y desglosa automáticamente cadenas de bultos heterogéneos con picos (ej. `'39*60 1*78'` $\rightarrow$ 39 cajas de 60 + 1 caja de 78 = 40 bultos, 2,418 unidades).
-- **Pestaña Dedicada de Cuadre de Bultos (`📦 Cuadre & Desglose de Bultos`):** Top 5 tarjetas KPI de bultos, calculadora interactiva de empaque, y réplica exacta 1-a-1 de la hoja `'Bultos'` del libro corporativo.
-- **Arquitectura Dual (Recepción y Despacho):** Estructura sincronizada para Cierres de Recepción (`CIERRE RECEP`) y Cierres de Despacho (`CIERRE DESP`, `Check list DESPACHO`, `STOCK CONTROL DE INVENTARIO`, `Mov 641`).
-- **Cruce Heurístico Determinista:** Agrupa tallas hijas bajo su lista de materiales (BOM) respetando la curva de compra ($100\%$ de precisión sin discrepancias).
-- **Auto-Reparación de Fórmulas Corruptas:** Detecta fórmulas borradas o sobreescritas por error en la plantilla oficial (ej. columna H, AU y AZ) y las restaura automáticamente.
-- **Tiras de Pegado Rápido (`ZDESCARGA` & `PACKING LIST`):** Genera los bloques de texto listos para pegar en las columnas **`AS:AT`** y **`AW:AY`**, cuadrando la macro oficial a **cero diferencias en 10 segundos** sin modificar fórmulas.
-- **Exportación en 1 Clic del Libro Oficial (.xlsm):** Genera directamente en memoria el archivo Excel oficial cuadrado, preservando intactas todas las macros VBA y el formato original.
-- **Interfaz Bilingüe (Español por Defecto / Inglés Opcional):** Traducción completa de UI y traducción dinámica en el cliente de los tooltips de barra de herramientas en tablas.
-- **Ficha 360° del Material (Cero Desplazamiento):** Muestra compras, factura, físico, curvas y costos en una sola pantalla visual.
-- **Validador de Portapapeles Pre-Macro:** Audita y desactiva la notación científica (`1.45E+06`) y limpia textos copiados desde el GUI de SAP (`ME80FN`, `MB51`) antes de llevarlos a Excel.
+- **Arquitectura Nativa en .NET 10 LTS Win-x64:** Algoritmos deterministas y procesamiento OpenXML de alto rendimiento con 181 pruebas automatizadas.
+- **Franja Ejecutiva de KPIs:** Visualización inmediata de cabecera con contenedor, PO, estilos auditados, unidades y bultos (facturados vs físicos) y revueltos.
+- **Pestaña Oficial de Bultos y Empaque:** Réplica exacta de 10 columnas enlazada a `CIERRE RECEP`, con cálculo de cajas maestras (enteros), picos/complementos y unidades por bulto.
+- **Tiras de Pegado Rápido (`ZDESCARGA` & `PACKING LIST`):** Bloques de texto TSV listos para copiar con 1 clic y pegar con `Ctrl+V` en Excel (`AS:AT` y `AW:AY`), cuadrando la macro oficial en **10 segundos**.
+- **Enciclopedia de Transacciones SAP y Diagnóstico:** Catálogo integrado de transacciones (`ME80FN`, `SE16N`, `MB51`, `VL31N`, `RFUI`) y guías de triage vinculadas directamente desde la grilla de discrepancias.
+- **Exportación en 1 Clic del Libro Oficial (.xlsm):** Genera directamente el archivo Excel oficial cuadrado, preservando intactas todas las macros VBA (`vbaProject.bin`), estilos y fórmulas.
 
 ---
 
-## 🚀 Inicio Rápido (En 1 Clic)
+## 🚀 Inicio Rápido
 
-### Opción A: Paquete Portable Independiente (Recomendado para Demo)
-*Ideal para computadoras de oficina o bodega sin Python ni permisos de Administrador.*
-1. Descomprime **`ReconcileAI_Portable.zip`** (o utiliza la carpeta `dist/ReconcileAI`).
-2. Haz doble clic en **`ReconcileAI.exe`** (o en `INICIAR_RECONCILEAI.bat`).
-3. Tu navegador web se abrirá automáticamente en `http://localhost:8501`.
+### Opción A: Ejecutable Portable Autónomo (Recomendado)
+1. Ejecuta `dist/ACR_Release/Acr.Desktop.exe`.
+2. Selecciona tu archivo de Control de Calidad (`CONTROL CALIDAD.xlsm`) y la Plantilla Maestra (`CIERRE_TEMPLATE.xlsm`).
+3. Haz clic en **"Ejecutar Conciliación y Generar Cierre .XLSM"**.
 
-### Opción B: Ejecución con Python Local
-*Para desarrolladores o personalización del código.*
+### Opción B: Compilación desde Código Fuente (.NET 10 LTS)
 ```bash
-# 1. Configurar entorno y dependencias automáticamente
-preparar_equipo.bat
+# 1. Restaurar y compilar
+dotnet build src/dotnet/Acr.sln -c Release
 
-# 2. Iniciar el copiloto web
-iniciar_asistente.bat
-# o directamente: streamlit run app.py
+# 2. Ejecutar suite de pruebas (181 tests)
+dotnet test src/dotnet/Acr.sln
+
+# 3. Publicar ejecutable único autosuficiente
+dotnet publish src/dotnet/Acr.Desktop/Acr.Desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/ACR_Release
 ```
 
 ### Opción C: Auditoría Ultrarrápida por Consola (CLI)

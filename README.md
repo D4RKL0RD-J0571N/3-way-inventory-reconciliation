@@ -1,31 +1,31 @@
-# 🛡️ ReconcileAI — 3-Way Inventory Reconciliation & Goods Receipt Auditor
-### Enterprise Copilot for Supply Chain, Quality Control & Import Closures
+# 🛡️ ACR — Asistente de Cierre de Recepción & Conciliador de Inventarios
+### Enterprise Desktop Application (.NET 10 LTS Win-x64) for Supply Chain & Import Closures
 
 [**Español**](README.es.md) | **English** | [**Operational Wiki**](docs/WIKI.md) | [**Release Notes**](docs/RELEASE_NOTES_DEMO.md) | [**SAP Receiving SOP**](docs/SOP_RECEPCION_SAP.md) | [**Cartons & VBA Audit**](docs/CONOCIMIENTO_EMPIRICO_BULTOS_MACROS.md) | [**Dispatch Architecture**](docs/AUDITORIA_DESPACHO_MACRO.md)
 
 ---
 
-## 🌟 Standalone Portable Edition (v1.2.0)
+## 🌟 Standalone Portable Desktop Edition (.NET 10 LTS)
 
 > [!TIP]
-> **Zero Installation Required:** ReconcileAI is packaged as a **100% portable standalone distribution** (`ReconcileAI_Portable.zip`, 134 MB). It runs out of the box on Windows 10/11 **without requiring a Python installation or administrator privileges**.
+> **Zero Installation Required:** ACR is built as a single-file, self-contained native Windows desktop executable (`dist/ACR_Release/Acr.Desktop.exe`, Win-x64). It runs natively out of the box **without requiring .NET Runtime or Python installations, and without administrative privileges**.
 
-An agnostic, enterprise-grade calculation engine and interactive audit copilot for **3-Way Supply Chain Inventory Reconciliation**. Designed to eliminate manual cross-referencing between Purchase Orders (PO), Commercial Invoices/Customs Declarations, Physical Warehouse Receiving counts, and ERP Material Movements (`Mov 101` and `Mov 641`).
+An agnostic, enterprise-grade calculation engine and interactive audit assistant for **3-Way Supply Chain Inventory Reconciliation**. Designed to eliminate manual cross-referencing between Purchase Orders (PO), Commercial Invoices/Customs Declarations, Physical Warehouse Receiving counts, and ERP Material Movements (`Mov 101` and `Mov 641`).
 
 ```mermaid
 flowchart LR
-    A["ERP Purchasing (PO 43)"] --> D["ReconcileAI Copilot"]
+    A["ERP Purchasing (PO 43)"] --> D["ACR Desktop Assistant (.NET 10)"]
     B["Commercial Invoice (Ped 41)"] --> D
-    C["Physical Dock QC & Curves"] --> D
+    C["Physical Dock QC & Packaging"] --> D
     
-    D --> E["📦 Carton & Packaging Reconciliation"]
-    D --> F["🔍 360° Material Inspector"]
-    D --> G["🚦 Color-coded Semáforo Grid"]
-    D --> H["⚡ Fast Paste Strips (AS:AZ)"]
-    D --> I["💾 1-Click Official .xlsm Export"]
+    D --> E["📦 Executive KPI Strip & Reconcile Grid"]
+    D --> F["📋 1-to-1 Official Bultos Sheet Projection"]
+    D --> G["⚡ Instant TSV Paste Strips (AS:AT / AW:AY)"]
+    D --> H["📖 Embedded SAP T-Code & Diagnostic Encyclopedia"]
+    D --> I["💾 Macro-Safe 1-Click .XLSM Export"]
     
-    H -->|"10-Second Copy/Paste"| J["Official Workbook (.xlsm)"]
-    I -->|"Instant Download"| J
+    G -->|"10-Second Copy/Paste"| J["Official Workbook (.xlsm)"]
+    I -->|"Instant Generation"| J
     J --> K["100% Squared Zero-Discrepancy Closure"]
 ```
 
@@ -39,43 +39,38 @@ In international retail logistics and distribution centers, closing an import co
 3. **Accounting / Ledger Layer:** ERP inventory movements (`SAP Mov 101` for Goods Receipt and `SAP Mov 641` for Store Transfers).
 
 ### The 3 Independent Numerical Levels in Supply Chain
-ReconcileAI enforces mathematical segregation across the three levels of inventory data:
+ACR enforces mathematical segregation across the three levels of inventory data:
 * **Level 1 — Physical Cartons (Bultos Físicos):** Boxes physically handled at the dock (Col `AS`), Vendor Packing List cartons (Col `AW`), and Quality Control count (`Enteros` + `Complementos`).
 * **Level 2 — Prepacks / Commercial Assortments (PRK / Curva):** Ordering unit for assortments (Col `BD` and `BE` in PRKs, Col `BB` Curve ratio, Col `BC` UoM).
 * **Level 3 — Total Pieces (Unidades Totales):** Invoiced and nationalized garments (Col `F`, `G`, `H`, `AT`, `AX`).
 
 ### Key Operational Capabilities
-- **Compound Packaging String Parsing:** Parses scalar numbers (`42`) as well as compound cartons with odds/picos (e.g. `'39*60 1*78'` $\rightarrow$ 39 boxes of 60 + 1 box of 78 = 40 cartons, 2,418 units).
-- **Dedicated Carton Reconciliation Tab (`📦 Cuadre & Desglose de Bultos`):** Top 5 KPI cards, interactive packaging calculator, and 1-to-1 official `'Bultos'` sheet replica.
-- **Dual-Phase Architecture (Reception & Dispatch):** Pre-wires and synchronizes both Reception Closures (`CIERRE RECEP`) and Dispatch Closures (`CIERRE DESP`, `Check list DESPACHO`, `STOCK CONTROL DE INVENTARIO`, `Mov 641`).
-- **Self-Healing Spreadsheet Recovery:** Detects deleted, overwritten, or corrupted formulas in official closure workbooks and automatically repairs them.
-- **Dual Strip Copy-Pasting (`ZDESCARGA` & `PACKING LIST`):** Generates pre-formatted TSV text blocks for Columns `AS:AT` and `AW:AY` so operators can square official corporate macros in **10 seconds**.
-- **1-Click Official `.xlsm` Export:** Automatically generates the finalized, fully-squared official Excel file in memory with all VBA macros intact.
-- **Bilingual Interface (Spanish Default / English Optional):** Complete UI translation and dynamic client-side translation for data table toolbar tooltips.
+- **Native .NET 10 Win-x64 Architecture:** Core algorithms and OpenXML processing execute natively with 181 automated tests.
+- **Executive KPI Strip:** Instant banner with container ID, PO, audited styles, declared vs physical units, cartons, and revueltos.
+- **Dedicated Carton Reconciliation Tab (`Bultos y Empaque`):** Direct 1-to-1 projection of the official 10-column `'Bultos'` sheet, complete with master cartons, picos, and packaging formulas.
+- **Dual Strip Copy-Pasting (`ZDESCARGA` & `PACKING LIST`):** Generates clean pre-formatted TSV text blocks for Columns `AS:AT` and `AW:AY` so operators can square official corporate macros in **10 seconds**.
+- **Embedded SAP Diagnostic & T-Code Encyclopedia:** Direct access to SAP transactions (`ME80FN`, `SE16N`, `MB51`, `VL31N`, `RFUI`) and step-by-step triage guides directly from discrepancy rows.
+- **1-Click Official `.xlsm` Export:** Automatically generates the finalized, fully-squared official Excel file preserving all VBA macros and styles.
 
 ---
 
 ## 🚀 Quickstart Guide
 
-### Option A: Portable Standalone Executable (Recommended for Workstations)
-*Ideal for office or warehouse computers without Python or admin rights.*
-1. Unpack **`ReconcileAI_Portable.zip`** (or use the `dist/ReconcileAI` folder).
-2. Double-click **`ReconcileAI.exe`** (or `INICIAR_RECONCILEAI.bat`).
-3. Your default web browser will open automatically at `http://localhost:8501`.
+### Option A: Portable Standalone Executable (Recommended)
+1. Run `dist/ACR_Release/Acr.Desktop.exe`.
+2. Browse or select your Quality Control (`CONTROL CALIDAD.xlsm`) and Template (`CIERRE_TEMPLATE.xlsm`) files.
+3. Click **"Ejecutar Conciliación y Generar Cierre .XLSM"**.
 
-### Option B: Local Python Development
-*For developers and local customization.*
+### Option B: Building from Source (.NET 10 LTS)
 ```bash
-# 1. Clone repository
-git clone https://github.com/D4RKL0RD-J0571N/3-way-inventory-reconciliation.git
-cd 3-way-inventory-reconciliation
+# 1. Restore and build
+dotnet build src/dotnet/Acr.sln -c Release
 
-# 2. Run automated setup (creates virtual environment & installs dependencies)
-preparar_equipo.bat
+# 2. Run automated test suite (181 tests)
+dotnet test src/dotnet/Acr.sln
 
-# 3. Launch interactive copilot
-iniciar_asistente.bat
-# or: streamlit run app.py
+# 3. Publish single-file executable
+dotnet publish src/dotnet/Acr.Desktop/Acr.Desktop.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o dist/ACR_Release
 ```
 
 ### Option C: 1-Second Terminal Audit (CLI Mode)

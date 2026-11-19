@@ -22,10 +22,12 @@ htmlcov/
 # Streamlit
 .streamlit/secrets.toml
 
-# PyInstaller & Build artifacts
+# Build & Distributables
 build/
 dist/
 *.spec
+*.exe
+publish/
 
 # .NET / C#
 [Bb]in/
