@@ -156,6 +156,54 @@ public sealed class QuantityEngineTests
     }
 
     [Fact]
+    public void TestComplementFormulaVariants_AsSpecifiedByUser()
+    {
+        // 1. Caso Estándar: BULTOS ENTEROS * UNIDADES POR BULTOS COMPLETOS + BULTOS COMPLEMENTOS * UNIDADES BULTOS COMPLEMENTOS
+        var inputStandard = new CartonCalculationInput
+        {
+            FullCartons = 7,
+            UnitsPerFullCarton = 600,
+            ComplementCartons = 1,
+            UnitsInComplement = 240,
+            ReportedTotalCartons = 8,
+            ReportedTotalUnits = 4440
+        };
+        var resStandard = QuantityEngine.CalculateCartonQuantities(inputStandard);
+        Assert.Equal(4440, resStandard.CalculatedUnits); // 7 * 600 + 1 * 240 = 4200 + 240 = 4440
+        Assert.Equal(8, resStandard.CalculatedCartons);
+
+        // 2. Caso Complemento Vacío/Cero pero Unidades Complemento > 0 con Total Bultos = Enteros + 1
+        var inputCompZeroWithExtraBox = new CartonCalculationInput
+        {
+            FullCartons = 7,
+            UnitsPerFullCarton = 600,
+            ComplementCartons = 0,
+            UnitsInComplement = 240,
+            ReportedTotalCartons = 8,
+            ReportedTotalUnits = 4440
+        };
+        var resExtraBox = QuantityEngine.CalculateCartonQuantities(inputCompZeroWithExtraBox);
+        Assert.Equal(4440, resExtraBox.CalculatedUnits); // 7 * 600 + 240 = 4440
+        Assert.Equal(8, resExtraBox.CalculatedCartons); // 7 + 1 = 8
+        Assert.Contains(QuantityEngineFlags.FlagQcComplementWithoutCartonCount, resExtraBox.Flags);
+
+        // 3. Caso Complemento Vacío/Cero pero Unidades Complemento > 0 con Total Bultos = Enteros (unidades sueltas en tarima)
+        var inputCompZeroSameBox = new CartonCalculationInput
+        {
+            FullCartons = 104,
+            UnitsPerFullCarton = 60,
+            ComplementCartons = null,
+            UnitsInComplement = 12,
+            ReportedTotalCartons = 104,
+            ReportedTotalUnits = 6252
+        };
+        var resSameBox = QuantityEngine.CalculateCartonQuantities(inputCompZeroSameBox);
+        Assert.Equal(6252, resSameBox.CalculatedUnits); // 104 * 60 + 12 = 6240 + 12 = 6252
+        Assert.Equal(104, resSameBox.CalculatedCartons); // 104
+        Assert.Contains(QuantityEngineFlags.FlagQcComplementWithoutCartonCount, resSameBox.Flags);
+    }
+
+    [Fact]
     public void TestVarianteSueltaRow()
     {
         CartonCalculationResult res = QuantityEngine.CalculateCartonQuantities(new CartonCalculationInput
