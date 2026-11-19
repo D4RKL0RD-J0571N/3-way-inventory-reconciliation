@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Acr.Tests", "Acr.Tests\Acr.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Acr.Infrastructure", "Acr.Infrastructure\Acr.Infrastructure.csproj", "{F3D64614-3055-4528-854F-05D213FE4954}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Acr.Desktop", "Acr.Desktop\Acr.Desktop.csproj", "{048BAF81-42E4-4CEB-8229-8505BE28307F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{F3D64614-3055-4528-854F-05D213FE4954}.Release|x64.Build.0 = Release|Any CPU
 		{F3D64614-3055-4528-854F-05D213FE4954}.Release|x86.ActiveCfg = Release|Any CPU
 		{F3D64614-3055-4528-854F-05D213FE4954}.Release|x86.Build.0 = Release|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Debug|x64.Build.0 = Debug|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Debug|x86.Build.0 = Debug|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Release|x64.ActiveCfg = Release|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Release|x64.Build.0 = Release|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Release|x86.ActiveCfg = Release|Any CPU
+		{048BAF81-42E4-4CEB-8229-8505BE28307F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
