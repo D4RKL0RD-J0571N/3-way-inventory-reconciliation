@@ -209,10 +209,64 @@
             <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Padding" Value="12"/>
         </Style>
+
+        <!-- Global DataGrid Styles to guarantee high-contrast text selection -->
+        <Style TargetType="DataGrid">
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#E2E8F0"/>
+            <Setter Property="VerticalGridLinesBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="RowBackground" Value="White"/>
+            <Setter Property="AlternatingRowBackground" Value="#F8FAFC"/>
+            <Setter Property="RowHeight" Value="28"/>
+            <Setter Property="FontSize" Value="11"/>
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Style.Resources>
+                <!-- Subtle, pleasant selection highlight: soft slate-blue #E0F2FE instead of blinding electric blue -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0F2FE"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#0F172A"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#F1F5F9"/>
+                <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#0F172A"/>
+            </Style.Resources>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E0F2FE"/>
+                    <Setter Property="BorderBrush" Value="#38BDF8"/>
+                </Trigger>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#F1F5F9"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#E0F2FE"/>
+                    <Setter Property="Foreground" Value="#0F172A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -377,9 +431,27 @@
         </Border>
 
         <!-- ========================================== -->
-        <!-- 8 MAIN WORKSPACE TABS                      -->
+        <!-- MONTAJE A CIEGAS ALERT BANNER (Row 2)      -->
         <!-- ========================================== -->
-        <TabControl Grid.Row="2" Margin="10,8,10,6" Background="White" BorderBrush="#CBD5E1" SelectedIndex="{Binding SelectedTabIndex}">
+        <Border Grid.Row="2" Margin="10,6,10,0"
+                Visibility="{Binding IsBlindReceiving, Converter={StaticResource BoolToVis}}"
+                Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="1" CornerRadius="5" Padding="12,8">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <Path Data="{StaticResource GeoShieldCheck}" Width="16" Height="16" Stretch="Uniform" Fill="#D97706" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                    <TextBlock Text="AVISO: MONTAJE A CIEGAS DETECTADO — " FontWeight="Bold" FontSize="11" Foreground="#92400E" VerticalAlignment="Center"/>
+                    <TextBlock Text="La importación contiene únicamente valores de factura/sistema sin datos de control de calidad ni descarga en muelle (Físico = 0). Las unidades figuran como pendientes de descarga física." FontSize="11" Foreground="#78350F" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Border DockPanel.Dock="Right" Background="#FDE68A" CornerRadius="3" Padding="8,3" VerticalAlignment="Center">
+                    <TextBlock Text="PENDIENTE DE DESCARGA FÍSICA" FontWeight="Bold" FontSize="10" Foreground="#B45309"/>
+                </Border>
+            </DockPanel>
+        </Border>
+
+        <!-- ========================================== -->
+        <!-- 8 MAIN WORKSPACE TABS (Row 3)              -->
+        <!-- ========================================== -->
+        <TabControl Grid.Row="3" Margin="10,8,10,6" Background="White" BorderBrush="#CBD5E1" SelectedIndex="{Binding SelectedTabIndex}">
 
             <!-- ========================================== -->
             <!-- TAB 1: CUADRE & BULTOS                     -->
@@ -515,7 +587,21 @@
                             <DataGridTextColumn Header="Descripción" Binding="{Binding Description}" Width="*"/>
                             <DataGridTextColumn Header="Recibido Real" Binding="{Binding ReceivedUnits, StringFormat={}{0:N0}}" Width="95" FontWeight="SemiBold"/>
                             <DataGridTextColumn Header="Curva" Binding="{Binding Curve}" Width="60"/>
-                            <DataGridTextColumn Header="Empaque Canónico" Binding="{Binding PackagingExpression}" Width="135" FontWeight="Bold" Foreground="#0284C7"/>
+                            <DataGridTextColumn Header="Empaque Canónico" Binding="{Binding PackagingExpression}" Width="135" FontWeight="Bold">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#0369A1"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Margin" Value="4,0"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                                <Setter Property="Foreground" Value="#0C4A6E"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
                             <DataGridTextColumn Header="B. Enteros" Binding="{Binding FullCartons}" Width="75"/>
                             <DataGridTextColumn Header="U/B Entero" Binding="{Binding UnitsPerFullCarton}" Width="80"/>
                             <DataGridTextColumn Header="B. Comp" Binding="{Binding ComplementCartons}" Width="70"/>
@@ -762,7 +848,22 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTextColumn Header="Empaque Canónico" Binding="{Binding CanonicalPackaging}" Width="130" FontWeight="SemiBold"/>
+                            <DataGridTextColumn Header="Empaque Canónico" Binding="{Binding CanonicalPackaging}" Width="130" FontWeight="SemiBold">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#0369A1"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Margin" Value="4,0"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True">
+                                                <Setter Property="Foreground" Value="#0C4A6E"/>
+                                                <Setter Property="FontWeight" Value="Bold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
                             
                             <DataGridTemplateColumn Header="Pareja Revuelto" Width="140">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -1187,9 +1288,9 @@
         </TabControl>
 
         <!-- ========================================== -->
-        <!-- BOTTOM STATUS BAR                          -->
+        <!-- BOTTOM STATUS BAR (Row 4)                  -->
         <!-- ========================================== -->
-        <StatusBar Grid.Row="3" Background="#1E293B" Foreground="#94A3B8" Padding="12,4">
+        <StatusBar Grid.Row="4" Background="#1E293B" Foreground="#94A3B8" Padding="12,4">
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}" FontSize="11" Foreground="#CBD5E1"/>
             </StatusBarItem>

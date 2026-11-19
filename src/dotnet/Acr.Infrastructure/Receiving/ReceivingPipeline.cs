@@ -190,6 +190,10 @@ public static class ReceivingPipeline
         ClosureExportResult? exportResult = ExportIfRequested(options, summary, qcReport);
         List<string> warnings = CollectWarnings(templateData, exportResult);
         warnings.AddRange(qcReport.Warnings);
+        if (summary.IsBlindReceiving)
+        {
+            warnings.Add("[MONTAJE A CIEGAS] Se detectó una importación en montaje a ciegas sin datos de control de calidad o descarga física en muelle (Total Físico = 0). Las diferencias representan mercancía pendiente de recepción física y no deben tramitarse como reclamo NCR al proveedor.");
+        }
 
         (IReadOnlyList<BultosPresentationItem> bultosItems, string tira1Tsv, string tira2Tsv) =
             BuildBultosAndPasteStrips(templateData, qcReport, summary, options.ExcludeZeroTotalFromStripsAndBultos);

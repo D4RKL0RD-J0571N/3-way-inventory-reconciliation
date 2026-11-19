@@ -1,6 +1,8 @@
 using Acr.Core.Models;
 using Acr.Core.SapKnowledge;
 using Acr.Desktop.ViewModels;
+using Acr.Infrastructure.Excel;
+using Acr.Infrastructure.Receiving;
 using Xunit;
 
 namespace Acr.Tests.Desktop;
@@ -188,5 +190,51 @@ public sealed class MainViewModelTests
         Assert.Contains("112345678005808817", vm.ClipboardSummary);
         Assert.Contains("Etapa Actual (Col O):", vm.ClipboardSummary);
         Assert.Contains("Notificación SAP (Col R):", vm.ClipboardSummary);
+    }
+
+    [Fact]
+    public void MainViewModel_BlindReceiving_SetsIsBlindReceivingAndUpdatesStatusAndChecklist()
+    {
+        var vm = new MainViewModel();
+
+        var blindSummary = new ComparisonSummary
+        {
+            TotalDeclaredUnits = 800,
+            TotalPhysicalUnits = 0,
+            NetUnitDifference = -800,
+            TotalDeclaredCartons = 40,
+            TotalPhysicalCartons = 0,
+            NetCartonDifference = -40,
+            CleanMaterialsCount = 0,
+            DiscrepantMaterialsCount = 5,
+            Items = Array.Empty<DiscrepancyItem>()
+        };
+
+        var mockResult = new ReceivingPipelineResult
+        {
+            ContainerId = "IMP-BLIND",
+            QcReport = new QcInspectionReport
+            {
+                FilePath = "dummy.xlsm",
+                ContainerId = "IMP-BLIND",
+                Items = Array.Empty<QcInspectionItem>(),
+                DetectedParts = Array.Empty<string>(),
+                Warnings = Array.Empty<string>()
+            },
+            DeclaredItems = Array.Empty<DeclaredItem>(),
+            PhysicalItems = Array.Empty<PhysicalItem>(),
+            Comparison = blindSummary,
+            BultosItems = Array.Empty<BultosPresentationItem>(),
+            Tira1AsAtTsv = "",
+            Tira2AwAyTsv = ""
+        };
+
+        vm.LastReconciliationResult = mockResult;
+        vm.IsBlindReceiving = blindSummary.IsBlindReceiving;
+        vm.UpdateChecklistDynamicLabels();
+
+        Assert.True(vm.IsBlindReceiving);
+        Assert.False(vm.Checklist6Bultos);
+        Assert.Contains("MONTAJE A CIEGAS", vm.Checklist6Text);
     }
 }

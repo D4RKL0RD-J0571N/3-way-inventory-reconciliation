@@ -40,6 +40,9 @@ public sealed partial class MainViewModel : ObservableObject
     private bool _hideZeroTotalItems = true;
 
     [ObservableProperty]
+    private bool _isBlindReceiving;
+
+    [ObservableProperty]
     private ReceivingPipelineResult? _lastReconciliationResult;
 
     [ObservableProperty]
@@ -603,6 +606,14 @@ public sealed partial class MainViewModel : ObservableObject
         Checklist6Text = "6. Lista de Empaque de Bultos y Unidades en Excel (Hoja 'Bultos') — Desglose físico de cartones enteros y complementos.";
         Checklist7Text = "7. DUA (Documentación Única Aduanera) — Copia aduanera sellada con peso bruto y valor CIF.";
 
+        if (IsBlindReceiving)
+        {
+            Checklist3Text = $"3. Carátula del Cierre Oficial (Hoja 'CIERRE RECEP') — Montaje a ciegas preliminar ({KpiDeclaredUnits:N0} UN Factura | Físico: 0 UN).";
+            Checklist4Text = "4. Formulario de Nota de Crédito (Hoja 'PARA N.C RECEP.') — Estado: SUSPENDIDO (MONTAJE A CIEGAS, PENDIENTE CONTEO).";
+            Checklist6Text = "6. Lista de Empaque de Bultos y Unidades (Hoja 'Bultos') — Estado: PENDIENTE (MONTAJE A CIEGAS, SIN CONTEO FÍSICO).";
+            Checklist6Bultos = false;
+        }
+
         RecalculateChecklistProgress();
     }
 
@@ -673,7 +684,14 @@ public sealed partial class MainViewModel : ObservableObject
             PopulateResults(result);
             UpdateChecklistDynamicLabels();
 
-            StatusMessage = $"Conciliación exitosa: Contenedor {result.ContainerId} | {result.Comparison.ActiveStylesCount} estilos activos procesados.";
+            if (result.Comparison.IsBlindReceiving)
+            {
+                StatusMessage = $"AVISO: Montaje a ciegas detectado (Facturado: {result.Comparison.TotalDeclaredUnits:N0} UN | Físico: 0 UN). Cierre preliminar en espera de descarga física.";
+            }
+            else
+            {
+                StatusMessage = $"Conciliación exitosa: Contenedor {result.ContainerId} | {result.Comparison.ActiveStylesCount} estilos activos procesados.";
+            }
         }
         catch (Exception ex)
         {
@@ -732,6 +750,8 @@ public sealed partial class MainViewModel : ObservableObject
         KpiPhysicalCartons = result.Comparison.TotalPhysicalCartons;
         KpiDeltaCartons = result.Comparison.NetCartonDifference;
         KpiRevueltoPairs = result.Comparison.RevueltoPairsCount;
+
+        IsBlindReceiving = result.Comparison.IsBlindReceiving;
         KpiDamagedUnits = result.Comparison.TotalDamagedUnits;
 
         ContainerId = result.ContainerId;

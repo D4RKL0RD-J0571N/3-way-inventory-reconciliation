@@ -394,4 +394,10 @@ public sealed record ComparisonSummary
 
     /// <summary>Material codes that had multiple declared PO lines aggregated.</summary>
     public IReadOnlyList<string> MultiPoMaterials { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Indica si la importación corresponde a un montaje o cierre a ciegas preliminar
+    /// (se dispone de factura/declarado > 0, pero el conteo físico de control de calidad o descarga es 0).
+    /// </summary>
+    public bool IsBlindReceiving => TotalDeclaredUnits > 0 && TotalPhysicalUnits == 0;
 }
