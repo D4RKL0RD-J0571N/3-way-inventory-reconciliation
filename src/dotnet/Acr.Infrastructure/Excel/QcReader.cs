@@ -128,19 +128,19 @@ public static class QcReader
 
     private static readonly KeyValuePair<string, string[]>[] FieldKeywords =
     [
-        new("pallet", ["TARIMA", "NUMERO DE TARIMA"]),
+        new("pallet", ["TARIMA", "NUMERO DE TARIMA", "NÚMERO DE TARIMA"]),
         new("category", ["CATEGORIA", "CATEGORÍA", "UEN"]),
-        new("vendor_material", ["MATERIAL PROVEEDOR", "MAT. PROVEEDOR"]),
+        new("vendor_material", ["MATERIAL PROVEEDOR", "MAT. PROVEEDOR", "COD PROVEEDOR"]),
         new("material", ["MATERIAL"]),
         new("declared_units", ["CANTIDAD DE UNIDADES", "CANTIDAD"]),
         new("curve_system", ["CURVA SISTEMA"]),
         new("curve_physical", ["CURVA FISICA", "CURVA FÍSICA"]),
         new("uom", ["UM", "UNIDAD DE MEDIDA"]),
         new("description", ["DESCRIPCIÓN", "DESCRIPCION"]),
-        new("full_cartons", ["BULTOS ENTEROS"]),
-        new("units_per_full", ["UNIDADES POR BULTOS COMPLETOS", "UNIDADES POR BULTO"]),
+        new("full_cartons", ["BULTOS ENTEROS", "BULTOS ENTERO"]),
+        new("units_per_full", ["UNIDADES POR BULTOS COMPLETOS", "UNIDADES POR BULTOS", "UNIDADES POR BULTO"]),
         new("comp_cartons", ["BULTOS COMPLEMENTOS", "BULTOS COMPLEMENTO"]),
-        new("units_comp", ["UNIDADES BULTOS COMPLEMENTOS", "UNIDADES EN BULTOS COMPLEMENTOS"]),
+        new("units_comp", ["UNIDADES BULTOS COMPLEMENTOS", "UNIDADES EN BULTOS COMPLEMENTOS", "UNIDADES BULTOS COMPLEMENTO", "UNIDADES EN BULTOS COMPLEMENTO"]),
         new("total_cartons", ["TOTAL DE BULTOS", "TOTAL BULTOS"]),
         new("total_units", ["TOTAL DE UNIDADES", "TOTAL UNIDADES"]),
         new("total_prk", ["TOTAL PRK"]),
@@ -538,9 +538,46 @@ public static class QcReader
             {
                 if (!cleaned.Contains(kw, StringComparison.Ordinal))
                     continue;
-                if (fieldName == "material" && cleaned.Contains("PROVEEDOR", StringComparison.Ordinal))
+
+                // Protecciones estrictas contra falsos positivos por coincidencia parcial de subcadenas
+                if (fieldName == "material" && (cleaned.Contains("PROVEEDOR", StringComparison.Ordinal) ||
+                                                cleaned.Contains("CONFIRMA", StringComparison.Ordinal) ||
+                                                cleaned.Contains("DIFERENCIA", StringComparison.Ordinal)))
                     continue;
+
+                if (fieldName == "description" && (cleaned.Contains("CONFIRMA", StringComparison.Ordinal) ||
+                                                    cleaned.Contains("CONFRIMA", StringComparison.Ordinal)))
+                    continue;
+
                 if (fieldName == "comp_cartons" && cleaned.Contains("UNIDADES", StringComparison.Ordinal))
+                    continue;
+
+                if (fieldName == "full_cartons" && cleaned.Contains("UNIDADES", StringComparison.Ordinal))
+                    continue;
+
+                if (fieldName == "total_cartons" && cleaned.Contains("UNIDADES", StringComparison.Ordinal))
+                    continue;
+
+                if (fieldName == "total_units" && (cleaned.Contains("BULTO", StringComparison.Ordinal) ||
+                                                   cleaned.Contains("DIFERENCIA", StringComparison.Ordinal)))
+                    continue;
+
+                if (fieldName == "declared_units" && (cleaned.Contains("BULTO", StringComparison.Ordinal) ||
+                                                      cleaned.Contains("DIFERENCIA", StringComparison.Ordinal) ||
+                                                      cleaned.Contains("TOTAL", StringComparison.Ordinal) ||
+                                                      cleaned.Contains("COMPLE", StringComparison.Ordinal)))
+                    continue;
+
+                if (fieldName == "curve_system" && (cleaned.Contains("CONFIRMA", StringComparison.Ordinal) ||
+                                                    cleaned.Contains("FISICA", StringComparison.Ordinal) ||
+                                                    cleaned.Contains("FÍSICA", StringComparison.Ordinal)))
+                    continue;
+
+                if (fieldName == "curve_physical" && (cleaned.Contains("CONFIRMA", StringComparison.Ordinal) ||
+                                                      cleaned.Contains("SISTEMA", StringComparison.Ordinal)))
+                    continue;
+
+                if (fieldName == "diff_units" && cleaned.Contains("MATERIAL", StringComparison.Ordinal))
                     continue;
 
                 mapping[fieldName] = colIdx;

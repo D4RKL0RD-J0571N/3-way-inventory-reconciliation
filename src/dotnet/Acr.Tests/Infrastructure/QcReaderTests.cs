@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Text;
 using Acr.Core.Models;
 using Acr.Infrastructure.Excel;
+using Acr.Infrastructure.Receiving;
 using Acr.Infrastructure.Safety;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
@@ -62,6 +63,48 @@ public sealed class QcReaderTests : IDisposable
         Assert.Contains(QuantityEngineFlags.FlagSharedCartonPrimary, report.Items[2].CalculationResult!.Flags);
         Assert.Contains(QuantityEngineFlags.FlagSharedCartonSecondary, report.Items[3].CalculationResult!.Flags);
         Assert.Contains(QuantityEngineFlags.FlagVarianteSueltaRow, report.Items[4].CalculationResult!.Flags);
+    }
+
+    [Fact]
+    public void Read_Imp218_RealDataFiles_ExtractsAllMaterialsWithNonZeroPhysicalUnits()
+    {
+        string qcPath = Path.Combine(ProductionDataDir, "IMP-218", "Informacion General", "IMP 218 CONTROL CALIDAD.xlsm");
+        string closurePath = Path.Combine(ProductionDataDir, "IMP-218", "CIERRE_IMP 218 CONTROL CALIDAD.xlsm");
+
+        if (!File.Exists(qcPath) || !File.Exists(closurePath))
+            return; // Skip gracefully if running on machine without local production directory
+
+        var pipelineResult = ReceivingPipeline.Execute(new ReceivingPipelineOptions
+        {
+            QcFilePath = qcPath,
+            ClosureTemplatePath = closurePath,
+            SafetyGuard = _testingGuard
+        });
+
+        // Asegurar que no hay regresión y que los materiales escolares (SUMA) no se omitan como pie de página
+        var items = pipelineResult.Comparison.Items;
+        Assert.Equal(8, items.Count);
+
+        var mat1331868 = items.First(i => i.MaterialCode == "1331868");
+        Assert.Equal(18000, mat1331868.DeclaredUnits);
+        Assert.Equal(18000, mat1331868.PhysicalUnits);
+        Assert.Equal(75, mat1331868.DeclaredCartons);
+        Assert.Equal(75, mat1331868.PhysicalCartons);
+        Assert.Equal(DiscrepancyType.ExactMatch, mat1331868.DiscrepancyType);
+
+        var mat1331862 = items.First(i => i.MaterialCode == "1331862");
+        Assert.Equal(14000, mat1331862.DeclaredUnits);
+        Assert.Equal(14000, mat1331862.PhysicalUnits);
+        Assert.Equal(140, mat1331862.DeclaredCartons);
+        Assert.Equal(140, mat1331862.PhysicalCartons);
+        Assert.Equal(DiscrepancyType.ExactMatch, mat1331862.DiscrepancyType);
+
+        var mat1331861 = items.First(i => i.MaterialCode == "1331861");
+        Assert.Equal(8160, mat1331861.DeclaredUnits);
+        Assert.Equal(8160, mat1331861.PhysicalUnits);
+        Assert.Equal(34, mat1331861.DeclaredCartons);
+        Assert.Equal(34, mat1331861.PhysicalCartons);
+        Assert.Equal(DiscrepancyType.ExactMatch, mat1331861.DiscrepancyType);
     }
 
     [Fact]
@@ -187,13 +230,13 @@ public sealed class QcReaderTests : IDisposable
     }
 
     [Theory]
-    [InlineData(@"IMP-103\Informacion General\imp 103 control calidad corregirdo.xlsm", "103", 267, 1038, 102854, 1038, 102711, 41)]
+    [InlineData(@"IMP-103\Informacion General\imp 103 control calidad corregirdo.xlsm", "103", 267, 1038, 102854, 1038, 102711, 221)]
     [InlineData(@"IMP-100\Informacion General\IMP 100 Control Calidad.xlsm", "100", 18, 990, 990, 990, 990, 0)]
     [InlineData(@"IMP-218\IMP-218.xlsm", "218", 8, 781, 51740, 781, 51740, 0)]
     [InlineData(@"IMP-298\Informacion General\imp298 control calidad ver2.xlsm", "298", 163, 1036, 67746, 1032, 67314, 11)]
     [InlineData(@"IMP-327\Informacion General\cierre imp 327 Control de calidad.xlsm", "327", 6, 669, 4014, 669, 4014, 0)]
     [InlineData(@"IMP-348\Informacion General\imp 348.xlsm", "348", 1, 620, 620, 620, 620, 0)]
-    [InlineData(@"IMP-406\INFORMACION GENERAL\IMP 406.xlsm", "IMP 406.xlsm", 191, 855, 41040, 855, 41040, 0)]
+    [InlineData(@"IMP-406\INFORMACION GENERAL\IMP 406.xlsm", "IMP 406.xlsm", 191, 855, 41040, 855, 41040, 150)]
     [InlineData(@"IMP-84\INFORMACION GENERAL\imp 84.xlsm", "84", 32, 2184, 58324, 2184, 29162, 32)]
     [InlineData(@"IMP-244\Información general\IMP244.xlsm", "244", 6, 57, 2795, 57, 2655, 1)]
     [InlineData(@"IMP-188-189\INFORMACIÓN GENERAL\IMP 188-189Control de calidad.xlsm", "188", 16, 8672, 186636, 8672, 156492, 2)]

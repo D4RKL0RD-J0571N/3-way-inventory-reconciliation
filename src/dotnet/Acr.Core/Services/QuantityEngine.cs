@@ -297,11 +297,13 @@ public static class QuantityEngine
 
             if ((c is null || compC == 0) && compD > 0)
             {
+                // Regla operativa: Bultos complementos es cero o vacío y unidades complemento > 0.
+                // La operación cambia a sumar directamente compD (unidades complementos) sin multiplicar por cero.
                 flags.Add(QuantityEngineFlags.FlagQcComplementWithoutCartonCount);
-                if (reportedTotalCartons == fullCartons)
+                if (reportedTotalCartons.HasValue && reportedTotalCartons.Value > fullCartons)
+                    return (reportedTotalCartons.Value - fullCartons, compD, flags);
+                if (reportedTotalCartons.HasValue && reportedTotalCartons.Value == fullCartons)
                     return (0, compD, flags);
-                if (reportedTotalCartons == fullCartons + 1)
-                    return (1, compD, flags);
                 return (fullCartons > 0 ? 0 : 1, compD, flags);
             }
 
