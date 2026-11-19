@@ -64,6 +64,15 @@ public sealed record ReceivingPipelineResult
 
     /// <summary>Combined non-blocking warnings emitted during template reading or validation.</summary>
     public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
+
+    /// <summary>Proyección oficial para la hoja 'Bultos' y análisis de empaque.</summary>
+    public IReadOnlyList<BultosPresentationItem> BultosItems { get; init; } = Array.Empty<BultosPresentationItem>();
+
+    /// <summary>Tira 1 para pegar en Excel columnas AS:AT (Bultos y Unidades de Muelle).</summary>
+    public string Tira1AsAtTsv { get; init; } = "";
+
+    /// <summary>Tira 2 para pegar en Excel columnas AW:AY (Packing List y Empaque).</summary>
+    public string Tira2AwAyTsv { get; init; } = "";
 }
 
 /// <summary>
@@ -90,6 +99,8 @@ public static class ReceivingPipeline
 
         ClosureExportResult? exportResult = ExportIfRequested(options, summary, qcReport);
         List<string> warnings = CollectWarnings(templateData, exportResult);
+        (IReadOnlyList<BultosPresentationItem> bultosItems, string tira1Tsv, string tira2Tsv) =
+            BuildBultosAndPasteStrips(templateData, qcReport, summary);
         ProcessingReport report = BuildProcessingReport(containerId, qcReport, templateData, summary, exportResult, warnings);
 
         string? savedReportPath = SaveReportIfRequested(options, report);
@@ -106,8 +117,92 @@ public static class ReceivingPipeline
             Report = report,
             SavedReportPath = savedReportPath,
             SavedHistoryPath = savedHistoryPath,
-            Warnings = warnings
+            Warnings = warnings,
+            BultosItems = bultosItems,
+            Tira1AsAtTsv = tira1Tsv,
+            Tira2AwAyTsv = tira2Tsv
         };
+    }
+
+    private static (IReadOnlyList<BultosPresentationItem> Items, string Tira1Tsv, string Tira2Tsv) BuildBultosAndPasteStrips(
+        ClosureTemplateData templateData,
+        QcInspectionReport qcReport,
+        ComparisonSummary summary)
+    {
+        var bultosList = new List<BultosPresentationItem>();
+        var tira1Sb = new System.Text.StringBuilder();
+        var tira2Sb = new System.Text.StringBuilder();
+
+        var qcMap = new Dictionary<string, QcInspectionItem>(StringComparer.OrdinalIgnoreCase);
+        foreach (var q in qcReport.Items)
+        {
+            if (!q.IsChildSku)
+            {
+                string norm = OpenXmlCellHelper.NormalizeMaterialCode(q.MaterialCode);
+                if (norm.Length > 0)
+                    qcMap.TryAdd(norm, q);
+            }
+        }
+
+        var discMap = new Dictionary<string, DiscrepancyItem>(StringComparer.OrdinalIgnoreCase);
+        foreach (var d in summary.Items)
+        {
+            string norm = OpenXmlCellHelper.NormalizeMaterialCode(d.MaterialCode);
+            if (norm.Length > 0)
+                discMap.TryAdd(norm, d);
+        }
+
+        foreach (DeclaredItem decl in templateData.DeclaredItems)
+        {
+            string norm = OpenXmlCellHelper.NormalizeMaterialCode(decl.MaterialCode);
+            qcMap.TryGetValue(norm, out QcInspectionItem? qcItem);
+            discMap.TryGetValue(norm, out DiscrepancyItem? discItem);
+
+            int physUnits = discItem?.PhysicalUnits ?? (qcItem?.CalculationResult?.CalculatedUnits ?? 0);
+            int physCartons = discItem?.PhysicalCartons ?? (qcItem?.CalculationResult?.CalculatedCartons ?? 0);
+            int declCartons = decl.DeclaredCartons;
+            int declUnits = decl.DeclaredUnits;
+            int curve = templateData.RowCurves.TryGetValue(decl.SourceRow ?? 0, out int rc) && rc > 0
+                ? rc
+                : (qcItem?.CurveSystem is > 0 ? qcItem.CurveSystem.Value : (qcItem?.CurvePhysical ?? 1));
+
+            string empaque = curve > 1 ? curve.ToString(System.Globalization.CultureInfo.InvariantCulture) : "1";
+
+            // En caso de bulto cero / entrega diferida
+            if (physUnits == 0 && declUnits == 0)
+            {
+                empaque = "0";
+            }
+
+            var bultoItem = new BultosPresentationItem
+            {
+                CierreRow = decl.SourceRow ?? 0,
+                Category = decl.Category ?? qcItem?.Category ?? "",
+                MaterialCode = decl.MaterialCode,
+                Description = decl.Description ?? qcItem?.Description ?? "",
+                PhysicalCartons = physCartons,
+                PhysicalUnits = physUnits,
+                ReceivedUnits = physUnits,
+                Curve = curve,
+                Uom = decl.Uom ?? qcItem?.Uom ?? "UN",
+                PackagingExpression = empaque,
+                FullCartons = qcItem?.FullCartons ?? (curve > 0 ? physUnits / curve : physCartons),
+                UnitsPerFullCarton = qcItem?.UnitsPerFullCarton ?? curve,
+                ComplementCartons = qcItem?.ComplementCartons ?? 0,
+                UnitsInComplement = qcItem?.UnitsInComplement ?? 0,
+                DeclaredCartons = declCartons,
+                Observation = qcItem?.Observation ?? ""
+            };
+            bultosList.Add(bultoItem);
+
+            // Tira 1: AS:AT (Bultos Físicos \t Unidades Físicas)
+            tira1Sb.AppendLine($"{physCartons}\t{physUnits}");
+
+            // Tira 2: AW:AY (Bultos PL \t Unidades PL \t Empaque)
+            tira2Sb.AppendLine($"{declCartons}\t{declUnits}\t{empaque}");
+        }
+
+        return (bultosList, tira1Sb.ToString(), tira2Sb.ToString());
     }
 
     private static IReadOnlyList<PhysicalItem> MapPhysicalItems(QcInspectionReport qcReport)

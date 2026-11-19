@@ -43,6 +43,62 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private DiscrepancyItem? _selectedDiscrepancy;
 
+    // --- PRESENTATION MODELS FOR BULTOS & INSPECTOR 360 ---
+    [ObservableProperty]
+    private ObservableCollection<BultosPresentationItem> _bultosItems = new();
+
+    [ObservableProperty]
+    private BultosPresentationItem? _selectedBultoItem;
+
+    [ObservableProperty]
+    private string _tira1AsAtText = "";
+
+    [ObservableProperty]
+    private string _tira2AwAyText = "";
+
+    // --- KPI SUMMARY BANNER PROPERTIES ---
+    [ObservableProperty]
+    private string _kpiContainerId = "-";
+
+    [ObservableProperty]
+    private string _kpiPoNumber = "-";
+
+    [ObservableProperty]
+    private string _kpiPedidoNumber = "-";
+
+    [ObservableProperty]
+    private int _kpiTotalStyles;
+
+    [ObservableProperty]
+    private int _kpiCleanStyles;
+
+    [ObservableProperty]
+    private int _kpiDiscrepantStyles;
+
+    [ObservableProperty]
+    private int _kpiDeclaredUnits;
+
+    [ObservableProperty]
+    private int _kpiPhysicalUnits;
+
+    [ObservableProperty]
+    private int _kpiDeltaUnits;
+
+    [ObservableProperty]
+    private int _kpiDeclaredCartons;
+
+    [ObservableProperty]
+    private int _kpiPhysicalCartons;
+
+    [ObservableProperty]
+    private int _kpiDeltaCartons;
+
+    [ObservableProperty]
+    private int _kpiRevueltoPairs;
+
+    [ObservableProperty]
+    private int _kpiDamagedUnits;
+
     // --- DAILY LOG 6-STAGES & FORMULAS ---
     [ObservableProperty]
     private string _dailyLogFilePath = @"D:\Development\Software Development\3 Way Inventory Reconciliation\Control_Diario_Operaciones_Jostin.xlsx";
@@ -310,6 +366,31 @@ public sealed partial class MainViewModel : ObservableObject
                 Discrepancies.Add(item);
             }
 
+            BultosItems.Clear();
+            foreach (var b in result.BultosItems)
+            {
+                BultosItems.Add(b);
+            }
+
+            Tira1AsAtText = result.Tira1AsAtTsv;
+            Tira2AwAyText = result.Tira2AwAyTsv;
+
+            // Actualizar KPIs de cabecera
+            KpiContainerId = result.ContainerId;
+            KpiPoNumber = result.DeclaredItems.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.OrderPo43))?.OrderPo43 ?? "-";
+            KpiPedidoNumber = result.Comparison.Items.FirstOrDefault()?.OrderPo43 ?? "-";
+            KpiTotalStyles = result.Comparison.Items.Count;
+            KpiCleanStyles = result.Comparison.CleanMaterialsCount;
+            KpiDiscrepantStyles = result.Comparison.DiscrepantMaterialsCount;
+            KpiDeclaredUnits = result.Comparison.TotalDeclaredUnits;
+            KpiPhysicalUnits = result.Comparison.TotalPhysicalUnits;
+            KpiDeltaUnits = result.Comparison.NetUnitDifference;
+            KpiDeclaredCartons = result.Comparison.TotalDeclaredCartons;
+            KpiPhysicalCartons = result.Comparison.TotalPhysicalCartons;
+            KpiDeltaCartons = result.Comparison.NetCartonDifference;
+            KpiRevueltoPairs = result.Comparison.RevueltoPairsCount;
+            KpiDamagedUnits = result.Comparison.TotalDamagedUnits;
+
             StatusMessage = $"Reconciliación exitosa. Total líneas: {result.Comparison.Items.Count}, Discrepancias: {result.Comparison.DiscrepantMaterialsCount}. Guardado en: {exportPath}";
         }
         catch (Exception ex)
@@ -319,6 +400,46 @@ public sealed partial class MainViewModel : ObservableObject
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    public void CopyTira1AsAt()
+    {
+        if (string.IsNullOrWhiteSpace(Tira1AsAtText))
+        {
+            StatusMessage = "No hay datos de Tira 1 para copiar. Ejecute la conciliación primero.";
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(Tira1AsAtText);
+            StatusMessage = "Tira 1 (AS:AT - Bultos y Unidades Físicas) copiada al portapapeles.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error al copiar al portapapeles: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    public void CopyTira2AwAy()
+    {
+        if (string.IsNullOrWhiteSpace(Tira2AwAyText))
+        {
+            StatusMessage = "No hay datos de Tira 2 para copiar. Ejecute la conciliación primero.";
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(Tira2AwAyText);
+            StatusMessage = "Tira 2 (AW:AY - Packing List y Empaque) copiada al portapapeles.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error al copiar al portapapeles: {ex.Message}";
         }
     }
 
