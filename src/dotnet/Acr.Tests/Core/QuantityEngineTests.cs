@@ -483,9 +483,9 @@ public sealed class QuantityEngineTests
     }
 
     [Fact]
-    public void FormatPackagingExpression_ComplementCartonsEmpty_InfersOneComplementCarton()
+    public void FormatPackagingExpression_LooseUnitsWithoutComplementCartons_FormatsAsNxMPlusUnits()
     {
-        // Bultos complementos = 0 / null pero unidades complemento = 36 y totalCartons = 9 (8+1) -> "8*48 1*36"
+        // Sin bultos complementos pero con unidades complemento -> son unidades sueltas -> "8*48 +36"
         string res = QuantityEngine.FormatPackagingExpression(
             fullCartons: 8,
             unitsPerFull: 48,
@@ -493,9 +493,9 @@ public sealed class QuantityEngineTests
             unitsInComp: 36,
             curve: 48,
             totalUnits: 420,
-            totalCartons: 9);
+            totalCartons: 8);
 
-        Assert.Equal("8*48 1*36", res);
+        Assert.Equal("8*48 +36", res);
     }
 
     [Fact]

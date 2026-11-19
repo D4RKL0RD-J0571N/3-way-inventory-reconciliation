@@ -310,6 +310,11 @@ public sealed class ReceivingPipelineTests : IDisposable
                 (0, "2"), (1, "NAVIDAD"), (2, "V888"), (3, "5033282"),
                 (4, "UN"), (5, "0"), (6, "0"), (7, "0"), (8, "0"), (9, "0"), (10, "0")
             ]);
+            // Item 3: 8 enteros de 48 + 0 bultos complementos y 36 unidades sueltas = 8 bultos, 420 unidades ("8*48 +36")
+            WriteInlineRow(sd, 9, [
+                (0, "3"), (1, "NAVIDAD"), (2, "V888"), (3, "5033285"),
+                (4, "UN"), (5, "8"), (6, "48"), (7, "0"), (8, "36"), (9, "8"), (10, "420")
+            ]);
             wsPart.Worksheet.Save();
             wbPart.Workbook.Save();
         }
@@ -329,6 +334,7 @@ public sealed class ReceivingPipelineTests : IDisposable
             WriteInlineRow(sd, 12, [(2, "Categoría"), (3, "MAT. PROVEEDOR"), (4, "MATERIAL"), (6, "CANTIDAD PEDIDO 41"), (48, "Bultos según Paking List")]);
             WriteInlineRow(sd, 13, [(2, "NAVIDAD"), (3, "V888"), (4, "5033280"), (6, "420"), (48, "9")]);
             WriteInlineRow(sd, 14, [(2, "NAVIDAD"), (3, "V888"), (4, "5033282"), (6, "0"), (48, "0")]);
+            WriteInlineRow(sd, 15, [(2, "NAVIDAD"), (3, "V888"), (4, "5033285"), (6, "420"), (48, "8")]);
 
             wsPart.Worksheet.Save();
             wbPart.Workbook.Save();
@@ -341,10 +347,10 @@ public sealed class ReceivingPipelineTests : IDisposable
             SafetyGuard = _testingGuard
         });
 
-        // Con ExcludeZeroTotalFromStripsAndBultos activo por defecto, el material en cero no aparece en Bultos ni en las Tiras
-        Assert.Single(result.BultosItems);
+        // Con ExcludeZeroTotalFromStripsAndBultos activo por defecto, el material en cero no aparece en Bultos ni en las Tiras (quedan 2 activos)
+        Assert.Equal(2, result.BultosItems.Count);
 
-        // Item 1: 5033280
+        // Item 1: 5033280 (1 bulto complemento -> "8*48 1*36")
         BultosPresentationItem bulto1 = result.BultosItems[0];
         Assert.Equal("5033280", bulto1.MaterialCode);
         Assert.Equal("8*48 1*36", bulto1.PackagingExpression);
@@ -354,14 +360,25 @@ public sealed class ReceivingPipelineTests : IDisposable
         Assert.Equal(36, bulto1.UnitsInComplement);
         Assert.False(bulto1.IsZeroTotal);
 
+        // Item 3: 5033285 (sin bultos complementos pero con 36 unidades sueltas -> "8*48 +36")
+        BultosPresentationItem bulto3 = result.BultosItems[1];
+        Assert.Equal("5033285", bulto3.MaterialCode);
+        Assert.Equal("8*48 +36", bulto3.PackagingExpression);
+        Assert.Equal(8, bulto3.FullCartons);
+        Assert.Equal(48, bulto3.UnitsPerFullCarton);
+        Assert.Equal(0, bulto3.ComplementCartons);
+        Assert.Equal(36, bulto3.UnitsInComplement);
+        Assert.False(bulto3.IsZeroTotal);
+
         // Verificación de Tira 2 (AW:AY) y Tira 1 (AS:AT):
-        // Contienen el material con mercancía real y omiten el material en cero
         Assert.Contains("9\t420\t8*48 1*36", result.Tira2AwAyTsv);
+        Assert.Contains("8\t420\t8*48 +36", result.Tira2AwAyTsv);
         Assert.Contains("9\t420", result.Tira1AsAtTsv);
+        Assert.Contains("8\t420", result.Tira1AsAtTsv);
         Assert.DoesNotContain("0\t0\t0", result.Tira2AwAyTsv);
         Assert.DoesNotContain("0\t0", result.Tira1AsAtTsv);
 
-        // Si se desactiva explícitamente ExcludeZeroTotalFromStripsAndBultos, se incluyen ambos
+        // Si se desactiva explícitamente ExcludeZeroTotalFromStripsAndBultos, se incluyen los 3
         ReceivingPipelineResult resultWithZeros = ReceivingPipeline.Execute(new ReceivingPipelineOptions
         {
             QcFilePath = qcPath,
@@ -369,7 +386,7 @@ public sealed class ReceivingPipelineTests : IDisposable
             ExcludeZeroTotalFromStripsAndBultos = false,
             SafetyGuard = _testingGuard
         });
-        Assert.Equal(2, resultWithZeros.BultosItems.Count);
+        Assert.Equal(3, resultWithZeros.BultosItems.Count);
         Assert.Contains("0\t0\t0", resultWithZeros.Tira2AwAyTsv);
     }
 
