@@ -10,6 +10,8 @@ import pandas as pd
 import openpyxl
 import os
 import io
+import time
+import hashlib
 import collections
 from pathlib import Path
 import streamlit.components.v1 as components
@@ -21,7 +23,13 @@ from src.validator import validate_all_items
 from src.sanitizer import clean_material_code, clean_number, clean_string
 from src.models import PrepackItem
 from src.i18n import t, get_current_language, render_language_selector, get_table_toolbar_js
-from src.ui_helpers import inject_skeleton_css, render_skeleton_dashboard, render_skeleton_table, paginate_dataframe
+from src.ui_helpers import (
+    inject_skeleton_css,
+    render_skeleton_dashboard,
+    render_skeleton_table,
+    paginate_dataframe,
+    render_clipboard_copy_button
+)
 
 # High-Resolution Widescreen Layout
 st.set_page_config(
@@ -257,13 +265,20 @@ if "audit_data" not in st.session_state:
     st.session_state.audit_data = None
 
 @st.cache_data(show_spinner="Procesando y auditando libros de Excel...")
-def run_audit(qc_content, cierre_content):
-    if isinstance(qc_content, bytes):
-        qc_file = io.BytesIO(qc_content)
-        qc_raw = qc_content
+def run_audit(qc_content, cierre_content, is_blind_setup: bool = False):
+    t_start = time.time()
+    if is_blind_setup or qc_content is None:
+        boms = {}
+        qc_details = {}
+        qc_raw = b""
     else:
-        qc_file = qc_content
-        qc_raw = Path(qc_content).read_bytes()
+        if isinstance(qc_content, bytes):
+            qc_file = io.BytesIO(qc_content)
+            qc_raw = qc_content
+        else:
+            qc_file = qc_content
+            qc_raw = Path(qc_content).read_bytes()
+        boms, qc_details = parse_quality_control_boms(qc_file)
 
     if isinstance(cierre_content, bytes):
         cierre_file = io.BytesIO(cierre_content)
@@ -272,10 +287,16 @@ def run_audit(qc_content, cierre_content):
         cierre_file = cierre_content
         cierre_raw = Path(cierre_content).read_bytes()
 
-    boms, qc_details = parse_quality_control_boms(qc_file)
-    items, meta = parse_cierre_recepcion(cierre_file, boms, qc_details, return_meta=True)
+    items, meta = parse_cierre_recepcion(
+        cierre_file,
+        boms=boms,
+        qc_details=qc_details,
+        return_meta=True,
+        is_blind_setup=is_blind_setup
+    )
     summary = compute_summary(items, metadata=meta)
     validation = validate_all_items(items)
+    t_elapsed = time.time() - t_start
     return {
         "items": items,
         "summary": summary,
@@ -283,7 +304,9 @@ def run_audit(qc_content, cierre_content):
         "qc_details": qc_details,
         "validation": validation,
         "cierre_raw_bytes": cierre_raw,
-        "qc_raw_bytes": qc_raw
+        "qc_raw_bytes": qc_raw,
+        "is_blind_setup": is_blind_setup,
+        "elapsed_seconds": t_elapsed
     }
 
 # Sidebar Navigation & Management
@@ -303,6 +326,14 @@ else:
 
 if st.session_state.audit_data is not None:
     current_summary = st.session_state.audit_data["summary"]
+    elapsed_time = st.session_state.audit_data.get("elapsed_seconds", 0.0)
+    st.sidebar.markdown(f"""
+    <div style="background:#0F172A; border:1px solid #10B981; border-radius:6px; padding:8px 12px; margin-bottom:12px;">
+        <span style="color:#10B981; font-weight:600; font-size:12px;">⚡ Velocidad de Carga:</span>
+        <span style="color:#F8FAFC; font-weight:700; font-size:13px; float:right;">{elapsed_time:.2f}s</span>
+        <div style="color:#94A3B8; font-size:11px; margin-top:2px;">Lectura selectiva streaming activa</div>
+    </div>
+    """, unsafe_allow_html=True)
     st.sidebar.success(f"📦 **{t('field_status')}:** {current_summary.import_id}")
     st.sidebar.caption(f"Proveedor / Vendor: {current_summary.vendor_name[:25]}")
     st.sidebar.caption(f"Materiales / Styles: {current_summary.total_materials}")
@@ -357,15 +388,23 @@ if st.session_state.audit_data is None:
 
             p = Path(folder_input)
             if p.exists() and p.is_dir():
-                all_excel_files = sorted([
-                    f.name for f in p.iterdir()
-                    if f.is_file() and f.suffix.lower() in [".xlsm", ".xlsx", ".xls"] and not f.name.startswith("~$")
-                ])
+                excel_files_map = {}
+                try:
+                    # Recursive discovery: finds files in root or subdirectories like Informacion General/
+                    for f in p.rglob("*"):
+                        if f.is_file() and f.suffix.lower() in [".xlsm", ".xlsx", ".xls"] and not f.name.startswith("~$"):
+                            rel_lbl = str(f.relative_to(p)).replace("\\", "/")
+                            excel_files_map[rel_lbl] = f
+                except Exception:
+                    pass
+                all_excel_files = sorted(list(excel_files_map.keys()))
                 if all_excel_files:
                     st.caption(t("files_found_in", folder=folder_input, count=len(all_excel_files)))
                     
                     qc_candidates_idx = [i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["calidad", "qc", "conteo"])]
-                    cierre_candidates_idx = [i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["cierre", "plantilla", "inprogress", "recep"]) and "final" not in f.lower()]
+                    cierre_candidates_idx = [i for i, f in enumerate(all_excel_files) if any(k in f.lower() for k in ["cierre", "plantilla", "inprogress", "in progress", "recep"]) and "final" not in f.lower()]
+                    if not cierre_candidates_idx:
+                        cierre_candidates_idx = [i for i, f in enumerate(all_excel_files) if "imp-" in f.lower() and not any(k in f.lower() for k in ["calidad", "qc", "conteo", "portada"])]
                     
                     qc_default_idx = qc_candidates_idx[0] if qc_candidates_idx else 0
                     cierre_default_idx = cierre_candidates_idx[0] if cierre_candidates_idx else min(1, len(all_excel_files)-1)
@@ -387,30 +426,83 @@ if st.session_state.audit_data is None:
                         )
                         
                     st.markdown("<br>", unsafe_allow_html=True)
-                    if st.button(t("start_audit_btn"), type="primary", use_container_width=True):
-                        qc_full_path = p / sel_qc_file
-                        cierre_full_path = p / sel_cierre_file
-                        placeholder = st.empty()
-                        with placeholder.container():
-                            with st.status(
-                                "⚡ " + ("Auditando libros y cuadrando diferencias..." if current_lang == "es" else "Auditing workbooks and calculating reconciliation..."),
-                                expanded=True
-                            ) as status_box:
-                                st.write("📐 " + ("Extrayendo curvas de muelle y listas de materiales (BOMs)..." if current_lang == "es" else "Extracting dock curves and Bills of Materials (BOMs)..."))
-                                try:
-                                    res = run_audit(str(qc_full_path), str(cierre_full_path))
-                                    st.write("🔍 " + ("Cruzando compras (PO 43), facturación (41) y muelle..." if current_lang == "es" else "Cross-referencing POs, invoice and dock counts..."))
-                                    st.write("🛡️ " + ("Verificando notas de crédito y balances contables..." if current_lang == "es" else "Validating credit notes and accounting balances..."))
-                                    status_box.update(
-                                        label="✅ " + ("¡Auditoría 3-Way completada con éxito!" if current_lang == "es" else "3-Way audit completed successfully!"),
-                                        state="complete",
-                                        expanded=False
-                                    )
-                                    st.session_state.audit_data = res
-                                    st.rerun()
-                                except Exception as e_run:
-                                    status_box.update(label="❌ Error", state="error")
-                                    st.error(f"Error: {e_run}")
+                    has_qc_candidate = len(qc_candidates_idx) > 0
+
+                    if not has_qc_candidate:
+                        st.warning("⚠️ " + ("No se detectó archivo de Control de Calidad en esta importación.\n\n**Regla de Negocio:** Sin control de calidad no se puede hacer el cierre definitivo. Solo se puede montar a ciegas la macro utilizando SAP y dejándola en pausa." if current_lang == "es" else "No Quality Control file was detected in this import folder.\n\n**Business Rule:** Without quality control, official closure cannot be performed. You can only blindly set up the macro using SAP and leave it on pause."))
+                        col_btn1, col_btn2 = st.columns(2)
+                        with col_btn1:
+                            if st.button("🟡 " + ("Montar a Ciegas desde SAP (Modo Pausa)" if current_lang == "es" else "Blind Setup from SAP (Pause Mode)"), type="primary", use_container_width=True, key="btn_blind_local"):
+                                cierre_full_path = excel_files_map[sel_cierre_file]
+                                placeholder = st.empty()
+                                with placeholder.container():
+                                    with st.status(
+                                        "⚡ " + ("Montando macro a ciegas desde SAP..." if current_lang == "es" else "Mounting SAP macro blindly..."),
+                                        expanded=True
+                                    ) as status_box:
+                                        st.write("📦 " + ("Cargando órdenes de compra (PO 43) y facturación (41) sin reporte de muelle..." if current_lang == "es" else "Loading SAP orders without dock report..."))
+                                        try:
+                                            res = run_audit(None, str(cierre_full_path), is_blind_setup=True)
+                                            status_box.update(
+                                                label="⏸️ " + ("Montaje a ciegas completado — En pausa a la espera de Control de Calidad" if current_lang == "es" else "Blind setup completed — Paused awaiting Quality Control"),
+                                                state="complete",
+                                                expanded=False
+                                            )
+                                            st.session_state.audit_data = res
+                                            st.rerun()
+                                        except Exception as e_run:
+                                            status_box.update(label="❌ Error", state="error")
+                                            st.error(f"Error: {e_run}")
+                        with col_btn2:
+                            if st.button(t("start_audit_btn"), type="secondary", use_container_width=True, key="btn_local_forced"):
+                                qc_full_path = excel_files_map[sel_qc_file]
+                                cierre_full_path = excel_files_map[sel_cierre_file]
+                                placeholder = st.empty()
+                                with placeholder.container():
+                                    with st.status(
+                                        "⚡ " + ("Auditando libros y cuadrando diferencias..." if current_lang == "es" else "Auditing workbooks and calculating reconciliation..."),
+                                        expanded=True
+                                    ) as status_box:
+                                        st.write("📐 " + ("Extrayendo curvas de muelle y listas de materiales (BOMs)..." if current_lang == "es" else "Extracting dock curves and Bills of Materials (BOMs)..."))
+                                        try:
+                                            res = run_audit(str(qc_full_path), str(cierre_full_path))
+                                            st.write("🔍 " + ("Cruzando compras (PO 43), facturación (41) y muelle..." if current_lang == "es" else "Cross-referencing POs, invoice and dock counts..."))
+                                            st.write("🛡️ " + ("Verificando notas de crédito y balances contables..." if current_lang == "es" else "Validating credit notes and accounting balances..."))
+                                            status_box.update(
+                                                label="✅ " + ("¡Auditoría 3-Way completada con éxito!" if current_lang == "es" else "3-Way audit completed successfully!"),
+                                                state="complete",
+                                                expanded=False
+                                            )
+                                            st.session_state.audit_data = res
+                                            st.rerun()
+                                        except Exception as e_run:
+                                            status_box.update(label="❌ Error", state="error")
+                                            st.error(f"Error: {e_run}")
+                    else:
+                        if st.button(t("start_audit_btn"), type="primary", use_container_width=True):
+                            qc_full_path = excel_files_map[sel_qc_file]
+                            cierre_full_path = excel_files_map[sel_cierre_file]
+                            placeholder = st.empty()
+                            with placeholder.container():
+                                with st.status(
+                                    "⚡ " + ("Auditando libros y cuadrando diferencias..." if current_lang == "es" else "Auditing workbooks and calculating reconciliation..."),
+                                    expanded=True
+                                ) as status_box:
+                                    st.write("📐 " + ("Extrayendo curvas de muelle y listas de materiales (BOMs)..." if current_lang == "es" else "Extracting dock curves and Bills of Materials (BOMs)..."))
+                                    try:
+                                        res = run_audit(str(qc_full_path), str(cierre_full_path))
+                                        st.write("🔍 " + ("Cruzando compras (PO 43), facturación (41) y muelle..." if current_lang == "es" else "Cross-referencing POs, invoice and dock counts..."))
+                                        st.write("🛡️ " + ("Verificando notas de crédito y balances contables..." if current_lang == "es" else "Validating credit notes and accounting balances..."))
+                                        status_box.update(
+                                            label="✅ " + ("¡Auditoría 3-Way completada con éxito!" if current_lang == "es" else "3-Way audit completed successfully!"),
+                                            state="complete",
+                                            expanded=False
+                                        )
+                                        st.session_state.audit_data = res
+                                        st.rerun()
+                                    except Exception as e_run:
+                                        status_box.update(label="❌ Error", state="error")
+                                        st.error(f"Error: {e_run}")
                 else:
                     st.warning(f"No se encontraron libros de Excel (.xlsm, .xlsx, .xls) dentro de '{folder_input}'.")
             else:
@@ -449,6 +541,15 @@ if st.session_state.audit_data is None:
                             except Exception as e_up:
                                 status_box.update(label="❌ Error", state="error")
                                 st.error(f"Error al procesar archivos: {e_up}")
+            elif uploaded_cierre and not uploaded_qc:
+                st.info("ℹ️ " + ("¿No cuenta con Control de Calidad de muelle aún?\n\n**Regla de Negocio:** No se puede emitir el cierre oficial sin conteo físico de muelle. Puede montar a ciegas la macro utilizando SAP y dejarla en pausa." if current_lang == "es" else "No dock Quality Control file provided yet.\n\n**Business Rule:** Official closure cannot be issued without physical dock count. You can set up the macro blindly using SAP and leave it on pause."))
+                if st.button("🟡 " + ("Montar a Ciegas desde SAP (Modo Pausa)" if current_lang == "es" else "Blind Setup from SAP (Pause Mode)"), type="secondary", use_container_width=True, key="btn_upload_blind"):
+                    try:
+                        res = run_audit(None, uploaded_cierre.getvalue(), is_blind_setup=True)
+                        st.session_state.audit_data = res
+                        st.rerun()
+                    except Exception as e_up:
+                        st.error(f"Error al montar a ciegas: {e_up}")
 
     with col_welcome_right:
         st.markdown(f"### {t('sidebar_guide_title')}")
@@ -475,12 +576,24 @@ qc_details = audit_res["qc_details"]
 validation = audit_res["validation"]
 
 # Header Banner (Agnostic & Corporate-Independent)
-st.markdown(f"""
-<div class="app-header">
-    <h1>{t("app_badge")}</h1>
-    <p>{t("app_subtitle")} | {summary.import_id} ({summary.vendor_name})</p>
-</div>
-""", unsafe_allow_html=True)
+if summary.is_blind_setup or summary.status == "PAUSA_SIN_CONTROL_CALIDAD":
+    st.markdown(f"""
+    <div style="background: linear-gradient(90deg, #78350f 0%, #451a03 100%); border-left: 5px solid #f59e0b; border-radius: 6px; padding: 14px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+        <h3 style="margin:0 0 6px 0; color:#fbbf24; display:flex; align-items:center; gap:8px;">
+            ⚠️ MODO MONTAJE CIEGO DESDE SAP (EN PAUSA)
+        </h3>
+        <p style="margin:0; font-size:13.5px; color:#fef3c7; line-height:1.5;">
+            <strong>Regla Operativa:</strong> No se cuenta con archivo de Control de Calidad de muelle. Los pedidos de SAP (PO 43 / Doc. 41) han sido montados pero la importación permanece en <strong>PAUSA / BORRADOR</strong>. El cierre oficial se encuentra bloqueado y no se emiten reclamos de faltante (NCR) hasta que muelle remita el conteo físico.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown(f"""
+    <div class="app-header">
+        <h1>{t("app_badge")}</h1>
+        <p>{t("app_subtitle")} | {summary.import_id} ({summary.vendor_name})</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Top KPIs Row (Expanded across full widescreen - 6 cards)
 k1, k2, k3, k4, k5, k6 = st.columns(6)
@@ -513,41 +626,68 @@ with k3:
         help=t("kpi_invoiced_units_sub")
     )
 with k4:
-    is_squared = (summary.total_ped_41_units == summary.total_received_units)
-    dif_units = summary.total_received_units - summary.total_ped_41_units
-    delta_txt = (t("kpi_net_diff_squared") if is_squared else f"Dif: {dif_units:,.0f} UN")
-    st.metric(
-        label=t("kpi_received_units"),
-        value=f"{summary.total_received_units:,.0f} UN",
-        delta=delta_txt,
-        delta_color="normal" if is_squared else "inverse",
-        help=t("kpi_received_units_sub")
-    )
-with k5:
-    pkg_rec = summary.received_packages
-    pkg_theor = summary.theor_packages
-    pkg_dif = summary.difference_packages
-    if pkg_rec > 0 or pkg_theor > 0:
-        pkg_val = f"{pkg_rec:,.0f} {'Cartons' if current_lang == 'en' else 'Bultos'}"
-        pkg_delta = f"{'Theor' if current_lang == 'en' else 'Teóricos'}: {pkg_theor:,.0f} (Dif: {pkg_dif:,.0f})"
+    if summary.is_blind_setup or summary.status == "PAUSA_SIN_CONTROL_CALIDAD":
+        st.metric(
+            label=t("kpi_received_units"),
+            value="0 UN (Pendiente QC)" if current_lang == "es" else "0 UN (Pending QC)",
+            delta="En Pausa / No Certificado" if current_lang == "es" else "On Pause / Uncertified",
+            delta_color="off",
+            help="Sin conteo físico de muelle / Dock count pending"
+        )
     else:
-        pkg_val = f"0 {'Cartons' if current_lang == 'en' else 'Bultos'}"
-        pkg_delta = "Verificado en muelle" if current_lang == "es" else "Dock verified"
-    st.metric(
-        label=t("kpi_dock_bultos"),
-        value=pkg_val,
-        delta=pkg_delta,
-        delta_color="normal" if pkg_dif == 0 else "off",
-        help="Bultos muelle vs packing list"
-    )
+        is_squared = (summary.total_ped_41_units == summary.total_received_units)
+        dif_units = summary.total_received_units - summary.total_ped_41_units
+        delta_txt = (t("kpi_net_diff_squared") if is_squared else f"Dif: {dif_units:,.0f} UN")
+        st.metric(
+            label=t("kpi_received_units"),
+            value=f"{summary.total_received_units:,.0f} UN",
+            delta=delta_txt,
+            delta_color="normal" if is_squared else "inverse",
+            help=t("kpi_received_units_sub")
+        )
+with k5:
+    if summary.is_blind_setup or summary.status == "PAUSA_SIN_CONTROL_CALIDAD":
+        st.metric(
+            label=t("kpi_dock_bultos"),
+            value="0 Bultos (Pendiente QC)" if current_lang == "es" else "0 Cartons (Pending QC)",
+            delta="Sin Conteo Físico" if current_lang == "es" else "No Dock Count",
+            delta_color="off",
+            help="Bultos de muelle pendientes / Dock count pending"
+        )
+    else:
+        pkg_rec = summary.received_packages
+        pkg_theor = summary.theor_packages
+        pkg_dif = summary.difference_packages
+        if pkg_rec > 0 or pkg_theor > 0:
+            pkg_val = f"{pkg_rec:,.0f} {'Cartons' if current_lang == 'en' else 'Bultos'}"
+            pkg_delta = f"{'Theor' if current_lang == 'en' else 'Teóricos'}: {pkg_theor:,.0f} (Dif: {pkg_dif:,.0f})"
+        else:
+            pkg_val = f"0 {'Cartons' if current_lang == 'en' else 'Bultos'}"
+            pkg_delta = "Verificado en muelle" if current_lang == "es" else "Dock verified"
+        st.metric(
+            label=t("kpi_dock_bultos"),
+            value=pkg_val,
+            delta=pkg_delta,
+            delta_color="normal" if pkg_dif == 0 else "off",
+            help="Bultos muelle vs packing list"
+        )
 with k6:
-    st.metric(
-        label="CREDIT NOTE (NCR)" if current_lang == "en" else "NOTA DE CRÉDITO (NCR)",
-        value=f"${summary.total_ncr_amount:,.2f} USD",
-        delta=("CLEAN (0 Diff)" if current_lang == "en" else "LIMPIO (0 Discrepancias)") if summary.status == "LIMPIO" else ("Active Claim" if current_lang == "en" else "Con Reclamo Activo"),
-        delta_color="normal" if summary.status == "LIMPIO" else "inverse",
-        help="Reclamo NCR / Claim amount"
-    )
+    if summary.is_blind_setup or summary.status == "PAUSA_SIN_CONTROL_CALIDAD":
+        st.metric(
+            label="CREDIT NOTE (NCR)" if current_lang == "en" else "NOTA DE CRÉDITO (NCR)",
+            value="$0.00 USD",
+            delta="BLOQUEADO (Sin QC)" if current_lang == "es" else "LOCKED (No QC)",
+            delta_color="off",
+            help="Bloqueado: no se emite reclamo sin conteo físico de muelle"
+        )
+    else:
+        st.metric(
+            label="CREDIT NOTE (NCR)" if current_lang == "en" else "NOTA DE CRÉDITO (NCR)",
+            value=f"${summary.total_ncr_amount:,.2f} USD",
+            delta=("CLEAN (0 Diff)" if current_lang == "en" else "LIMPIO (0 Discrepancias)") if summary.status == "LIMPIO" else ("Active Claim" if current_lang == "en" else "Con Reclamo Activo"),
+            delta_color="normal" if summary.status == "LIMPIO" else "inverse",
+            help="Reclamo NCR / Claim amount"
+        )
 
 st.divider()
 
@@ -568,18 +708,48 @@ with tab_bultos:
     st.markdown(f"### {t('bultos_title')}")
     st.caption(t("bultos_desc"))
 
+    # Selector de Modo de Bultos: Estricto Aduanero vs Consolidado de Muelle
+    col_b_toggle, col_b_info = st.columns([2.5, 3.5])
+    with col_b_toggle:
+        bultos_mode = st.radio(
+            "Modo de Visualización de Bultos:" if current_lang == "es" else "Carton View Mode:",
+            options=[
+                "📦 Conteo de Muelle (Consolidado Humano)" if current_lang == "es" else "📦 Dock Count (Consolidated Human)",
+                "⚖️ Estricto Aduanero (Enteros + Picos)" if current_lang == "es" else "⚖️ Strict Customs (Full + Odds)"
+            ],
+            index=0,
+            horizontal=True,
+            key="bultos_mode_selector"
+        )
+    is_strict_customs = "Estricto" in bultos_mode or "Strict" in bultos_mode
+
+    with col_b_info:
+        if is_strict_customs:
+            st.info("⚖️ **Modo Aduanero Activo:** Descompone con rigor matemático los bultos enteros estándar y los complementos/picos según la curva comercial. Ideal para fiscalización aduanera y DUA.")
+        else:
+            st.success("📦 **Modo Conteo de Muelle Activo:** Agrupa las cajas según el conteo físico consolidado del patio de descarga. Coincide 100% con las anotaciones de muelle.")
+
     # Top KPI Cards for Cartons & Units
     cb1, cb2, cb3, cb4, cb5 = st.columns(5)
     total_b_desc = summary.total_bultos_descarga if summary.total_bultos_descarga > 0 else summary.received_packages
     total_b_pl = summary.total_bultos_pl if summary.total_bultos_pl > 0 else summary.theor_packages
     dif_b = total_b_desc - total_b_pl
+    total_b_enteros = sum(it.bultos_enteros for it in items)
+    total_b_comp = sum(it.bultos_complementos for it in items)
 
     with cb1:
-        st.metric(
-            t("kpi_bultos_descarga"),
-            f"{total_b_desc:,.0f} Bultos" if current_lang == "es" else f"{total_b_desc:,.0f} Cartons",
-            delta="Descarga Muelle" if current_lang == "es" else "Dock Discharge"
-        )
+        if is_strict_customs:
+            st.metric(
+                "BULTOS ADUANEROS" if current_lang == "es" else "CUSTOMS CARTONS",
+                f"{total_b_enteros + total_b_comp:,.0f} Bultos" if current_lang == "es" else f"{total_b_enteros + total_b_comp:,.0f} Cartons",
+                delta=f"{total_b_enteros:,.0f} Enteros + {total_b_comp:,.0f} Pico" if current_lang == "es" else f"{total_b_enteros:,.0f} Full + {total_b_comp:,.0f} Odds"
+            )
+        else:
+            st.metric(
+                t("kpi_bultos_descarga"),
+                f"{total_b_desc:,.0f} Bultos" if current_lang == "es" else f"{total_b_desc:,.0f} Cartons",
+                delta="Descarga Muelle" if current_lang == "es" else "Dock Discharge"
+            )
     with cb2:
         st.metric(
             t("kpi_bultos_pl"),
@@ -664,22 +834,75 @@ with tab_bultos:
 
     bultos_rows = []
     for it in items:
-        # Determine display bultos discharge (string or number)
-        b_disp = it.bultos_str if (it.bultos_str and "*" in it.bultos_str) else (int(it.bultos_descarga) if it.bultos_descarga > 0 else int(it.quantity_inv_41_prk))
-        bultos_rows.append({
-            "CATEGORIA": it.category or "TEXTIL",
-            "CANTIDAD DE BULTOS Z-Carga": b_disp,
-            "CANTIDAD DE UNIDADES Z-Carga": int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units),
-            "MATERIAL": it.material_code,
-            "RECIBIDO REAL & FISICO": int(it.received_real_units),
-            "Curva": it.curve_total,
-            "UM": it.um or "PRK",
-            "DESCRIPCION": it.description,
-            "EMPAQUE UNIDADES Z-Carga": it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12"),
-            "Bultos Packing List": int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga),
-            "Diferencia Bultos": int(it.dif_bultos),
-            "_status": it.status
-        })
+        is_other_p = it.status.startswith("PENDIENTE_PARTE") or (it.container_part and it.container_part != "A")
+        is_zero_rec = (it.received_real_units == 0) or is_other_p
+
+        if is_strict_customs:
+            if is_zero_rec:
+                b_disp = "0 Enteros"
+                b_ent = 0
+                b_pico = 0
+                u_zc = 0
+                r_fis = 0
+                emp_str = "0"
+                b_pl = 0
+                dif_b = 0
+            else:
+                b_disp = f"{int(it.bultos_enteros)} E + {int(it.bultos_complementos)} P" if it.bultos_complementos > 0 else f"{int(it.bultos_enteros)} Enteros"
+                b_ent = int(it.bultos_enteros)
+                b_pico = int(it.bultos_complementos)
+                u_zc = int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units)
+                r_fis = int(it.received_real_units)
+                emp_str = it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12")
+                b_pl = int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga)
+                dif_b = int(it.dif_bultos)
+
+            bultos_rows.append({
+                "CATEGORIA": it.category or "TEXTIL",
+                "CANTIDAD DE BULTOS Z-Carga": b_disp,
+                "Bultos Enteros": b_ent,
+                "Bultos Pico": b_pico,
+                "CANTIDAD DE UNIDADES Z-Carga": u_zc,
+                "MATERIAL": it.material_code,
+                "RECIBIDO REAL & FISICO": r_fis,
+                "Curva": it.curve_total,
+                "UM": it.um or "PRK",
+                "DESCRIPCION": it.description,
+                "EMPAQUE UNIDADES Z-Carga": emp_str,
+                "Bultos Packing List": b_pl,
+                "Diferencia Bultos": dif_b,
+                "_status": it.status
+            })
+        else:
+            if is_zero_rec:
+                b_disp = 0
+                u_zc = 0
+                r_fis = 0
+                emp_str = "0"
+                b_pl = 0
+                dif_b = 0
+            else:
+                b_disp = it.bultos_str if (it.bultos_str and "*" in it.bultos_str) else (int(it.bultos_descarga) if it.bultos_descarga > 0 else int(it.quantity_inv_41_prk))
+                u_zc = int(it.unidades_descarga if it.unidades_descarga > 0 else it.received_real_units)
+                r_fis = int(it.received_real_units)
+                emp_str = it.empaque_str or (str(it.curve_total) if it.curve_total > 0 else "12")
+                b_pl = int(it.bultos_packing_list if it.bultos_packing_list > 0 else it.bultos_descarga)
+                dif_b = int(it.dif_bultos)
+
+            bultos_rows.append({
+                "CATEGORIA": it.category or "TEXTIL",
+                "CANTIDAD DE BULTOS Z-Carga": b_disp,
+                "CANTIDAD DE UNIDADES Z-Carga": u_zc,
+                "MATERIAL": it.material_code,
+                "RECIBIDO REAL & FISICO": r_fis,
+                "Curva": it.curve_total,
+                "UM": it.um or "PRK",
+                "DESCRIPCION": it.description,
+                "EMPAQUE UNIDADES Z-Carga": emp_str,
+                "Bultos Packing List": b_pl,
+                "Diferencia Bultos": dif_b,
+                "_status": it.status
+            })
 
     df_bultos_all = pd.DataFrame(bultos_rows)
 
@@ -1260,17 +1483,20 @@ with tab_excel_export:
             df_exp.to_excel(writer, index=False, sheet_name="CIERRE_RECEP_VALORES")
         excel_buf.seek(0)
         
+        exp_filename = f"{summary.import_id}_Montaje_Ciego_Pausa.xlsx" if summary.is_blind_setup else f"{summary.import_id}_Valores_Cierre_Recep_Limpio.xlsx"
         st.download_button(
             label="📥 Descargar Columnas Principales (.xlsx)",
             data=excel_buf,
-            file_name=f"{summary.import_id}_Valores_Cierre_Recep_Limpio.xlsx",
+            file_name=exp_filename,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary",
-            help="Descarga las 17 columnas verificadas ordenadas según la plantilla oficial para alimentar el libro de cierre."
+            help="Descarga las columnas verificadas ordenadas según la plantilla oficial para alimentar el libro de cierre."
         )
 
     with subtab_descarga:
         st.markdown("#### ⚡ Cuadre Rápido de Muelle y Packing List (Columnas AS a AZ)")
+        if summary.is_blind_setup:
+            st.warning("⚠️ **Aviso de Modo Pausa (Sin Control de Calidad):** Esta importación carece de reporte de muelle. Los valores de descarga no pueden ser certificados hasta que se reciba el reporte de Control de Calidad. La macro de SAP permanece montada en modo preliminar/borrador.")
         st.info("""
         💡 **¿Por qué la plantilla oficial muestra diferencias negativas al inicio?**  
         Porque la macro de SAP solo llena los pedidos del sistema, dejando en blanco o en cero las columnas de **Muelle de Descarga** (`AS:AT`) y de **Packing List** (`AW:AY`). La fórmula `=AT13 - H13` calcula `0 - 888 = -888`.
@@ -1286,17 +1512,28 @@ with tab_excel_export:
         
         for i in items:
             qc_item = qc_details.get(i.material_code, {})
-            if i.bultos_descarga > 0:
-                bultos_desc = i.bultos_str if (i.bultos_str and "*" in i.bultos_str) else i.bultos_descarga
-            elif qc_item.get('bultos', 0) > 0:
-                bultos_desc = qc_item['bultos']
+            is_other_part = i.status.startswith("PENDIENTE_PARTE") or (i.container_part and i.container_part != "A")
+            
+            if i.received_real_units == 0 or is_other_part:
+                unidades_desc = 0
+                bultos_desc = 0
             else:
-                bultos_desc = i.quantity_inv_41_prk if i.quantity_inv_41_prk > 0 else 1.0
+                unidades_desc = i.unidades_descarga if i.unidades_descarga > 0 else (qc_item.get('unidades', 0) if qc_item.get('unidades', 0) > 0 else i.received_real_units)
+                if i.bultos_descarga > 0:
+                    bultos_desc = i.bultos_str if (i.bultos_str and "*" in i.bultos_str) else i.bultos_descarga
+                elif qc_item.get('bultos', 0) > 0:
+                    bultos_desc = qc_item['bultos']
+                else:
+                    bultos_desc = i.quantity_inv_41_prk if i.quantity_inv_41_prk > 0 else (round(unidades_desc / max(i.curve_total, 1), 2) if unidades_desc > 0 else 0)
 
-            unidades_desc = i.unidades_descarga if i.unidades_descarga > 0 else (qc_item.get('unidades', 0) if qc_item.get('unidades', 0) > 0 else i.received_real_units)
-            bultos_pl = i.bultos_packing_list if i.bultos_packing_list > 0 else bultos_desc
-            unidades_pl = i.unidades_packing_list if i.unidades_packing_list > 0 else i.quantity_inv_41_units
-            curva_empaque = i.empaque_str or (str(i.curve_total) if i.curve_total > 0 else "12")
+            if is_other_part or (i.received_real_units == 0 and i.quantity_inv_41_units == 0):
+                unidades_pl = 0
+                bultos_pl = 0
+                curva_empaque = "0"
+            else:
+                unidades_pl = i.unidades_packing_list if i.unidades_packing_list > 0 else (i.quantity_inv_41_units if i.quantity_inv_41_units > 0 else unidades_desc)
+                bultos_pl = i.bultos_packing_list if i.bultos_packing_list > 0 else bultos_desc
+                curva_empaque = i.empaque_str or (str(i.curve_total) if i.curve_total > 0 else "12")
             
             descarga_rows.append({
                 "Fila Excel": len(descarga_rows) + 13,
@@ -1320,23 +1557,35 @@ with tab_excel_export:
         with col_tira1:
             st.markdown("##### 📌 Tira 1: ZDESCARGA (Columnas AS y AT)")
             st.caption("2 columnas contiguas: `[TOTAL BULTOS DESCARGA | CANTIDAD UNIDADES EN BULTOS]`")
+            render_clipboard_copy_button(
+                button_id="copy_tira1",
+                label="📋 Copiar Tira 1 (AS13)",
+                text_to_copy="\n".join(tsv_as_at_lines),
+                success_label="¡Tira 1 copiada! Lista para pegar en celda AS13"
+            )
             st.text_area(
-                "Copiar con Ctrl+A -> Ctrl+C y pegar en celda AS13 de Excel:",
+                "Vista previa / Copia manual:",
                 value="\n".join(tsv_as_at_lines),
                 height=180,
                 key="tsv_as_at_area",
-                help="Selecciona todo este texto, cópialo y pégalo directamente en la celda AS13 de la hoja CIERRE RECEP."
+                help="Haz clic en el botón de copiar arriba o selecciona este texto para pegarlo en la celda AS13."
             )
             
         with col_tira2:
             st.markdown("##### 📌 Tira 2: PACKING LIST (Columnas AW, AX y AY)")
             st.caption("3 columnas contiguas: `[Bultos según Packing List | CANTIDAD UNIDADES | Empaque]`")
+            render_clipboard_copy_button(
+                button_id="copy_tira2",
+                label="📋 Copiar Tira 2 (AW13)",
+                text_to_copy="\n".join(tsv_aw_ay_lines),
+                success_label="¡Tira 2 copiada! Lista para pegar en celda AW13"
+            )
             st.text_area(
-                "Copiar con Ctrl+A -> Ctrl+C y pegar en celda AW13 de Excel:",
+                "Vista previa / Copia manual:",
                 value="\n".join(tsv_aw_ay_lines),
                 height=180,
                 key="tsv_aw_ay_area",
-                help="Selecciona todo este texto, cópialo y pégalo directamente en la celda AW13 de la hoja CIERRE RECEP."
+                help="Haz clic en el botón de copiar arriba o selecciona este texto para pegarlo en la celda AW13."
             )
             
         col_dl1, col_dl2 = st.columns(2)
@@ -1367,18 +1616,28 @@ with tab_excel_export:
                     for idx_c, it_c in enumerate(items):
                         row_c = 13 + idx_c
                         qc_i = qc_details.get(it_c.material_code, {})
+                        is_other_p = it_c.status.startswith("PENDIENTE_PARTE") or (it_c.container_part and it_c.container_part != "A")
                         
-                        if it_c.bultos_descarga > 0:
-                            b_desc = it_c.bultos_str if (it_c.bultos_str and "*" in it_c.bultos_str) else it_c.bultos_descarga
-                        elif qc_i.get('bultos', 0) > 0:
-                            b_desc = qc_i['bultos']
+                        if it_c.received_real_units == 0 or is_other_p:
+                            b_desc = 0
+                            u_desc = 0
                         else:
-                            b_desc = it_c.quantity_inv_41_prk if it_c.quantity_inv_41_prk > 0 else 1.0
+                            u_desc = it_c.unidades_descarga if it_c.unidades_descarga > 0 else (qc_i.get('unidades', 0) if qc_i.get('unidades', 0) > 0 else it_c.received_real_units)
+                            if it_c.bultos_descarga > 0:
+                                b_desc = it_c.bultos_str if (it_c.bultos_str and "*" in it_c.bultos_str) else it_c.bultos_descarga
+                            elif qc_i.get('bultos', 0) > 0:
+                                b_desc = qc_i['bultos']
+                            else:
+                                b_desc = it_c.quantity_inv_41_prk if it_c.quantity_inv_41_prk > 0 else (round(u_desc / max(it_c.curve_total, 1), 2) if u_desc > 0 else 0)
 
-                        u_desc = it_c.unidades_descarga if it_c.unidades_descarga > 0 else (qc_i.get('unidades', 0) if qc_i.get('unidades', 0) > 0 else it_c.received_real_units)
-                        b_pl = it_c.bultos_packing_list if it_c.bultos_packing_list > 0 else b_desc
-                        u_pl = it_c.unidades_packing_list if it_c.unidades_packing_list > 0 else it_c.quantity_inv_41_units
-                        emp = it_c.empaque_str or (str(it_c.curve_total) if it_c.curve_total > 0 else "12")
+                        if is_other_p or (it_c.received_real_units == 0 and it_c.quantity_inv_41_units == 0):
+                            b_pl = 0
+                            u_pl = 0
+                            emp = 0
+                        else:
+                            u_pl = it_c.unidades_packing_list if it_c.unidades_packing_list > 0 else (it_c.quantity_inv_41_units if it_c.quantity_inv_41_units > 0 else u_desc)
+                            b_pl = it_c.bultos_packing_list if it_c.bultos_packing_list > 0 else b_desc
+                            emp = it_c.empaque_str or (str(it_c.curve_total) if it_c.curve_total > 0 else "12")
 
                         # Reparar fórmula de Col H si fue borrada o sobreescrita manualmente
                         val_h = ws_closure.cell(row=row_c, column=8).value

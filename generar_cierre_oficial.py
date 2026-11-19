@@ -51,27 +51,30 @@ def main():
         
         # Bultos y unidades verificados desde QC, empaque real y cierre
         qc_item = qc_details.get(item.material_code, {})
+        is_other_p = item.status.startswith("PENDIENTE_PARTE") or (item.container_part and item.container_part != "A")
         
-        # Bultos físicos de descarga
-        if item.bultos_descarga > 0:
-            bultos_desc = item.bultos_descarga
-        elif qc_item.get('bultos', 0) > 0:
-            bultos_desc = qc_item['bultos']
+        # Bultos y unidades físicas de descarga
+        if item.received_real_units == 0 or is_other_p:
+            bultos_desc = 0.0
+            unidades_desc = 0.0
         else:
-            bultos_desc = item.quantity_inv_41_prk if item.quantity_inv_41_prk > 0 else 1.0
-
-        # Unidades físicas de descarga
-        if item.unidades_descarga > 0:
-            unidades_desc = item.unidades_descarga
-        elif qc_item.get('unidades', 0) > 0:
-            unidades_desc = qc_item['unidades']
-        else:
-            unidades_desc = item.received_real_units
+            unidades_desc = item.unidades_descarga if item.unidades_descarga > 0 else (qc_item.get('unidades', 0) if qc_item.get('unidades', 0) > 0 else item.received_real_units)
+            if item.bultos_descarga > 0:
+                bultos_desc = item.bultos_descarga
+            elif qc_item.get('bultos', 0) > 0:
+                bultos_desc = qc_item['bultos']
+            else:
+                bultos_desc = item.quantity_inv_41_prk if item.quantity_inv_41_prk > 0 else (round(unidades_desc / max(item.curve_total, 1), 2) if unidades_desc > 0 else 0.0)
 
         # Bultos y unidades de Packing List
-        bultos_pl = item.bultos_packing_list if item.bultos_packing_list > 0 else bultos_desc
-        unidades_pl = item.unidades_packing_list if item.unidades_packing_list > 0 else item.quantity_inv_41_units
-        empaque_val = item.empaque_str or (str(item.curve_total) if item.curve_total > 0 else "12")
+        if is_other_p or (item.received_real_units == 0 and item.quantity_inv_41_units == 0):
+            bultos_pl = 0.0
+            unidades_pl = 0.0
+            empaque_val = "0"
+        else:
+            unidades_pl = item.unidades_packing_list if item.unidades_packing_list > 0 else (item.quantity_inv_41_units if item.quantity_inv_41_units > 0 else unidades_desc)
+            bultos_pl = item.bultos_packing_list if item.bultos_packing_list > 0 else bultos_desc
+            empaque_val = item.empaque_str or (str(item.curve_total) if item.curve_total > 0 else "12")
 
         # Reparar fórmula de Col H si fue borrada o sobreescrita manualmente
         val_h = ws.cell(row=r, column=8).value

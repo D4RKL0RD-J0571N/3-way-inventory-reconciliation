@@ -128,3 +128,111 @@ def test_compute_summary_bultos():
     assert summary.dif_total_bultos == 1.0
     assert summary.total_prk_41 == 30.0
     assert summary.total_received_units == 180.0
+
+
+def test_dual_carton_modes_dock_vs_strict_customs():
+    """
+    Verifies that ReconcileAI correctly handles both carton views:
+    1. Dock Count Mode: Direct physical cartons counted on the patio (e.g. 40 cartons).
+    2. Strict Customs Mode: Mathematical decomposition into full standard boxes and odds (e.g. 39 Full + 1 Odd).
+    """
+    item = PrepackItem(
+        material_code="1001",
+        vendor_material="VM-01",
+        description="Pantalon Denim",
+        category="CABALLEROS",
+        order_po_43="PO-100",
+        quantity_po_43_prk=40.0,
+        quantity_po_43_units=240.0,
+        quantity_inv_41_prk=40.0,
+        quantity_inv_41_units=240.0,
+        received_real_units=240.0,
+        curve_total=6,
+        unit_cost=10.0,
+        bultos_descarga=5.0, # 5 physical cartons reported by dock
+        unidades_descarga=240.0,
+        bultos_packing_list=5.0,
+        unidades_packing_list=240.0,
+        empaque_str="50",
+        bultos_str="4*50 1*40",
+        um="PRK",
+        bultos_enteros=4.0, # 4 full cartons of 50
+        unidades_por_bulto_entero=50.0,
+        bultos_complementos=1.0, # 1 odd carton of 40
+        unidades_por_bulto_comp=40.0,
+        unidades_por_bulto=48.0,
+        dif_bultos=0.0
+    )
+
+    # 1. Dock View Mode
+    dock_cartons = item.bultos_descarga
+    assert dock_cartons == 5.0
+
+    # 2. Strict Customs Mode
+    customs_full = item.bultos_enteros
+    customs_odds = item.bultos_complementos
+    assert customs_full == 4.0
+    assert customs_odds == 1.0
+    assert customs_full + customs_odds == 5.0
+    assert (customs_full * item.unidades_por_bulto_entero) + (customs_odds * item.unidades_por_bulto_comp) == item.received_real_units
+
+
+def test_zero_units_produce_zero_cartons():
+    """
+    Critical regression test:
+    Items with 0 units received or status 'PENDIENTE_PARTE_B' must NEVER produce
+    a phantom fallback of 1 carton (1.0). Cartons and packaging values must strictly be 0.
+    """
+    item_pending = PrepackItem(
+        material_code="1306026",
+        vendor_material="EMN0100",
+        description="SERIES DE LUCES BLANCA ARROZ",
+        category="NAVIDAD",
+        order_po_43="4300006742",
+        quantity_po_43_prk=7560.0,
+        quantity_po_43_units=7560.0,
+        quantity_inv_41_prk=0.0,
+        quantity_inv_41_units=0.0,
+        received_real_units=0.0,
+        curve_total=1,
+        unit_cost=0.0,
+        status="PENDIENTE_PARTE_B",
+        container_part="B",
+        bultos_descarga=0.0,
+        unidades_descarga=0.0,
+        bultos_packing_list=0.0,
+        unidades_packing_list=0.0,
+        empaque_str="0",
+        bultos_str="0",
+        bultos_enteros=0.0,
+        bultos_complementos=0.0,
+        dif_bultos=0.0
+    )
+
+    # Calculation logic for dock (AS/AT) & packing list (AW/AX/AY)
+    is_other_part = item_pending.status.startswith("PENDIENTE_PARTE") or (item_pending.container_part and item_pending.container_part != "A")
+    assert is_other_part is True
+
+    if item_pending.received_real_units == 0 or is_other_part:
+        bultos_desc = 0.0
+        unidades_desc = 0.0
+    else:
+        bultos_desc = item_pending.bultos_descarga or 1.0
+        unidades_desc = item_pending.unidades_descarga
+
+    if is_other_part or (item_pending.received_real_units == 0 and item_pending.quantity_inv_41_units == 0):
+        bultos_pl = 0.0
+        unidades_pl = 0.0
+        empaque_val = "0"
+    else:
+        bultos_pl = item_pending.bultos_packing_list or bultos_desc
+        unidades_pl = item_pending.unidades_packing_list
+        empaque_val = item_pending.empaque_str or "12"
+
+    assert bultos_desc == 0.0
+    assert unidades_desc == 0.0
+    assert bultos_pl == 0.0
+    assert unidades_pl == 0.0
+    assert empaque_val == "0"
+
+

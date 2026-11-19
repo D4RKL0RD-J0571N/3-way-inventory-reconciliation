@@ -596,6 +596,23 @@ def get_table_toolbar_js(lang: str) -> str:
                 doc.body.addEventListener('mouseover', function() {{
                     translateToolbars();
                 }}, true);
+
+                // Suppress Streamlit's global 'c' key shortcut which opens 'Clear caches' modal unexpectedly
+                function blockClearCacheShortcut(e) {{
+                    if ((e.key === 'c' || e.key === 'C') && !e.ctrlKey && !e.metaKey && !e.altKey) {{
+                        const target = e.target || doc.activeElement;
+                        const tag = target ? (target.tagName || '').toUpperCase() : '';
+                        const isEditable = target ? (target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA') : false;
+                        if (!isEditable) {{
+                            e.stopImmediatePropagation();
+                            e.preventDefault();
+                        }}
+                    }}
+                }}
+                rootWin.addEventListener('keydown', blockClearCacheShortcut, true);
+                if (doc !== rootWin.document) {{
+                    doc.addEventListener('keydown', blockClearCacheShortcut, true);
+                }}
             }}
         }} catch(e) {{}}
     }})();
